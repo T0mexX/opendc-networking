@@ -1,4 +1,4 @@
-package org.opendc.simulator.network.util
+package org.opendc.simulator.network.utils
 
 import mu.KotlinLogging
 import org.slf4j.Logger

@@ -1,10 +1,9 @@
 package org.opendc.simulator.network.components
 
 import org.opendc.simulator.network.flow.Flow
-import org.opendc.simulator.network.util.OnChangeHandler
+import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.components.internalstructs.FlowsTable
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
-import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.utils.Kbps
 

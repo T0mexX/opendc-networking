@@ -3,7 +3,7 @@ package org.opendc.simulator.network.flow
 import org.opendc.simulator.network.components.Link
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.NodeId
-import org.opendc.simulator.network.util.OnChangeHandler
+import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.Kbps
 import kotlin.properties.Delegates
 
