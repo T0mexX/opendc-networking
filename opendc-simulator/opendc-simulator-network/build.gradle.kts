@@ -24,11 +24,32 @@ description = "Library for simulating datacenter network components"
 
 plugins {
     `kotlin-library-conventions`
+    `testing-conventions`
+    `jacoco-conventions`
+    kotlin("plugin.serialization") version "1.9.22"
 }
+
+val kLoggingVersion = "3.0.5"
+val logBackVersion = "1.5.6"
+val kotestVersion = "5.9.1"
+val kotestDataTestVersion = kotestVersion
+val kotestPropertyTestVersion = kotestVersion
+val serializationVersion = "1.6.0"
 
 dependencies {
     api(projects.opendcSimulator.opendcSimulatorFlow)
     implementation(projects.opendcSimulator.opendcSimulatorCore)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+    implementation("io.github.microutils:kotlin-logging-jvm:$kLoggingVersion")
+    implementation("ch.qos.logback:logback-classic:$logBackVersion")
+    implementation(libs.clikt)
 
-    testImplementation(libs.slf4j.simple)
+    testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
+    testImplementation("io.kotest:kotest-property:$version")
+    testImplementation("io.kotest:kotest-framework-datatest:$kotestDataTestVersion")
+    testImplementation("io.kotest:kotest-property:$kotestPropertyTestVersion")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }
