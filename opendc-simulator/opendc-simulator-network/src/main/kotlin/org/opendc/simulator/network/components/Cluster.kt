@@ -10,7 +10,6 @@ import org.opendc.simulator.network.energy.EnModel
 import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.energy.emodels.ClusterDfltEnModel
-import org.opendc.simulator.network.energy.emodels.ClusterEnModels
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
