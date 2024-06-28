@@ -1,6 +1,6 @@
 # Network Playground
 A sort of sandbox where you can create your own topology and start your own flows to test it.
- 
+
 > What I am working on:
 > - optimizing fat-tree building.
 > - refactoring flow handling.
@@ -18,6 +18,9 @@ A sort of sandbox where you can create your own topology and start your own flow
 > - working directory needs to be `<path to repo>/opendc-networking/opendc-simulator/opendc-simulator-network/src/main`.
 > - exporting as json from playground not implemented yet
 
+> What I added:
+> - everything in main.kotlin (main.java files were already there)
+> - `CustomNetworkTest` & `FatTreeNetworkTest` (none of the other tests)
 
 ## Components
 ### Nodes
