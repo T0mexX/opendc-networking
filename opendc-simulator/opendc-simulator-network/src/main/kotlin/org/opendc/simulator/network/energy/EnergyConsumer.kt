@@ -5,6 +5,7 @@ package org.opendc.simulator.network.energy
  * and their energy consumption can be tracked using [enMonitor].
  */
 internal interface EnergyConsumer<T: EnergyConsumer<T>> {
+    val id: Int
     /**
      * Allows to track the energy consumption of ***this***.
      */
