@@ -1,5 +1,5 @@
 # Network Playground
-A sort of sandbox where you can create your own topology and start your own flows to test it.
+A sort of sandbox where you can create your own topology and start your own network flows to test it.
 
 > What I am working on:
 > - optimizing fat-tree building.
@@ -22,24 +22,25 @@ A sort of sandbox where you can create your own topology and start your own flow
 > - everything in main.kotlin (main.java files were already there)
 > - `CustomNetworkTest` & `FatTreeNetworkTest` (none of the other tests)
 
+&nbsp;  
 ## Components
 ### Nodes
-#### Switch
+##### Switch
 - id (uniquely identifies a node in the network)
 - port speed 
 - number of ports
 
-#### CoreSwitch
+##### CoreSwitch
 Same as switch but can start/receive flows.
 
-#### Cluster
+##### Cluster
 Same functionalities of a core switch for now, not yet integrated in any way with the existent experiments.
 
 ### Flows
-#### EndToEndFlow
+##### EndToEndFlow
 Represent a network flow from one `EndPointNode` to another.
 
-#### Flow
+##### Flow
 >**NOTE:** probably changing name.
 
 Represent the flow between a `Node`'s port and a `Link` (or vice-versa) for a specific `EndToEndFlow`.
@@ -59,6 +60,7 @@ can be implemented by defining classes which extend `ForwardingPolicy` with netw
 >**NOTE:** only 1 policy for now.
 
 
+&nbsp;  
 ## Playground Commands
 
 ### ADD_SWITCH
