@@ -4,6 +4,7 @@ import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.components.internalstructs.FlowsTable
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
+import org.opendc.simulator.network.flow.EndToEndFlow
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.utils.Kbps
 
@@ -108,8 +109,29 @@ internal interface Node {
      * Pushes a new flow from an adjacent [Node] into ***this***.
      * If needed, it forwards the flow based on the [forwardingPolicy].
      */
-    fun pushNewFlow(flow: Flow)
+    fun pushNewFlow(flow: Flow) {
+        flowTable.addIncomingFLow(flow)
+        flow.addDataRateObsChangeHandler(handler = this.dataRateOnChangeHandler)
+        if (flowTable.hasOutgoingRoutsFor(flow.endToEndFlowId)) {
+            // less compute intensive
+            updateOutGoingFlowRates(flow.endToEndFlowId)
+            return
+        }
 
+        forwardingPolicy.forwardFlow(forwarder = this, flow)
+    }
+
+    /**
+     * Updates the outgoing flow rates according to the total incoming data rate of each [EndToEndFlow].
+     * The flow is distributed homogeneously among the links with the same shortest path.
+     */
+    fun updateOutGoingFlowRates(eToEFlowId: Int) {
+        val totalIncomingFlowDataRate: Double = flowTable.totalIncomingDataOf(eToEFlowId)
+        val outgoingFlowsForEtoEFlow: Set<Flow> = flowTable.getOutGoingFlowsOf(eToEFlowId)
+        outgoingFlowsForEtoEFlow.forEach {
+            it.dataRate = totalIncomingFlowDataRate / outgoingFlowsForEtoEFlow.size
+        }
+    }
 
     fun routingTableToString(): String = routingTable.toString()
 }

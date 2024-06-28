@@ -23,7 +23,9 @@ internal object StaticECMP: ForwardingPolicy {
         val linksToForwardTo: List<Link?> =
             routTable.getPossiblePathsTo(flow.finalDestinationId)
                 ?.map { path -> linksToAdjNodes[path.nextHop.id] }!!
-        flow.split(linksToForwardTo.size).forEachIndexed { idx, subFlow ->
+
+        val dummyFlow: Flow = flow.copy(sender = forwarder)
+        dummyFlow.split(linksToForwardTo.size).forEachIndexed { idx, subFlow ->
             flowTable.addOutgoingFlow(subFlow)
             linksToForwardTo[idx]!!.pushNewFlow(subFlow)
         }

@@ -10,6 +10,7 @@ import org.opendc.simulator.network.energy.EnModel
 import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.energy.emodels.ClusterDfltEnModel
+import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
@@ -31,6 +32,12 @@ internal class Cluster(
     override val routingTable: RoutingTable = RoutingTable(this.id)
     override val flowTable: FlowsTable = FlowsTable()
     override val enMonitor by lazy { EnMonitor(this) }
+
+    override fun pushNewFlow(flow: Flow) {
+        super<EndPointNode>.pushNewFlow(flow)
+
+        enMonitor.update()
+    }
 
     override fun getDfltEnModel(): EnModel<Cluster> = ClusterDfltEnModel
 
