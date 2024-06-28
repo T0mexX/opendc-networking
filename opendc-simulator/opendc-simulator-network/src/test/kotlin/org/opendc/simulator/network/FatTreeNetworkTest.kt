@@ -17,7 +17,7 @@ import java.io.File
 import kotlin.math.pow
 
 @OptIn(ExperimentalSerializationApi::class, ExperimentalKotest::class)
-class FatTreeNetworkTopologyTest: FunSpec({
+class FatTreeNetworkTest: FunSpec({
     val jsonReader = Json { ignoreUnknownKeys = true }
 
     context("convert json file to network specs") {

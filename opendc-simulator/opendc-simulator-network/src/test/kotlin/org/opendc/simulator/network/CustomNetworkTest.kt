@@ -25,7 +25,7 @@ import org.opendc.simulator.network.components.Switch
 import java.io.File
 
 @OptIn(ExperimentalSerializationApi::class, ExperimentalKotest::class)
-class CustomNetworkTopologyTest: FunSpec({
+class CustomNetworkTest: FunSpec({
     val jsonReader = Json { ignoreUnknownKeys = true }
 
     context("Build network from json file") {
