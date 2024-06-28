@@ -50,30 +50,9 @@ internal open class Switch (
     override fun pushNewFlow(flow: Flow) {
         require(flow.finalDestinationId != this.id) { "Flow cannot have a switch as destination (except CoreSwitches)." }
 
-        flowTable.addIncomingFLow(flow)
-        flow.addDataRateObsChangeHandler(handler = this.dataRateOnChangeHandler)
-        if (flowTable.hasOutgoingRoutsFor(flow.endToEndFlowId)) {
-            updateOutGoingFlowRates(flow.endToEndFlowId)
-            return
-        }
-
-        val outgoingFlow = flow.copy(sender = this)
-
-        forwardingPolicy.forwardFlow(forwarder = this, outgoingFlow)
+        super<Node>.pushNewFlow(flow)
 
         enMonitor.update()
-    }
-
-    /**
-     * Updates the outgoing flow rates according to the total incoming data rate of each [EndToEndFlow].
-     * The flow is distributed homogeneously among the links with the same shortest path.
-     */
-    private fun updateOutGoingFlowRates(eToEFlowId: Int) {
-        val totalIncomingFlowDataRate: Double = flowTable.totalIncomingDataOf(eToEFlowId)
-        val outgoingFlowsForEtoEFlow: Set<Flow> = flowTable.getOutGoingFlowsOf(eToEFlowId)
-        outgoingFlowsForEtoEFlow.forEach {
-            it.dataRate = totalIncomingFlowDataRate / outgoingFlowsForEtoEFlow.size
-        }
     }
 
     override fun getDfltEnModel(): EnModel<Switch> = SwitchDfltEnModel

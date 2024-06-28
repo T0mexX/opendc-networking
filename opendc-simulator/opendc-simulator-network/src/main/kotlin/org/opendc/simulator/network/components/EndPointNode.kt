@@ -52,16 +52,15 @@ internal interface EndPointNode: Node {
     }
 
     override fun pushNewFlow(flow: Flow) {
-        require(flow.finalDestinationId == this.id)
-        { "EndPoint (id=$id) received flow (id=${flow.endToEndFlowId}) directed to another id (${flow.finalDestinationId})" }
-        require(incomingEtoEFlows.contains(flow.endToEndFlowId))
-        {
-            "EndPoint (id=$id) received flow (id=${flow.endToEndFlowId}) not present in its incoming end-to-end flows. " +
-                "The EndToEndFlow should be added to the map beforehand."
+
+        if (flow.finalDestinationId == this.id) {
+            flowTable.addIncomingFLow(flow)
+            updateEndToEndFlowDataRate(flow.endToEndFlowId)
+            flow.addDataRateObsChangeHandler(this.dataRateOnChangeHandler)
+        } else {
+            outgoingEtoEFlows[flow.endToEndFlowId]
+            super<Node>.pushNewFlow(flow)
         }
-        flowTable.addIncomingFLow(flow)
-        updateEndToEndFlowDataRate(flow.endToEndFlowId)
-        flow.addDataRateObsChangeHandler(this.dataRateOnChangeHandler)
     }
 
     /**
