@@ -31,9 +31,12 @@ private class NetworkPlayground: CliktCommand(name = "bo") {
     private val env: PlaygroundEnv
 
     init {
-        val jsonReader = Json { ignoreUnknownKeys = true }
-        val networkSpecs: Specs<Network> = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
-        network = networkSpecs.buildFromSpecs()
+        if (file.exists()) {
+            val jsonReader = Json { ignoreUnknownKeys = true }
+            val networkSpecs: Specs<Network> = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
+            network = networkSpecs.buildFromSpecs()
+        } else network = CustomNetwork()
+
         energyRecorder = NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
         env = PlaygroundEnv(network = network, energyRecorder = energyRecorder)
         println(network.allNodesToString())

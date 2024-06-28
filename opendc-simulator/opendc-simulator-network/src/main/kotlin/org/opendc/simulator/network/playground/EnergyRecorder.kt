@@ -10,23 +10,27 @@ import org.opendc.simulator.network.utils.logger
 internal class NetworkEnergyRecorder(consumers: List<EnergyConsumer<*>>) {
     companion object { val log by logger() }
 
-    var currentConsumption: Double = .0
+    var currentConsumption: Watts = .0
         private set
-    var totalConsumption: Double = .0
+    var totalConsumption: Watts = .0
         private set
+
     private val consumers: Map<NodeId, EnergyConsumer<*>> = consumers.associateBy { it.id }
+
     private val energyUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, Watts> { _, oldValue, newValue ->
         currentConsumption += newValue - oldValue
     }
 
-    init { consumers.forEach { it.enMonitor.addObserver(energyUseOnChangeHandler) } }
+    init {
+        consumers.forEach { it.enMonitor.addObserver(energyUseOnChangeHandler) }
+        consumers.forEach { it.enMonitor.update() }
+    }
 
     fun getFmtReport(): String {
         // TODO: change/improve
         return """
             === ENERGY REPORT ===
-//            Total Energy Consumption: ${totalConsumption}kWh
-            Current Energy Consumption: ${currentConsumption}kWh
+            Current Energy Consumption: ${currentConsumption}W
             =====================
         """.trimIndent()
     }

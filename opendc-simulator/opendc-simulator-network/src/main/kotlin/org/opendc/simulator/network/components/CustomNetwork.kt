@@ -53,6 +53,16 @@ internal class CustomNetwork(
         }
     }
 
+    /**
+     * Adds a node to the network if a node with same id is not already present.
+     * @param[node] node to add.
+     */
+    fun addNode(node: Node) {
+        nodes[node.id]?.let { log.error("unable to add node $node, id already present"); return }
+        nodes[node.id] = node
+        (node as? EndPointNode)?.let { networkEndPointNodes[node.id] = node }
+    }
+
 
 
     /**
