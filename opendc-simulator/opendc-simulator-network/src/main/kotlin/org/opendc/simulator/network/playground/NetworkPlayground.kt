@@ -4,12 +4,16 @@ import com.github.ajalt.clikt.core.CliktCommand
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import org.opendc.simulator.network.components.CoreSwitch
+import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
+import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import java.io.File
 import kotlin.system.exitProcess
@@ -40,6 +44,7 @@ private class NetworkPlayground: CliktCommand(name = "bo") {
         while (true) {
             val str: String = readlnOrNull() ?: return
             whenMatch(str) {
+                Cmd.NEW_SWITCH.regex { Cmd.NEW_SWITCH.exec(this, env) }
                 Cmd.NEW_FLOW.regex { Cmd.NEW_FLOW.exec(this, env) }
                 Cmd.NEW_LINK.regex { Cmd.NEW_LINK.exec(this, env) }
                 Cmd.ENERGY_REPORT.regex { Cmd.ENERGY_REPORT.exec(this, env) }
@@ -53,6 +58,42 @@ private class NetworkPlayground: CliktCommand(name = "bo") {
 }
 
 private enum class Cmd {
+    NEW_SWITCH {
+        override val regex = Regex("\\s*(c|core|)(?:s|switch)\\s+(\\d+)\\s+([\\d.]+)\\s+(\\d+)\\s*")
+        override fun exec(result: MatchResult, env: PlaygroundEnv) {
+            val customNet: CustomNetwork = (env.network as? CustomNetwork) ?: let {
+                log.error("adding a switch is not allowed unless the network is custom type")
+                return
+            }
+            val groups: List<String> = result.groupValues
+            val id: NodeId = groups[2].toIntOrNull()?.let {
+                if (customNet.nodes.containsKey(it)) {
+                    log.error("unable to add node, id $it already present")
+                    return
+                }
+                it
+            } ?: let { log.error("unable to parse id"); return }
+            val portSpeed: Kbps = groups[3].toDoubleOrNull() ?: let { log.error("unable to parse port speed"); return }
+            val numOfPorts: Int = groups[4].toIntOrNull() ?: let { log.error("unable to parse number of ports"); return }
+            val newSwitch: Switch = let {
+                if (groups[1].isEmpty())
+                    Switch(
+                        id = id,
+                        portSpeed = portSpeed,
+                        numOfPorts = numOfPorts
+                    )
+                else
+                    CoreSwitch(
+                        id = id,
+                        portSpeed = portSpeed,
+                        numOfPorts = numOfPorts
+                    )
+            }
+
+            customNet.addNode(newSwitch)
+            log.info("$newSwitch added to network")
+        }
+    },
     NEW_FLOW {
         override val regex: Regex = Regex("\\s*(?:flow|f)\\s+(\\d+)\\s*(?:->| )\\s*(\\d+)\\s+(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
@@ -73,14 +114,18 @@ private enum class Cmd {
         }
     },
     NEW_LINK {
-        override val regex = Regex("\\s*(?:l|link)\\s+(\\d)\\s*[- ]\\s*(\\d)\\s*")
+        override val regex = Regex("\\s*(?:l|link)\\s+(\\d+)\\s*[- ]\\s*(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
             val groups: List<String> = result.groupValues
             val node1Id: NodeId = groups[1].toInt()
             val node2Id: NodeId = groups[2].toInt()
             val node1: Node = env.network.nodes[node1Id] ?: run { log.error("Invalid node id $node1Id"); return }
             val node2: Node = env.network.nodes[node2Id] ?: run { log.error("Invalid node id $node2Id"); return }
-            node1.connect(node2)
+            try {
+                node1.connect(node2)
+            } catch (e: Exception) { log.error(e.message); return}
+
+            log.info("link created")
         }
     },
     ENERGY_REPORT {
@@ -118,7 +163,8 @@ private enum class Cmd {
             val node: Node = env.network.nodes[nodeId]
                 ?: run { println("No node is assiciated with id $nodeId"); return }
             print("\n==== Flows in node $nodeId ====")
-//            println(node.flowTable.getFmtFlows())
+            println(node.flowTable.getFmtIngoingFlows())
+            println(node.flowTable.getFmtOutgoingFlows())
         }
 
     },
@@ -127,7 +173,7 @@ private enum class Cmd {
         override fun exec(result: MatchResult, env: PlaygroundEnv) { exitProcess(status = 0) }
     };
 
-    companion object { val log by logger() }
+    val log by logger(this.name)
     abstract val regex: Regex
     abstract fun exec(result: MatchResult, env: PlaygroundEnv)
 }
