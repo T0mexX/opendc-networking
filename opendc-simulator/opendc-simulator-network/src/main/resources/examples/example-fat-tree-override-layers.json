@@ -1,0 +1,9 @@
+
+{
+    "name": "example-fat-tree-topology-1",
+    "type": "fat-tree",
+    "switchSpecs": {
+        "numOfPorts": 4,
+        "portSpeed": 1000
+    }
+}
