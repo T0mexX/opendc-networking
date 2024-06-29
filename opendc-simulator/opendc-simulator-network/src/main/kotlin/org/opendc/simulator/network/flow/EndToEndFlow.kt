@@ -39,8 +39,14 @@ internal data class EndToEndFlow(
      * @param[sender]   the [EndPointNode] that generates the end-to-end flow.
      */
     fun getInitialFlow(sender: EndPointNode): Flow {
-        require(sender.id == this.senderId) { "BO" }
-        return Flow(sender = sender, dataRate = this.desiredDataRate, endToEndFlowId = this.flowId, finalDestinationId = destId)
+        require(sender.id == this.senderId) // TODO: add message
+
+        return Flow(
+            sender = sender,
+            id = this.flowId,
+            finalDestId = destId,
+            dataRate = desiredDataRate
+        )
     }
 
     /**

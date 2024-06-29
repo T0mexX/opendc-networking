@@ -26,11 +26,12 @@ internal class Link(private val sender: Node, private val receiver: Node) {
 
     /**
      * Pulls a flow from [sender]-[Node] into the link.
+     * If flow with same id already exists, they are swapped.
      * If needed, flow filters are adjusted and the resulting
      * output flow is pushed to the [receiver]-[Node].
      */
     fun pullFlow(flow: Flow) {
-        if (currLinkFlows.contains(flow.endToEndFlowId))
+        if (currLinkFlows.contains(flow.id))
             subExistingFlow(flow)
         else pullNewFlow(flow)
     }
@@ -41,7 +42,7 @@ internal class Link(private val sender: Node, private val receiver: Node) {
      * @param[flow]  replacer flow.
      */
     private fun subExistingFlow(flow: Flow) {
-        val newFlowId: FlowId = flow.endToEndFlowId
+        val newFlowId: FlowId = flow.id
         currLinkFlows[newFlowId]?. let { linkFlowFilter ->
             // handle case flow is already present
             currLinkFlows[newFlowId] = linkFlowFilter.copy(flowIn = flow)
@@ -57,16 +58,15 @@ internal class Link(private val sender: Node, private val receiver: Node) {
      * @param[newFlow]  new flow to pull.
      */
     private fun pullNewFlow(newFlow: Flow) {
-        val newFlowId: FlowId = newFlow.endToEndFlowId
+        val newFlowId: FlowId = newFlow.id
         require(!currLinkFlows.containsKey(newFlowId))
         { "this function should be called only if a flow with the " +
             "same id of the parameter is not already present in the link" }
 
         val outputFlow = Flow(
+            id = newFlowId,
             sender = sender,
-            dataRate = 0.0, // it's going to be updated
-            endToEndFlowId = newFlowId,
-            finalDestinationId = newFlow.finalDestinationId
+            finalDestId = newFlow.finalDestId,
         )
         val newLinkFlowFilter = LinkFlowFilter(
             flowIn = newFlow,
