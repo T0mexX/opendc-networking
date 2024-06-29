@@ -27,7 +27,7 @@ internal object StaticECMP: ForwardingPolicy {
         val dummyFlow: Flow = flow.copy(sender = forwarder)
         dummyFlow.split(linksToForwardTo.size).forEachIndexed { idx, subFlow ->
             flowTable.addOutgoingFlow(subFlow)
-            linksToForwardTo[idx]!!.pushNewFlow(subFlow)
+            linksToForwardTo[idx]!!.pullFlow(subFlow)
         }
     }
 

@@ -17,7 +17,7 @@ internal class Link(private val sender: Node, private val receiver: Node) {
      * Represent the maximum bandwidth of the link, which is determined by the minimum
      * port speed between the 2 nodes.
      */
-    private val maxBandwidth: Kbps = min(sender.portSpeed, receiver.portSpeed).toDouble()
+    private val maxBandwidth: Kbps = min(sender.portSpeed, receiver.portSpeed)
 
     /**
      * Maps each [Flow]'s id to its [LinkFlowFilter].
@@ -25,17 +25,46 @@ internal class Link(private val sender: Node, private val receiver: Node) {
     private val currLinkFlows: MutableMap<FlowId, LinkFlowFilter> = HashMap()
 
     /**
-     * Pushes a new flow from sender [Node] into the link.
+     * Pulls a flow from [sender]-[Node] into the link.
      * If needed, flow filters are adjusted and the resulting
-     * output flow is pushed to the receiver [Node].
+     * output flow is pushed to the [receiver]-[Node].
      */
-    fun pushNewFlow(newFlow: Flow) {
+    fun pullFlow(flow: Flow) {
+        if (currLinkFlows.contains(flow.endToEndFlowId))
+            subExistingFlow(flow)
+        else pullNewFlow(flow)
+    }
+
+    /**
+     * Substitutes the existing incoming flow with the
+     * same id as [flow] with [flow].
+     * @param[flow]  replacer flow.
+     */
+    private fun subExistingFlow(flow: Flow) {
+        val newFlowId: FlowId = flow.endToEndFlowId
+        currLinkFlows[newFlowId]?. let { linkFlowFilter ->
+            // handle case flow is already present
+            currLinkFlows[newFlowId] = linkFlowFilter.copy(flowIn = flow)
+            updateFilters()
+            return
+        } ?: throw IllegalArgumentException("this function should be called only if a flow with the " +
+            "same id of the parameter is already present in the link")
+    }
+
+    /**
+     * Pulls a new flow from [sender]-[Node]. Requires that
+     * no flow with same id already exists in the link.
+     * @param[newFlow]  new flow to pull.
+     */
+    private fun pullNewFlow(newFlow: Flow) {
         val newFlowId: FlowId = newFlow.endToEndFlowId
-        require(!currLinkFlows.containsKey(newFlowId)) { "Pushing flow (id=$newFlowId) on a link with flow already present." }
+        require(!currLinkFlows.containsKey(newFlowId))
+        { "this function should be called only if a flow with the " +
+            "same id of the parameter is not already present in the link" }
 
         val outputFlow = Flow(
             sender = sender,
-            dataRate = 0.0,
+            dataRate = 0.0, // it's going to be updated
             endToEndFlowId = newFlowId,
             finalDestinationId = newFlow.finalDestinationId
         )
@@ -96,5 +125,8 @@ internal class Link(private val sender: Node, private val receiver: Node) {
         init {
             flowIn.addDataRateObsChangeHandler(this.dataRateOnChangeHandler)
         }
+
+        fun copy(flowIn: Flow = this.flowIn, flowOut: Flow = this.flowOut): LinkFlowFilter =
+            LinkFlowFilter(flowIn, flowOut)
     }
 }
