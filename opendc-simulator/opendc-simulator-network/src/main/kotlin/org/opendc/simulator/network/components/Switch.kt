@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.components.internalstructs.FlowsTable
 import org.opendc.simulator.network.utils.IdDispatcher
-import org.opendc.simulator.network.flow.EndToEndFlow
 import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
@@ -36,7 +35,7 @@ internal open class Switch (
     override val dataRateOnChangeHandler =
         OnChangeHandler<Flow, Double> { inFlow, old, new ->
             if (old == new) return@OnChangeHandler
-            this@Switch.updateOutGoingFlowRates(inFlow.endToEndFlowId)
+            this@Switch.updateOutGoingFlowRates(inFlow.id)
         }
 
     /**
@@ -48,7 +47,7 @@ internal open class Switch (
      * @param[flow] new incoming flow.
      */
     override fun pushNewFlow(flow: Flow) {
-        require(flow.finalDestinationId != this.id) { "Flow cannot have a switch as destination (except CoreSwitches)." }
+        require(flow.finalDestId != this.id) { "Flow cannot have a switch as destination (except CoreSwitches)." }
 
         super<Node>.pushNewFlow(flow)
 

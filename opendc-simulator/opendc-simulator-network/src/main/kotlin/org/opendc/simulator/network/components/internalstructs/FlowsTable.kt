@@ -32,9 +32,9 @@ internal class FlowsTable {
     fun addIncomingFLow(flow: Flow) {
         // TODO: add warning if flow with same id and sender is already present
         incomingFlows
-            .getOrPut(flow.endToEndFlowId) { HashSet() }
-                .removeAll { it.endToEndFlowId == flow.endToEndFlowId && it.sender === flow.sender }
-        incomingFlows[flow.endToEndFlowId]?.add(flow)
+            .getOrPut(flow.id) { HashSet() }
+                .removeAll { it.id == flow.id && it.sender === flow.sender }
+        incomingFlows[flow.id]?.add(flow)
     }
 
     /**
@@ -42,7 +42,7 @@ internal class FlowsTable {
      * @param[flow]     outgoing flow to add.
      */
     fun addOutgoingFlow(flow: Flow) {
-        outgoingFlows.getOrPut(flow.endToEndFlowId) { HashSet() }
+        outgoingFlows.getOrPut(flow.id) { HashSet() }
             .add(flow)
     }
 

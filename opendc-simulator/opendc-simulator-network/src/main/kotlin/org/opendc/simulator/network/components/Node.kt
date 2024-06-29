@@ -112,9 +112,9 @@ internal interface Node {
     fun pushNewFlow(flow: Flow) {
         flowTable.addIncomingFLow(flow)
         flow.addDataRateObsChangeHandler(handler = this.dataRateOnChangeHandler)
-        if (flowTable.hasOutgoingRoutsFor(flow.endToEndFlowId)) {
+        if (flowTable.hasOutgoingRoutsFor(flow.id)) {
             // less compute intensive
-            updateOutGoingFlowRates(flow.endToEndFlowId)
+            updateOutGoingFlowRates(flow.id)
             return
         }
 

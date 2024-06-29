@@ -12,15 +12,15 @@ internal typealias FlowId = Int
 /**
  * Represent a flow that passes through a single port.
  * It can either be a flow from [Node] to [Link] or from [Link] to [Node]
+ * @param[id]           id of the [EndToEndFlow] to which this port flow belongs.
  * @param[sender]                   node from which this flow is sent.
- * @param[endToEndFlowId]           id of the [EndToEndFlow] to which this port flow belongs.
- * @param[finalDestinationId]       id of the node the corresponding [EndToEndFlow] is to be routed to.
+ * @param[finalDestId]       id of the node the corresponding [EndToEndFlow] is to be routed to.
  */
-internal class Flow(
+internal class Flow (
+    val id: FlowId,
     val sender: Node,
-    val endToEndFlowId: FlowId,
-    val finalDestinationId: NodeId,
-    dataRate: Kbps
+    val finalDestId: NodeId,
+    dataRate: Kbps = .0
 ) {
     /**
      * The current data rate of this flow.
@@ -41,18 +41,10 @@ internal class Flow(
         dataRateOnChangeHandlers.add(handler)
     }
 
-    /**
-     * Helper method to easily copy the [Flow] changing only a subset of the parameters.
-     */
     fun copy(
+        id: FlowId = this.id,
         sender: Node = this.sender,
-        endToEndFlowId: FlowId = this.endToEndFlowId,
-        finalDestinationId: NodeId = this.finalDestinationId,
+        finalDestId: NodeId = this.finalDestId,
         dataRate: Kbps = this.dataRate
-    ): Flow {
-        return Flow(sender, endToEndFlowId, finalDestinationId, dataRate)
-    }
-
-    override fun toString(): String =
-        "{NetFlow (eToEId=$endToEndFlowId) from $sender with dataRate=$dataRate}"
+    ): Flow = Flow(id, sender, finalDestId, dataRate)
 }

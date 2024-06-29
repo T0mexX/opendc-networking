@@ -29,7 +29,7 @@ internal interface EndPointNode: Node {
         get() {
             return OnChangeHandler { inFlow, old, new ->
                 if (old == new) return@OnChangeHandler
-                updateEndToEndFlowDataRate(inFlow.endToEndFlowId)
+                updateEndToEndFlowDataRate(inFlow.id)
             }
         }
 
@@ -53,12 +53,12 @@ internal interface EndPointNode: Node {
 
     override fun pushNewFlow(flow: Flow) {
 
-        if (flow.finalDestinationId == this.id) {
+        if (flow.finalDestId == this.id) {
             flowTable.addIncomingFLow(flow)
-            updateEndToEndFlowDataRate(flow.endToEndFlowId)
+            updateEndToEndFlowDataRate(flow.id)
             flow.addDataRateObsChangeHandler(this.dataRateOnChangeHandler)
         } else {
-            outgoingEtoEFlows[flow.endToEndFlowId]
+            outgoingEtoEFlows[flow.id]
             super<Node>.pushNewFlow(flow)
         }
     }
