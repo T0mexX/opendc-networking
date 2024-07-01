@@ -7,6 +7,7 @@ import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.largerThanBy
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -58,8 +59,8 @@ internal data class Port(
     val utilization: Double
         get() {
             val util: Double = (throughputIn + throughputOut) / (speed * 2)
-            check (util !in .0..1.0) { "measured utilization not a valid percentage" }
-            return util
+            check (util in .0..1.0001) { "measured utilization ($util) not a valid percentage" }
+            return minOf(util, 1.0)
         }
 
     /**
@@ -69,13 +70,15 @@ internal data class Port(
         get() {
             return linkIn?. let {
                 val throughput: Kbps = incomingFlows.values.sumOf { it.dataRate }
-                check (throughput > speed ||
-                    throughput > linkIn !!.maxBW ||
-                    throughput > linkIn !!.opposite(this).speed
-                ) { "measured throughput higher than port speed" }
-                throughput
+                check (throughput.largerThanBy(maxNodeToNodeSpeed, deltaPerc = 0.001))
+                { "measured throughputIn ($throughput) higher than possible link speed " +
+                    "(${maxNodeToNodeSpeed})" }
+                minOf(throughput, maxNodeToNodeSpeed)
             } ?: .0
         }
+
+    private val maxNodeToNodeSpeed: Double
+        get() { return minOf(speed, linkIn !!.maxBW, linkIn !!.opposite(this).speed) }
 
     /**
      * The throughput of the outgoing flows (measured by the port on the other end of the link).
