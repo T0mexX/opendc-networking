@@ -5,12 +5,12 @@ import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.utils.Kbps
 import kotlin.math.min
 
-///**
-// * Link that connects 2 [Node]s. Its maximum bandwidth
-// * is determined by the minimum port speed between the 2 nodes.
-// * @param[sender]   sender node.
-// * @param[receiver] receiver node.
-// */
+/**
+ * Unidirectional link that connects 2 [Port]s. Its maximum bandwidth (if not provided)
+ * is determined by the minimum speed between the 2 ports.
+ * @param[senderPort]   sender node's port.
+ * @param[receiverPort] receiver node's port.
+ */
 internal class Link(
     private val senderPort: Port,
     private val receiverPort: Port,
@@ -22,12 +22,12 @@ internal class Link(
         receiverPort.linkIn = this
     }
 
-//    /**
-//     * Pulls a flow from [sender]-[Node] into the link.
-//     * If flow with same id already exists, they are swapped.
-//     * If needed, flow filters are adjusted and the resulting
-//     * output flow is pushed to the [receiver]-[Node].
-//     */
+    /**
+     * Pulls a flow from [senderPort]-[Node] into the link through [addFlow].
+     * After necessary updates, the [receiverPort] is updated.
+     * @see[addFlow]
+     * @param[flow]     flow to be pulled into the link.
+     */
     fun pullFlow(flow: Flow) {
         super<FlowFilterer>.addFlow(flow, ifNew = receiverPort::pullFlow)
         receiverPort.update()

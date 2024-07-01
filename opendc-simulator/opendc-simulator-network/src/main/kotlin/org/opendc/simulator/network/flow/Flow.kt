@@ -10,11 +10,12 @@ import kotlin.properties.Delegates
 internal typealias FlowId = Int
 
 /**
- * Represent a flow that passes through a single port.
+ * Represent a flow that passes through a single medium.
  * It can either be a flow from [Node] to [Link] or from [Link] to [Node]
- * @param[id]           id of the [EndToEndFlow] to which this port flow belongs.
- * @param[sender]                   node from which this flow is sent.
- * @param[finalDestId]       id of the node the corresponding [EndToEndFlow] is to be routed to.
+ * @param[id]                   id of the [EndToEndFlow] to which this port flow belongs.
+ * @param[sender]               node from which this flow is sent.
+ * @param[finalDestId]          id of the node the corresponding [EndToEndFlow] is to be routed to.
+ * @param[dataRate]             initial data rate.
  */
 internal class Flow (
     val id: FlowId,
@@ -36,12 +37,16 @@ internal class Flow (
     private val dataRateOnChangeHandlers: MutableList<OnChangeHandler<Flow, Kbps>> = mutableListOf()
 
     /**
-     * Adds a data rate observer.
+     * Adds a data rate observer. Not used anymore for performance reasons.
      */
     fun addDataRateObsChangeHandler(handler: OnChangeHandler<Flow, Kbps>) {
         dataRateOnChangeHandlers.add(handler)
     }
 
+    /**
+     * Utility function since non property
+     * parameters are not allowed in data classes.
+     */
     fun copy(
         id: FlowId = this.id,
         sender: Node = this.sender,

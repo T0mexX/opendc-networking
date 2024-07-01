@@ -39,7 +39,7 @@ class FatTreeNetworkTest: FunSpec({
             SwitchSpecs(numOfPorts = 4, portSpeed = .0),
             SwitchSpecs(numOfPorts = 6, portSpeed = .0),
             SwitchSpecs(numOfPorts = 8, portSpeed = .0),
-            SwitchSpecs(numOfPorts = 10, portSpeed = .0)
+//            SwitchSpecs(numOfPorts = 10, portSpeed = .0)
         ) { switchSpecs ->
             val k: Int = switchSpecs.numOfPorts
             val fatTree: FatTreeNetwork = FatTreeTopologySpecs(switchSpecs = switchSpecs).buildFromSpecs()

@@ -34,20 +34,6 @@ internal data class EndToEndFlow(
      */
     var currDataRate: Kbps = 0.0
 
-//    /**
-//     * Returns the [Flow] that the [sender] needs to send to forward in order to start the end-to-end flow.
-//     * @param[sender]   the [EndPointNode] that generates the end-to-end flow.
-//     */
-//    fun getInitialFlow(sender: EndPointNode): Flow {
-//        require(sender.id == this.senderId) // TODO: add message
-//
-//        return Flow(
-//            sender = sender,
-//            id = this.flowId,
-//            finalDestId = destId,
-//        ).withDataRate(this.desiredDataRate)
-//    }
-
     /**
      * Advances time by [timeSpan], adjusting [remDataToTransmit] accordingly.
      */
