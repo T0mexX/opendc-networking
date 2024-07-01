@@ -17,13 +17,13 @@
         {
             "type": "cluster-specs",
             "id": 0,
-            "numOfPorts": 1,
+            "numOfPorts": 2,
             "portSpeed": 10000
         },
         {
             "type": "cluster-specs",
             "id": 3,
-            "numOfPorts": 1,
+            "numOfPorts": 2,
             "portSpeed": 10000
         }
     ],
