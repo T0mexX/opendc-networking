@@ -21,26 +21,15 @@ internal interface EndPointNode: Node {
      */
     val incomingEtoEFlows: MutableMap<NodeId, EndToEndFlow>
 
-    override val dataRateOnChangeHandler: OnChangeHandler<Flow, Kbps>
-        /**
-         * The getter is needed to be able to define in interface.
-         * Call the getter only once per instance to avoid overhead.
-         */
-        get() {
-            return OnChangeHandler { inFlow, old, new ->
-                if (old == new) return@OnChangeHandler
-                updateEndToEndFlowDataRate(inFlow.id)
-            }
-        }
 
     /**
      * Starts a [EndToEndFlow] from ***this*** node.
      * @param[netEtoEFlow]  the [EndToEndFlow] to be started.
      */
-    fun startFlow(netEtoEFlow: EndToEndFlow) {
+    fun startFlow(etoEFlow: EndToEndFlow) {
         // TODO: change
-        outgoingEtoEFlows[netEtoEFlow.flowId] = netEtoEFlow
-        forwardingPolicy.forwardFlow(forwarder = this, netEtoEFlow.getInitialFlow(sender = this))
+        outgoingEtoEFlows[etoEFlow.flowId] = etoEFlow
+        forwardingPolicy.forwardFlow(forwarder = this, etoEFlow.flowId, etoEFlow.destId)
     }
 
     /**
@@ -51,17 +40,14 @@ internal interface EndPointNode: Node {
         incomingEtoEFlows[netEtoEFlow.flowId] = netEtoEFlow
     }
 
-    override fun pushNewFlow(flow: Flow) {
 
-        if (flow.finalDestId == this.id) {
-            flowTable.addIncomingFLow(flow)
-            updateEndToEndFlowDataRate(flow.id)
-            flow.addDataRateObsChangeHandler(this.dataRateOnChangeHandler)
-        } else {
-            outgoingEtoEFlows[flow.id]
-            super<Node>.pushNewFlow(flow)
-        }
+    override fun notifyFlowChange(flow: Flow) {
+        incomingEtoEFlows[flow.id]?. let { updateEndToEndFlowDataRate(flow.id) }
+            ?: let { super<Node>.notifyFlowChange(flow) }
     }
+
+    override fun totDataRateOf(flowId: FlowId): Kbps =
+        super<Node>.totDataRateOf(flowId) + (outgoingEtoEFlows[flowId]?.desiredDataRate ?: .0)
 
     /**
      * Updates the end-to-end data rate of a [EndToEndFlow] if the flow is expected to be received, else throws error.
@@ -69,6 +55,6 @@ internal interface EndPointNode: Node {
      */
     private fun updateEndToEndFlowDataRate(endToEndFlowId: FlowId) {
         val endToEndFlow: EndToEndFlow = incomingEtoEFlows[endToEndFlowId] ?: throw IllegalArgumentException()
-        endToEndFlow.currDataRate = flowTable.totalIncomingDataOf(endToEndFlowId)
+        endToEndFlow.currDataRate = totDataRateOf(endToEndFlowId)
     }
 }

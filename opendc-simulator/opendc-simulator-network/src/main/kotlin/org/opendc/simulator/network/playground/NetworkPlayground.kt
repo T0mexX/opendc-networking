@@ -25,13 +25,14 @@ public fun main(args: Array<String>): Unit = NetworkPlayground().main(args)
 @OptIn(ExperimentalSerializationApi::class)
 private class NetworkPlayground: CliktCommand(name = "bo") {
 
-    private val file = File("resources/custom-network-topology-specs-example4.json")
+    private val file: File = File("resources/examples/custom-network-topology-specs-example4.json")
     private val network: Network
     private val energyRecorder: NetworkEnergyRecorder
     private val env: PlaygroundEnv
 
     init {
         if (file.exists()) {
+            println("exists")
             val jsonReader = Json { ignoreUnknownKeys = true }
             val networkSpecs: Specs<Network> = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
             network = networkSpecs.buildFromSpecs()
@@ -165,9 +166,8 @@ private enum class Cmd {
             val nodeId: NodeId = result.groupValues[1].toInt()
             val node: Node = env.network.nodes[nodeId]
                 ?: run { println("No node is assiciated with id $nodeId"); return }
-            print("\n==== Flows in node $nodeId ====")
-            println(node.flowTable.getFmtIngoingFlows())
-            println(node.flowTable.getFmtOutgoingFlows())
+            println("\n==== Flows in node $nodeId ====")
+            println(node.getFmtFlows())
         }
 
     },

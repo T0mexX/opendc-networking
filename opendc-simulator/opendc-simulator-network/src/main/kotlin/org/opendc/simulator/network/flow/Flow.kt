@@ -19,6 +19,7 @@ internal typealias FlowId = Int
 internal class Flow (
     val id: FlowId,
     val sender: Node,
+    val receiver: Node,
     val finalDestId: NodeId,
     dataRate: Kbps = .0
 ) {
@@ -44,7 +45,8 @@ internal class Flow (
     fun copy(
         id: FlowId = this.id,
         sender: Node = this.sender,
+        receiver: Node = this.receiver,
         finalDestId: NodeId = this.finalDestId,
         dataRate: Kbps = this.dataRate
-    ): Flow = Flow(id, sender, finalDestId, dataRate)
+    ): Flow = Flow(id, sender, receiver, finalDestId, dataRate)
 }
