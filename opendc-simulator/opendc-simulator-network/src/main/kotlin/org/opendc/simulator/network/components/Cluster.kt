@@ -3,6 +3,7 @@ package org.opendc.simulator.network.components
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.components.internalstructs.FlowsTable
+import org.opendc.simulator.network.components.internalstructs.Port
 import org.opendc.simulator.network.utils.IdDispatcher
 import org.opendc.simulator.network.flow.EndToEndFlow
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
@@ -27,17 +28,20 @@ internal class Cluster(
     override val forwardingPolicy: ForwardingPolicy = StaticECMP
 ) : EnergyConsumer<Cluster>, EndPointNode {
     override val outgoingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
+
     override val incomingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
-    override val linksToAdjNodes: MutableMap<NodeId, Link> = HashMap()
+
     override val routingTable: RoutingTable = RoutingTable(this.id)
-    override val flowTable: FlowsTable = FlowsTable()
+
+    override val portToNode: MutableMap<NodeId, Port> = HashMap()
+
     override val enMonitor by lazy { EnMonitor(this) }
 
-    override fun pushNewFlow(flow: Flow) {
-        super<EndPointNode>.pushNewFlow(flow)
+    override val ports: List<Port> =
+        buildList { repeat(numOfPorts) {
+            add(Port(speed = portSpeed, node = this@Cluster))
+        } }
 
-        enMonitor.update()
-    }
 
     override fun getDfltEnModel(): EnModel<Cluster> = ClusterDfltEnModel
 

@@ -1,12 +1,12 @@
 package org.opendc.simulator.network.components
 
-import org.opendc.simulator.network.flow.Flow
-import org.opendc.simulator.network.utils.OnChangeHandler
-import org.opendc.simulator.network.components.internalstructs.FlowsTable
+import org.opendc.simulator.network.components.internalstructs.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
-import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.flow.Flow
+import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.logger
 
 /**
  * Type alias for improved understandability.
@@ -16,45 +16,50 @@ internal typealias NodeId = Int
 /**
  * Interface representing a node in a [Network].
  */
-internal interface Node {
+internal interface Node: FlowView {
+    companion object { private val log by logger() }
     // TODO: allow connection between nodes without immediate vector routing forwarding,
     //  to optimize network building
     val id: NodeId
     val portSpeed: Kbps
-    val numOfPorts: Int
+    val ports: List<Port>
+    val numOfPorts: Int get() { return ports.size }
     val forwardingPolicy: ForwardingPolicy
 
-    /**
-     * Handler called when an incoming [Flow] changes its data rate.
-     */
-    val dataRateOnChangeHandler: OnChangeHandler<Flow, Kbps>
-
-    /**
-     * Maps the [NodeId] to the [Link] which is connected to the [Node] with that id.
-     */
-    val linksToAdjNodes: MutableMap<NodeId, Link>
-
     val routingTable: RoutingTable
-    val flowTable: FlowsTable
+    val portToNode: MutableMap<NodeId, Port>
 
     /**
      * Property returning the number of [Node]s connected to ***this***.
      */
     private val numOfConnectedNodes: Int
-        get() { return linksToAdjNodes.size }
+        get() { return ports.count { it.isConnected() } }
+
+    private fun getFreePort(): Port? =
+        ports.firstOrNull { !it.isConnected() }
 
     /**
      * Connects ***this*** to `other` [Node] through a [Link],
      * updating the respective [RoutingTable]s.
      * @param[other]    the [Node] to connect to.
      */
-    @Throws(IllegalStateException::class)
     fun connect(other: Node) {
-        check(numOfConnectedNodes < numOfPorts)
-            { "Unable to connect switch, maximum number of connected nodes reached ($numOfPorts)." }
+        if (other.id in portToNode.keys) {
+            log.error("unable to connect $this to $other, nodes already connected")
+            return
+        }
 
-        linksToAdjNodes[other.id] = Link(sender = this, receiver = other)
-        other.accept(this)
+        val freePort: Port = getFreePort()
+            ?: let {
+                log.error("unable to connect, maximum number of connected nodes reached ($numOfPorts).")
+                return
+            }
+
+        val otherPort: Port = other.accept(this, freePort) ?: return
+
+        portToNode[other.id] = freePort
+        Link(freePort, otherPort)
+
         other.pushRoutingVector(routingTable.routingVector, vectorOwner = this)
     }
 
@@ -65,12 +70,19 @@ internal interface Node {
      * @param[other]    node that is requesting to connect.
      */
     @Throws(IllegalStateException::class)
-    private fun accept(other: Node) {
-        check(numOfConnectedNodes < numOfPorts)
-            { "Unable to connect node (id=${this.id}, maximum number of connected nodes reached ($numOfPorts)." }
+    private fun accept(other: Node, otherPort: Port): Port? {
+        val freePort: Port = getFreePort()
+            ?: let {
+                log.error("Unable to accept connection, maximum number of connected nodes reached ($numOfPorts).")
+                return null
+            }
 
-        linksToAdjNodes[other.id] = Link(sender = this, receiver = other)
+        Link(freePort, otherPort)
+
+        portToNode[other.id] = freePort
         other.pushRoutingVector(routingTable.routingVector, vectorOwner = this)
+
+        return freePort
     }
 
     /**
@@ -84,8 +96,8 @@ internal interface Node {
         routingTable.mergeRoutingVector(routingVector, vectorOwner)
         if (!routingTable.isChanged) return
 
-        linksToAdjNodes.values.forEach { link: Link ->
-            val adjNode: Node = link.opposite(this)
+        portToNode.forEach { (_, port) ->
+            val adjNode: Node = port.linkIn?.opposite(port)?.node ?: return@forEach
             if (adjNode !== vectorOwner) adjNode.pushRoutingVector(routingTable.routingVector, vectorOwner = this)
         }
     }
@@ -105,33 +117,23 @@ internal interface Node {
         return 0.5
     }
 
-    /**
-     * Pushes a new flow from an adjacent [Node] into ***this***.
-     * If needed, it forwards the flow based on the [forwardingPolicy].
-     */
-    fun pushNewFlow(flow: Flow) {
-        flowTable.addIncomingFLow(flow)
-        flow.addDataRateObsChangeHandler(handler = this.dataRateOnChangeHandler)
-        if (flowTable.hasOutgoingRoutsFor(flow.id)) {
-            // less compute intensive
-            updateOutGoingFlowRates(flow.id)
-            return
-        }
+    fun totDataRateOf(flowId: FlowId): Kbps =
+        ports.sumOf { it.incomingFlows[flowId]?.dataRate ?: .0 }
 
-        forwardingPolicy.forwardFlow(forwarder = this, flow)
-    }
-
-    /**
-     * Updates the outgoing flow rates according to the total incoming data rate of each [EndToEndFlow].
-     * The flow is distributed homogeneously among the links with the same shortest path.
-     */
-    fun updateOutGoingFlowRates(eToEFlowId: Int) {
-        val totalIncomingFlowDataRate: Double = flowTable.totalIncomingDataOf(eToEFlowId)
-        val outgoingFlowsForEtoEFlow: Set<Flow> = flowTable.getOutGoingFlowsOf(eToEFlowId)
-        outgoingFlowsForEtoEFlow.forEach {
-            it.dataRate = totalIncomingFlowDataRate / outgoingFlowsForEtoEFlow.size
-        }
+    fun notifyFlowChange(flow: Flow) {
+        forwardingPolicy.forwardFlow(forwarder = this, flow.id, flow.finalDestId)
     }
 
     fun routingTableToString(): String = routingTable.toString()
+
+    override fun totIncomingDataRateOf(flowId: FlowId): Kbps =
+        ports.sumOf { it.incomingFlows[flowId]?.dataRate ?: .0 }
+
+    override fun totOutgoingDataRateOf(flowId: FlowId): Kbps =
+        ports.sumOf { it.outgoingFlows[flowId]?.dataRate ?: .0 }
+
+    override fun allTransitingFlowsIds(): Collection<FlowId> =
+        portToNode.flatMap { (_, port) ->
+            port.incomingFlows.keys + port.outgoingFlows.keys
+        }.toSet()
 }

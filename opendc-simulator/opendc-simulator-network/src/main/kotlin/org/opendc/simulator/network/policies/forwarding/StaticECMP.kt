@@ -5,7 +5,10 @@ import org.opendc.simulator.network.components.internalstructs.FlowsTable
 import org.opendc.simulator.network.components.Link
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.components.internalstructs.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
+import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.utils.Kbps
 
 
 /**
@@ -15,32 +18,37 @@ import org.opendc.simulator.network.components.internalstructs.RoutingTable
  */
 internal object StaticECMP: ForwardingPolicy {
 
-    override fun forwardFlow(forwarder: Node, flow: Flow) {
+    override fun forwardFlow(forwarder: Node, flowId: FlowId, finalDestId: NodeId) {
         val routTable: RoutingTable = forwarder.routingTable
-        val linksToAdjNodes: Map<NodeId, Link> = forwarder.linksToAdjNodes
-        val flowTable: FlowsTable = forwarder.flowTable
+        val portToNode: Map<NodeId, Port> = forwarder.portToNode
+        val totDataRateToForward: Kbps = forwarder.totDataRateOf(flowId)
 
-        val linksToForwardTo: List<Link?> =
-            routTable.getPossiblePathsTo(flow.finalDestId)
-                ?.map { path -> linksToAdjNodes[path.nextHop.id] }!!
+        if (totDataRateToForward == .0) return
 
-        val dummyFlow: Flow = flow.copy(sender = forwarder)
-        dummyFlow.split(linksToForwardTo.size).forEachIndexed { idx, subFlow ->
-            flowTable.addOutgoingFlow(subFlow)
-            linksToForwardTo[idx]!!.pullFlow(subFlow)
-        }
+
+
+        val portsToForwardTo: List<Port> =
+            routTable.getPossiblePathsTo(finalDestId)
+                ?.map { path -> portToNode[path.nextHop.id]!! } !!
+
+        val rateForEachPort: Kbps = totDataRateToForward / portsToForwardTo.size
+        portsToForwardTo.forEach { it.pushFlowIntoLink(
+            flowId = flowId,
+            finalDestId = finalDestId,
+            dataRate = rateForEachPort
+        ) }
     }
 
-    /**
-     * Splits a [Flow] in `n` [Flow]s,
-     * each with `dataRate` equal to `/n` the initial flow `dataRate`.
-     * @param[n]    number of sub-flows to split into.
-     */
-    private fun Flow.split(n: Int): List<Flow> {
-        return buildList {
-            repeat(n) {
-                add(this@split.copy(dataRate = this@split.dataRate / n))
-            }
-        }
-    }
+//    /**
+//     * Splits a [Flow] in `n` [Flow]s,
+//     * each with `dataRate` equal to `/n` the initial flow `dataRate`.
+//     * @param[n]    number of sub-flows to split into.
+//     */
+//    private fun Flow.split(n: Int): List<Flow> {
+//        return buildList {
+//            repeat(n) {
+//                add(this@split.copy(dataRate = this@split.dataRate / n))
+//            }
+//        }
+//    }
 }
