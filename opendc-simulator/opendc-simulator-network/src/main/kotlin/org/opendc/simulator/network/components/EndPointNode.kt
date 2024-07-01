@@ -3,7 +3,6 @@ package org.opendc.simulator.network.components
 import org.opendc.simulator.network.flow.EndToEndFlow
 import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.Kbps
 
 /**

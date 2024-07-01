@@ -69,7 +69,7 @@ class CustomNetworkTest: FunSpec({
 
     context("build correct links from link list") {
         data class TestData(val nodes: List<Node>, val linkList: List<Pair<NodeId, NodeId>>)
-        fun Node.isConnectedTo(other: Node): Boolean = this.linksToAdjNodes.contains(other.id)
+        fun Node.isConnectedTo(other: Node): Boolean = this.portToNode.contains(other.id)
 
         val testDataGenerator: Arb<TestData> = Arb.bind(
             Arb.int(2..20),

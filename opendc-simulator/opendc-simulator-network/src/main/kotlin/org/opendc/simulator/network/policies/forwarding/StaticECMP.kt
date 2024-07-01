@@ -1,8 +1,6 @@
 package org.opendc.simulator.network.policies.forwarding
 
 import org.opendc.simulator.network.flow.Flow
-import org.opendc.simulator.network.components.internalstructs.FlowsTable
-import org.opendc.simulator.network.components.Link
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.internalstructs.Port
@@ -24,8 +22,6 @@ internal object StaticECMP: ForwardingPolicy {
         val totDataRateToForward: Kbps = forwarder.totDataRateOf(flowId)
 
         if (totDataRateToForward == .0) return
-
-
 
         val portsToForwardTo: List<Port> =
             routTable.getPossiblePathsTo(finalDestId)
