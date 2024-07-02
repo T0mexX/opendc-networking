@@ -4,6 +4,7 @@ import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
+import org.opendc.simulator.network.components.internalstructs.Port
 import kotlin.math.min
 
 /**
@@ -12,6 +13,11 @@ import kotlin.math.min
  */
 internal abstract class FlowFilterer {
     companion object { private val log by logger() }
+
+    /**
+     * The next filter in a chain of filters. e.g [Port] -> [Link] -> [Port]
+     */
+    var nextFilter: FlowFilterer? = null
 
     /**
      * Maps each [FlowId] with its associated [Filter].
@@ -42,15 +48,17 @@ internal abstract class FlowFilterer {
      * proportional to its [Filter.unfiltered] data rate.
      * The ids of the flows that are effectively changed
      * by this call are stored in [lastUpdatedFlows].
+     * @param[newFlowId]    if exists, a new flow that was added before this call,
+     * the resulting filtered flow is then added to [nextFilter].
      */
-    open fun updateFilters() {
+    open fun updateFilters(newFlowId: FlowId? = null ) {
         val lastUpdatedFlows: MutableList<Flow> = mutableListOf()
         val totIncomingDataRate: Kbps = filters.values.sumOf { it.unfiltered.dataRate }
 
         filters.values.filter { it.unfiltered.dataRate == .0 }
             .forEach {
                 lastUpdatedFlows.add(it.filtered)
-                resetAndRmFlow(it.id)
+                resetAndRmFlow(it.id, updateFilters = false)
             }
 
         filters.values.forEach { filter ->
@@ -63,38 +71,62 @@ internal abstract class FlowFilterer {
         }
 
         this.lastUpdatedFlows = lastUpdatedFlows
+
+        val newFilteredFlow: Flow? = filters[newFlowId]?.filtered
+        newFilteredFlow?. let { nextFilter?.addOrReplaceFlow(newFilteredFlow) }
+        nextFilter?.updateFilters()
     }
 
     /**
      * If a flow with same id is present, it is swapped with the new one.
      * Otherwise, the new flow is added and the callback [ifNew] is called with
-     * the filtered flow.
+     * the resulting filtered flow.
      * @param[flow]     flow to add.
      * @param[ifNew]    function to call if the flow was
      * not present already, with the filtered flow as arg.
      */
-    protected fun addOrReplaceFlow(flow: Flow, ifNew: (Flow) -> Unit = {}) {
+    open fun addOrReplaceFlow(flow: Flow, ifNew: (Flow) -> Unit = {}) {
         filters[flow.id]?. also {
             filters[flow.id] = Filter(unfiltered = flow, filtered = it.filtered)
             updateFilters()
         } ?: let {
             val newFilter = Filter(unfiltered = flow)
             filters[flow.id] = newFilter
-            updateFilters()
+            updateFilters(newFlowId = flow.id)
             ifNew(newFilter.filtered)
         }
     }
 
-    fun resetAndRmFlow(flowId: FlowId) {
+    /**
+     * Removes the flow from this medium, also setting its
+     * data rate to 0 so that [nextFilter] can act accordingly.
+     * @param[flowId]           id of the flow to remove.
+     * @param[updateFilters]    determines if filters are to be updated afterwards.
+     * @param[suppressErr]      suppresses the error generated in case a non present [flowId] is passed as param.
+     */
+    fun resetAndRmFlow(flowId: FlowId, updateFilters: Boolean = true, suppressErr: Boolean = false) {
         filters.remove(flowId)
-            ?. also { it.filtered.dataRate = .0; updateFilters(); }
-            ?: log.error("asked to remove a flow which is not present on this medium")
+            ?. also {
+                it.filtered.dataRate = .0
+                if (updateFilters) updateFilters();
+            }
+            ?: let { if (!suppressErr) log.error("asked to remove a flow which is not present on this medium") }
     }
 
+    /**
+     * Resets all flows and updates [nextFilter].
+     * @see[resetAndRmFlow]
+     */
     fun resetAll() {
-        filters.keys.toList().forEach { resetAndRmFlow(it) }
+        filters.keys.toList().forEach { resetAndRmFlow(it, updateFilters = false) }
+        nextFilter?.updateFilters()
     }
 
+    /**
+     * @param[unfiltered]               the unfiltered flow whose dedicated data rate is to be returned.
+     * @param[totalIncomingDataRate]    the sum of the data rate of all incoming unfiltered flows.
+     * @return                          the data rate that ***this***medium provides to the flow, hence the data rate of the filtered flow.
+     */
     private fun dedicatedDataRateOf(unfiltered: Flow, totalIncomingDataRate: Kbps): Kbps {
         val dedicatedLinkUtilizationPercentage: Kbps =
             (unfiltered.dataRate / totalIncomingDataRate)
@@ -121,15 +153,6 @@ internal abstract class FlowFilterer {
          * ID of the flow that is filtered.
          */
         val id: FlowId = unfiltered.id
-
-        // TODO: add option to enable auto updates? (with worse performance)
-//        private val dataRateOnChangeHandler = OnChangeHandler<Flow, Kbps> { _, _, _ ->
-//            this@FlowFilterer.updateFilters()
-//        }
-
-//        init {
-//            unfiltered.addDataRateObsChangeHandler(this.dataRateOnChangeHandler)
-//        }
 
         /**
          * Utility function since inner classes are not allowed to be data classes.

@@ -34,9 +34,9 @@ internal class RoutingTable(private val ownerId: NodeId) {
     private val table: HashMap<NodeId, MutableMap<NodeId, PossiblePath>> = HashMap()
 
     /**
-    * Add a [PossiblePath] to the routing table if it is minimal and not already included.
+    * Adds [pathToAdd] to the routing table. If a path with
+     * the same next hop is already present, it is substituted.
     * @param[pathToAdd] The possible path to add to the table.
-    * TODO: change to include non minimal paths, needed for energy/traffic aware software defined networking
     */
     private fun addOrReplacePath(pathToAdd: PossiblePath) {
         val destId: NodeId = pathToAdd.destinationId
@@ -53,6 +53,12 @@ internal class RoutingTable(private val ownerId: NodeId) {
         isChanged = true
     }
 
+    /**
+     * Removes a [PossiblePath] form the routing table.
+     * The combination of [destId] and [nextHopId] uniquely identifies a possible path in the table.
+     * @param[destId]       final destination of the path to be removed.
+     * @param[nextHopId]    the next hop [NodeId] of the path to be removed.
+     */
     private fun rmPath(destId: NodeId, nextHopId: NodeId) {
         table[destId]?.remove(nextHopId)
         if (table[destId]?.isEmpty() == true)
@@ -88,11 +94,11 @@ internal class RoutingTable(private val ownerId: NodeId) {
                     )
                 )
             }
-//        vector.forEach { (destId, numOfHops) ->
-//            if (destId == this.ownerId) return@forEach
-//            addPath(PossiblePath(destId, numOfHops + 1, owner))
     }
 
+    /**
+     * Removes all possible paths whose next hop is [node].
+     */
     fun removeNextHop(node: Node) {
         table.forEach { (_, possPaths) ->
             possPaths.remove(node.id)
@@ -100,7 +106,10 @@ internal class RoutingTable(private val ownerId: NodeId) {
         table.values.removeAll { it.isEmpty() }
     }
 
-    fun minNumOfHopsTo(destId: NodeId): Int? =
+    /**
+     * Returns the minimum distance between ***this*** and the node with id [destId].
+     */
+    private fun minNumOfHopsTo(destId: NodeId): Int? =
         table[destId]?.minOf { (_, possPath) -> possPath.numOfHops }
 
     override fun toString(): String = table.toString()

@@ -17,6 +17,9 @@ import org.opendc.simulator.network.utils.Kbps
  */
 internal object StaticECMP: ForwardingPolicy {
 
+    /**
+     * The [EndToEndFlow] in the network. Needed to retrieve the destination id when forwarding a flow.
+     */
     lateinit var eToEFlows: Map<FlowId, EndToEndFlow>
 
     override fun forwardFlow(forwarder: Node, flowId: FlowId) {
@@ -43,6 +46,9 @@ internal object StaticECMP: ForwardingPolicy {
         ) }
     }
 
+    /**
+     * Filters ***this*** collection of [RoutingTable.PossiblePath], keeping only those that are minimal.
+     */
     private fun Collection<RoutingTable.PossiblePath>.onlyMinimal(): Collection<RoutingTable.PossiblePath> {
         val min: Int = this.minOfOrNull { it.numOfHops } ?: 0
         return  this.filter { it.numOfHops == min }
