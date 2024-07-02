@@ -28,7 +28,7 @@ internal interface EndPointNode: Node {
     fun startFlow(etoEFlow: EndToEndFlow) {
         // TODO: change
         outgoingEtoEFlows[etoEFlow.flowId] = etoEFlow
-        forwardingPolicy.forwardFlow(forwarder = this, etoEFlow.flowId, etoEFlow.destId)
+        forwardingPolicy.forwardFlow(forwarder = this, etoEFlow.flowId)
     }
 
     /**
@@ -40,9 +40,9 @@ internal interface EndPointNode: Node {
     }
 
 
-    override fun notifyFlowChange(flow: Flow) {
-        incomingEtoEFlows[flow.id]?. let { updateEndToEndFlowDataRate(flow.id) }
-            ?: let { super<Node>.notifyFlowChange(flow) }
+    override fun notifyFlowChange(flowId: FlowId) {
+        incomingEtoEFlows[flowId]?. let { updateEndToEndFlowDataRate(flowId) }
+            ?: let { super<Node>.notifyFlowChange(flowId) }
     }
 
     override fun totDataRateOf(flowId: FlowId): Kbps =

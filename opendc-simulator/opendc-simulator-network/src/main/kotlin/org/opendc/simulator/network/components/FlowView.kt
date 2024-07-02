@@ -16,9 +16,14 @@ internal interface FlowView {
     fun totIncomingDataRateOf(flowId: FlowId): Kbps
 
     /**
-     * Returns the total outgoing data rate corresponding to [flowId].
+     * Returns the total outgoing data rate corresponding to [flowId] (not the throughput).
      */
     fun totOutgoingDataRateOf(flowId: FlowId): Kbps
+
+    /**
+     * Returns the outgoing throughput of the flow corresponding to [flowId].
+     */
+    fun throughputOutOf(flowId: FlowId): Kbps
 
     /**
      * Returns the [FlowId]s of all flows transiting
@@ -32,12 +37,18 @@ internal interface FlowView {
      */
     fun getFmtFlows(): String {
         val sb = StringBuilder()
-        sb.appendLine("id".padEnd(15) + "in".padEnd(15) + "out".padEnd(15))
+        sb.appendLine(
+            "id".padEnd(15) +
+                "in (Kbps)".padEnd(15) +
+                "out (Kbps)".padEnd(15) +
+                "throughput out (Kbps)"
+        )
         allTransitingFlowsIds().forEach { flowId ->
             sb.appendLine(
                 flowId.toString().padEnd(15) +
                     String.format("%.6f", totIncomingDataRateOf(flowId)).padEnd(15) +
-                    String.format("%.6f", totOutgoingDataRateOf(flowId)).padEnd(15)
+                    String.format("%.6f", totOutgoingDataRateOf(flowId)).padEnd(15) +
+                    String.format("%.6f", throughputOutOf(flowId)).padEnd(15)
             )
         }
         return sb.toString()

@@ -23,16 +23,20 @@ internal class Link(
     }
 
     /**
-     * Pulls a flow from [senderPort]-[Node] into the link through [addFlow].
+     * Pulls a flow from [senderPort]-[Node] into the link through [addOrReplaceFlow].
      * After necessary updates, the [receiverPort] is updated.
-     * @see[addFlow]
+     * @see[addOrReplaceFlow]
      * @param[flow]     flow to be pulled into the link.
      */
     fun pullFlow(flow: Flow) {
-        super<FlowFilterer>.addFlow(flow, ifNew = receiverPort::pullFlow)
+        super<FlowFilterer>.addOrReplaceFlow(flow, ifNew = receiverPort::pullFlow)
         receiverPort.update()
     }
 
+    override fun updateFilters() {
+        super<FlowFilterer>.updateFilters()
+        receiverPort.update()
+    }
 
     /**
      * Returns the [Port] on the opposite side of the [Link].

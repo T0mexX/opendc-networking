@@ -7,6 +7,8 @@ import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.Result
+import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.largerThanBy
 import org.opendc.simulator.network.utils.logger
 
@@ -15,7 +17,7 @@ import org.opendc.simulator.network.utils.logger
  * @param[speed]    speed of the port (full-duplex).
  * @param[node]     the node this port is part of.
  */
-internal data class Port(
+internal class Port(
     val speed: Kbps,
     val node: Node,
 ) {
@@ -63,6 +65,9 @@ internal data class Port(
             return minOf(util, 1.0)
         }
 
+    val remoteConnectedPort: Port?
+        get() { return linkOut?.opposite(this) }
+
     /**
      * The throughput of the incoming flows.
      */
@@ -86,6 +91,26 @@ internal data class Port(
     private val throughputOut: Kbps
         get() { return linkOut?.opposite(this)?.throughputIn ?: .0 }
 
+    fun throughputInOf(flowId: FlowId): Kbps =
+        `in`.filteredFlows[flowId]?.dataRate ?: .0
+
+    fun throughputOutOf(flowId: FlowId): Kbps =
+        remoteConnectedPort?.throughputInOf(flowId) ?: .0
+
+    fun disconnect(): Result {
+        if (linkIn == null || linkOut == null) {
+            log.error("unable to disconnect port, already disconnected")
+            return FAILURE
+        }
+
+        val otherPort: Port = linkOut !! .opposite(this)
+
+        `in`.disconnect()
+        out.disconnect()
+
+        return  SUCCESS
+    }
+
     /**
      * Returns `true` if this port is connected to a [Link]. Else `false`.
      */
@@ -101,6 +126,15 @@ internal data class Port(
      * Pushes a [Flow] into the [Link] this port is connected to.
      */
     fun pushFlowIntoLink(flowId: FlowId, finalDestId: NodeId, dataRate: Kbps) {
+
+        // pushing flow to one of the nodes the flow is coming from
+        // if it happens after topology changes it probably still needs to adjust
+        if (`in`.filteredFlows.containsKey(flowId)) {
+            log.warn("unable to push flow, receiver is one of the node the flow is coming from. " +
+                "This should only happen when the topology just changed.")
+            return
+        }
+
         linkOut?. let {
             out.pushFlow(Flow(
                 id = flowId,
@@ -133,9 +167,21 @@ internal data class Port(
         `in`.updateFilters()
     }
 
+    fun resetAndRmFlowIn(flowId: FlowId) {
+        `in`.filteredFlows[flowId]?. let {
+            `in`.resetAndRmFlow(flowId)
+        }
+    }
+
+    fun resetAndRmFlowOut(flowId: FlowId){
+        out.filteredFlows[flowId]?. let {
+            out.resetAndRmFlow(flowId)
+        }
+    }
+
     /**
      * The "in" component of the port.
-     * Separated so that its direction has its own [FlowFilterer].
+
      */
     private inner class PortIn(): FlowFilterer() {
         override val maxBW: Kbps = this@Port.speed
@@ -144,14 +190,26 @@ internal data class Port(
          * Pulls [flow] from [linkIn] into the [Node].
          * Notifies the node.
          * @see[FlowFilterer]
-         * @see[FlowFilterer.addFlow]
+         * @see[FlowFilterer.addOrReplaceFlow]
          *
          */
         fun pullFlow(flow: Flow) {
             linkIn?. let {
-                super<FlowFilterer>.addFlow(flow, ifNew = {})
-                super<FlowFilterer>.lastUpdatedFlows.forEach { node.notifyFlowChange(it) }
+                super<FlowFilterer>.addOrReplaceFlow(flow, ifNew = {})
+                super<FlowFilterer>.lastUpdatedFlows.forEach { node.notifyFlowChange(it.id) }
             } ?: log.error("pulling $flow from not connected ${this@Port}, aborting...")
+        }
+
+        override fun updateFilters() {
+            super<FlowFilterer>.updateFilters()
+            super<FlowFilterer>.lastUpdatedFlows.forEach { node.notifyFlowChange(it.id) }
+        }
+
+        fun disconnect() {
+            linkIn = null
+            val updatedFlowsIds: Collection<FlowId> = filters.map { it.key }
+            super<FlowFilterer>.resetAll()
+            updatedFlowsIds.forEach { node.notifyFlowChange(it) }
         }
     }
 
@@ -166,13 +224,23 @@ internal data class Port(
          * Pushes flow from [node] into [linkOut].
          * Updates the link.
          * @see[FlowFilterer]
-         * @see[FlowFilterer.addFlow]
+         * @see[FlowFilterer.addOrReplaceFlow]
          */
         fun pushFlow(flow: Flow) {
             linkOut?. let {
-                super<FlowFilterer>.addFlow(flow, ifNew = linkOut!!::pullFlow)
+                super<FlowFilterer>.addOrReplaceFlow(flow, ifNew = linkOut!!::pullFlow)
                 linkOut?.updateFilters()
             } ?: log.error("pushing $flow from not connected ${this@Port}, aborting...")
+        }
+
+        override fun updateFilters() {
+            super<FlowFilterer>.updateFilters()
+            linkOut?.updateFilters()
+        }
+
+        fun disconnect() {
+            linkOut = null
+            super<FlowFilterer>.resetAll()
         }
     }
 }

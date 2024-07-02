@@ -37,26 +37,24 @@ internal abstract class FlowFilterer {
      */
     var lastUpdatedFlows: List<Flow> = listOf()
 
-
     /**
      * Updates each [Filter]. Each flow receives bandwidth
      * proportional to its [Filter.unfiltered] data rate.
      * The ids of the flows that are effectively changed
      * by this call are stored in [lastUpdatedFlows].
      */
-    fun updateFilters() {
+    open fun updateFilters() {
         val lastUpdatedFlows: MutableList<Flow> = mutableListOf()
         val totIncomingDataRate: Kbps = filters.values.sumOf { it.unfiltered.dataRate }
 
-        filters.values.forEach { filter ->
-            if (filter.unfiltered.dataRate == .0) {
-                filter.filtered.dataRate = .0
-                lastUpdatedFlows.add(filter.filtered)
-                rmFlow(filter.id)
-                return@forEach
+        filters.values.filter { it.unfiltered.dataRate == .0 }
+            .forEach {
+                lastUpdatedFlows.add(it.filtered)
+                resetAndRmFlow(it.id)
             }
 
-            val dedicatedDataRate: Kbps = dedicatedDataRateOf(filter.filtered, totIncomingDataRate)
+        filters.values.forEach { filter ->
+            val dedicatedDataRate: Kbps = dedicatedDataRateOf(filter.unfiltered, totIncomingDataRate)
 
             if (dedicatedDataRate != filter.filtered.dataRate) {
                 filter.filtered.dataRate = dedicatedDataRate
@@ -75,7 +73,7 @@ internal abstract class FlowFilterer {
      * @param[ifNew]    function to call if the flow was
      * not present already, with the filtered flow as arg.
      */
-    fun addFlow(flow: Flow, ifNew: (Flow) -> Unit = {}) {
+    protected fun addOrReplaceFlow(flow: Flow, ifNew: (Flow) -> Unit = {}) {
         filters[flow.id]?. also {
             filters[flow.id] = Filter(unfiltered = flow, filtered = it.filtered)
             updateFilters()
@@ -87,10 +85,14 @@ internal abstract class FlowFilterer {
         }
     }
 
-    private fun rmFlow(flowId: FlowId) {
+    fun resetAndRmFlow(flowId: FlowId) {
         filters.remove(flowId)
-            ?. also { updateFilters() }
+            ?. also { it.filtered.dataRate = .0; updateFilters(); }
             ?: log.error("asked to remove a flow which is not present on this medium")
+    }
+
+    fun resetAll() {
+        filters.keys.toList().forEach { resetAndRmFlow(it) }
     }
 
     private fun dedicatedDataRateOf(unfiltered: Flow, totalIncomingDataRate: Kbps): Kbps {
