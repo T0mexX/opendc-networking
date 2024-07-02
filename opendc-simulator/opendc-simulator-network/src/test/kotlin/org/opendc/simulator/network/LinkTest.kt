@@ -12,6 +12,7 @@ import io.kotest.property.arbitrary.next
 import io.kotest.property.checkAll
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
 
 class LinkTest: FunSpec({
@@ -46,6 +47,7 @@ class LinkTest: FunSpec({
                 val sender = CoreSwitch(id = 0, portSpeed = Double.MAX_VALUE, numOfPorts = 1)
                 val receiver = CoreSwitch(id = 1, portSpeed = totDataRate * testData.bwPerc, numOfPorts = 1) // only way currently to limit link bandwidth
                 sender.connect(receiver)
+                StaticECMP.eToEFlows = eToEndFlows.associateBy { it.flowId }
 
                 eToEndFlows.forEach {
                     receiver.addReceivingEtoEFlow(it)
