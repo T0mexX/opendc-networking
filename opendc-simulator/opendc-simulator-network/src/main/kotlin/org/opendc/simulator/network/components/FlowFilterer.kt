@@ -3,6 +3,7 @@ package org.opendc.simulator.network.components
 import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.logger
 import kotlin.math.min
 
 /**
@@ -10,6 +11,7 @@ import kotlin.math.min
  * gets bandwidth proportional to its unfiltered data rate (if the bandwidth is maxed out).
  */
 internal abstract class FlowFilterer {
+    companion object { private val log by logger() }
 
     /**
      * Maps each [FlowId] with its associated [Filter].
@@ -44,19 +46,20 @@ internal abstract class FlowFilterer {
      */
     fun updateFilters() {
         val lastUpdatedFlows: MutableList<Flow> = mutableListOf()
-        val totalIncomingDataRate: Kbps = filters.values.sumOf { it.unfiltered.dataRate }
+        val totIncomingDataRate: Kbps = filters.values.sumOf { it.unfiltered.dataRate }
 
         filters.values.forEach { filter ->
-            val dedicatedLinkUtilizationPercentage: Kbps =
-                (filter.unfiltered.dataRate / totalIncomingDataRate)
-                    .let { if (it.isNaN()) .0 else it }
+            if (filter.unfiltered.dataRate == .0) {
+                filter.filtered.dataRate = .0
+                lastUpdatedFlows.add(filter.filtered)
+                rmFlow(filter.id)
+                return@forEach
+            }
 
-            check (dedicatedLinkUtilizationPercentage in 0.0..1.0)
-            {"dedicated link utilization should be between 0 and 1 but is $dedicatedLinkUtilizationPercentage"}
-            val dedicatedLinkUtilization: Kbps = min(dedicatedLinkUtilizationPercentage * maxBW, filter.unfiltered.dataRate)
+            val dedicatedDataRate: Kbps = dedicatedDataRateOf(filter.filtered, totIncomingDataRate)
 
-            if (dedicatedLinkUtilization != filter.filtered.dataRate) {
-                filter.filtered.dataRate = dedicatedLinkUtilization
+            if (dedicatedDataRate != filter.filtered.dataRate) {
+                filter.filtered.dataRate = dedicatedDataRate
                 lastUpdatedFlows.add(filter.filtered)
             }
         }
@@ -82,6 +85,23 @@ internal abstract class FlowFilterer {
             updateFilters()
             ifNew(newFilter.filtered)
         }
+    }
+
+    private fun rmFlow(flowId: FlowId) {
+        filters.remove(flowId)
+            ?. also { updateFilters() }
+            ?: log.error("asked to remove a flow which is not present on this medium")
+    }
+
+    private fun dedicatedDataRateOf(unfiltered: Flow, totalIncomingDataRate: Kbps): Kbps {
+        val dedicatedLinkUtilizationPercentage: Kbps =
+            (unfiltered.dataRate / totalIncomingDataRate)
+                .let { if (it.isNaN()) .0 else it }
+
+        check (dedicatedLinkUtilizationPercentage in 0.0..1.0)
+        {"dedicated link utilization should be between 0 and 1 but is $dedicatedLinkUtilizationPercentage"}
+
+        return min(dedicatedLinkUtilizationPercentage * maxBW, unfiltered.dataRate)
     }
 
 
