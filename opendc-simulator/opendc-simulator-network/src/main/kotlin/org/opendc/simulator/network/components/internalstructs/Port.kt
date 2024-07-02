@@ -17,10 +17,7 @@ import org.opendc.simulator.network.utils.logger
  * @param[speed]    speed of the port (full-duplex).
  * @param[node]     the node this port is part of.
  */
-internal class Port(
-    val speed: Kbps,
-    val node: Node,
-) {
+internal class Port(val speed: Kbps, val node: Node) {
     companion object { private val log by logger() }
 
     /**
@@ -32,25 +29,26 @@ internal class Port(
      * The unidirectional link to which this port is connected fot outgoing flows.
      */
     var linkOut: Link? = null
+        set(link) { field = link; out.nextFilter = link }
 
     /**
-     * Hidden "in" port implementing [FlowFilterer].
+     * "in" port implementing [FlowFilterer].
      */
-    private val `in` = PortIn()
+    val `in` = PortIn()
 
     /**
-     * Hidden "out" port implementing [FlowFilterer].
+     * "out" port implementing [FlowFilterer].
      */
-    private val out = PortOut()
+    val out = PortOut()
 
     /**
-     * Flows passing through [in].
+     * Flows passing through [in] (filtered by port speed).
      */
     val incomingFlows: Map<FlowId, Flow>
         get() { return `in`.filteredFlows }
 
     /**
-     * Flows passing through [out].
+     * Flows passing through [out] (filtered by port speed).
      */
     val outgoingFlows: Map<FlowId, Flow>
         get() { return out.filteredFlows }
@@ -65,11 +63,14 @@ internal class Port(
             return minOf(util, 1.0)
         }
 
-    val remoteConnectedPort: Port?
+    /**
+     * The [Port] to which ***this*** port is connected.
+     */
+    private val remoteConnectedPort: Port?
         get() { return linkOut?.opposite(this) }
 
     /**
-     * The throughput of the incoming flows.
+     * Link throughput of the incoming flows (should be filtered by both ports and the link).
      */
     private val throughputIn: Kbps
         get() {
@@ -82,28 +83,40 @@ internal class Port(
             } ?: .0
         }
 
-    private val maxNodeToNodeSpeed: Double
-        get() { return minOf(speed, linkIn !!.maxBW, linkIn !!.opposite(this).speed) }
-
     /**
-     * The throughput of the outgoing flows (measured by the port on the other end of the link).
+     * Link throughput of the outgoing flows (measured by the port on the other end of the link).
      */
     private val throughputOut: Kbps
         get() { return linkOut?.opposite(this)?.throughputIn ?: .0 }
 
-    fun throughputInOf(flowId: FlowId): Kbps =
+    /**
+     * The maximum speed achievable on this connection,
+     * which is equal to the minimum between the two ports and the link speeds.
+     */
+    private val maxNodeToNodeSpeed: Double
+        get() { return minOf(speed, linkIn !!.maxBW, linkIn !!.opposite(this).speed) }
+
+    /**
+     * @return  link throughput of a specific incoming flow corresponding to [flowId].
+     */
+    private fun throughputInOf(flowId: FlowId): Kbps =
         `in`.filteredFlows[flowId]?.dataRate ?: .0
 
+    /**
+     * @return  link throughput of a specific outgoing flow corresponding to [flowId].
+     */
     fun throughputOutOf(flowId: FlowId): Kbps =
         remoteConnectedPort?.throughputInOf(flowId) ?: .0
 
+    /**
+     * Disconnects the port from the link.
+     * @return  [Result.SUCCESS] on success, [Result.FAILURE] otherwise.
+     */
     fun disconnect(): Result {
         if (linkIn == null || linkOut == null) {
             log.error("unable to disconnect port, already disconnected")
             return FAILURE
         }
-
-        val otherPort: Port = linkOut !! .opposite(this)
 
         `in`.disconnect()
         out.disconnect()
@@ -112,23 +125,23 @@ internal class Port(
     }
 
     /**
-     * Returns `true` if this port is connected to a [Link]. Else `false`.
+     * @return  `true` if this port is connected to a [Link]. `false` otherwise.
      */
     fun isConnected(): Boolean =
             linkIn != null && linkOut != null
 
+    /**
+     * @return  `true` if this port is active, `false` otherwise.
+     */
     fun isActive(): Boolean =
         // TODO: implement turn off feature
         isConnected()
-
 
     /**
      * Pushes a [Flow] into the [Link] this port is connected to.
      */
     fun pushFlowIntoLink(flowId: FlowId, finalDestId: NodeId, dataRate: Kbps) {
 
-        // pushing flow to one of the nodes the flow is coming from
-        // if it happens after topology changes it probably still needs to adjust
         if (`in`.filteredFlows.containsKey(flowId)) {
             log.warn("unable to push flow, receiver is one of the node the flow is coming from. " +
                 "This should only happen when the topology just changed.")
@@ -136,7 +149,7 @@ internal class Port(
         }
 
         linkOut?. let {
-            out.pushFlow(Flow(
+            out.addOrReplaceFlow(Flow(
                 id = flowId,
                 finalDestId = finalDestId,
                 sender = node,
@@ -147,61 +160,25 @@ internal class Port(
     }
 
     /**
-     * Pushes a [Flow] into [linkOut].
-     * @see[Port.PortOut.pushFlow]
+     * @see[FlowFilterer.resetAndRmFlow] wrapper that suppresses the error msg since this function
+     * is supposed to be called when the flow is not present.
      */
-    fun pushFlowIntoLink(flow: Flow) { out.pushFlow(flow) }
-
-    /**
-     * Pulls flow from [linkIn].
-     * @see[Port.PortIn.pullFlow]
-     */
-    fun pullFlow(flow: Flow) { `in`.pullFlow(flow) }
-
-    /**
-     * Called when incoming flow have changed and
-     * ***this*** needs to update its status accordingly.
-     * @see[FlowFilterer.updateFilters]
-     */
-    fun update() {
-        `in`.updateFilters()
-    }
-
-    fun resetAndRmFlowIn(flowId: FlowId) {
-        `in`.filteredFlows[flowId]?. let {
-            `in`.resetAndRmFlow(flowId)
-        }
-    }
-
-    fun resetAndRmFlowOut(flowId: FlowId){
-        out.filteredFlows[flowId]?. let {
-            out.resetAndRmFlow(flowId)
-        }
-    }
+    fun resetAndRmFlowOut(flowId: FlowId) { out.resetAndRmFlow(flowId, suppressErr = true) }
 
     /**
      * The "in" component of the port.
-
      */
-    private inner class PortIn(): FlowFilterer() {
+    inner class PortIn(): FlowFilterer() {
         override val maxBW: Kbps = this@Port.speed
 
-        /**
-         * Pulls [flow] from [linkIn] into the [Node].
-         * Notifies the node.
-         * @see[FlowFilterer]
-         * @see[FlowFilterer.addOrReplaceFlow]
-         *
-         */
-        fun pullFlow(flow: Flow) {
+        override fun addOrReplaceFlow(flow: Flow, ifNew: (Flow) -> Unit) {
             linkIn?. let {
-                super<FlowFilterer>.addOrReplaceFlow(flow, ifNew = {})
-                super<FlowFilterer>.lastUpdatedFlows.forEach { node.notifyFlowChange(it.id) }
+                super<FlowFilterer>.addOrReplaceFlow(flow, ifNew = { node.notifyFlowChange(it.id) })
             } ?: log.error("pulling $flow from not connected ${this@Port}, aborting...")
         }
 
-        override fun updateFilters() {
-            super<FlowFilterer>.updateFilters()
+        override fun updateFilters(newFlowId: FlowId?) {
+            super<FlowFilterer>.updateFilters(newFlowId)
             super<FlowFilterer>.lastUpdatedFlows.forEach { node.notifyFlowChange(it.id) }
         }
 
@@ -217,25 +194,13 @@ internal class Port(
      * The "out" component of the port.
      * Separated so that its direction has its own [FlowFilterer].
      */
-    private inner class PortOut(): FlowFilterer() {
+    inner class PortOut(): FlowFilterer() {
         override val maxBW: Kbps = this@Port.speed
 
-        /**
-         * Pushes flow from [node] into [linkOut].
-         * Updates the link.
-         * @see[FlowFilterer]
-         * @see[FlowFilterer.addOrReplaceFlow]
-         */
-        fun pushFlow(flow: Flow) {
+        override fun addOrReplaceFlow(flow: Flow, ifNew: (Flow) -> Unit) {
             linkOut?. let {
-                super<FlowFilterer>.addOrReplaceFlow(flow, ifNew = linkOut!!::pullFlow)
-                linkOut?.updateFilters()
+                super<FlowFilterer>.addOrReplaceFlow(flow, ifNew = {})
             } ?: log.error("pushing $flow from not connected ${this@Port}, aborting...")
-        }
-
-        override fun updateFilters() {
-            super<FlowFilterer>.updateFilters()
-            linkOut?.updateFilters()
         }
 
         fun disconnect() {
