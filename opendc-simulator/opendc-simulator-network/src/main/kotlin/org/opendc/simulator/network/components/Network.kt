@@ -39,9 +39,9 @@ internal interface Network {
         val receiver: EndPointNode = networkEndPointNodes[flow.destId]
             ?: run { log.error("Unable to start flow $flow, receiver does not exist or it is not able to start a flow"); return }
 
+        endToEndFlows[flow.flowId] = flow
         receiver.addReceivingEtoEFlow(flow)
         sender.startFlow(flow)
-        endToEndFlows[flow.flowId] = flow
     }
 
     fun stopFlow(flowId: FlowId) {

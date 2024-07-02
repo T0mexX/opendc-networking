@@ -6,12 +6,15 @@ import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.Result.*
+import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 
 /**
  * Type alias for improved understandability.
  */
 internal typealias NodeId = Int
+internal typealias RoutingVect = Map<NodeId, Int>
 
 /**
  * Interface representing a node in a [Network].
@@ -74,24 +77,28 @@ internal interface Node: FlowView {
      * updating the respective [RoutingTable]s.
      * @param[other]    the [Node] to connect to.
      */
-    fun connect(other: Node) {
+    fun connect(other: Node): Result {
         if (other.id in portToNode.keys) {
             log.error("unable to connect $this to $other, nodes already connected")
-            return
+            return FAILURE
         }
 
         val freePort: Port = getFreePort()
             ?: let {
                 log.error("unable to connect, maximum number of connected nodes reached ($numOfPorts).")
-                return
+                return FAILURE
             }
 
-        val otherPort: Port = other.accept(this, freePort) ?: return
+        val otherPort: Port = other.accept(this, freePort) ?: return FAILURE
 
         portToNode[other.id] = freePort
         Link(freePort, otherPort)
 
-        other.pushRoutingVector(routingTable.routingVector, vectorOwner = this)
+        other.pullRoutingVector(routingTable.vector, vectorOwner = this)
+
+        updateAllFlows()
+
+        return SUCCESS
     }
 
     /**
@@ -110,9 +117,42 @@ internal interface Node: FlowView {
         Link(freePort, otherPort)
 
         portToNode[other.id] = freePort
-        other.pushRoutingVector(routingTable.routingVector, vectorOwner = this)
+        other.pullRoutingVector(routingTable.vector, vectorOwner = this)
+
+        updateAllFlows()
 
         return freePort
+    }
+
+    fun updateAllFlows() {
+        allTransitingFlowsIds().forEach {
+            forwardingPolicy.forwardFlow(forwarder = this, flowId = it)
+        }
+    }
+
+    fun disconnect(other: Node, notifyOther: Boolean = true): Result {
+        val portToOther: Port = portToNode[other.id]
+            ?: let {
+                log.error("unable to disconnect $this from $other, nodes are not connected")
+                return FAILURE
+            }
+
+        routingTable.removeNextHop(other)
+
+        if (notifyOther &&
+            other.disconnect(this, notifyOther = false) == FAILURE)
+            return FAILURE
+
+        if (portToOther.disconnect() == FAILURE)
+            return FAILURE
+
+        portToNode.remove(other.id)
+
+        shareRoutingVect(exchange = true)
+
+        updateAllFlows()
+
+        return SUCCESS
     }
 
     /**
@@ -122,13 +162,38 @@ internal interface Node: FlowView {
      * @param[routingVector]    routing vector pushed by `vectorOwner`.
      * @param[vectorOwner]      adjacent node that pushes the routing vector.
      */
-    private fun pushRoutingVector(routingVector: Map<NodeId, Int>, vectorOwner: Node) {
+    private fun pullRoutingVector(routingVector: RoutingVect, vectorOwner: Node) {
         routingTable.mergeRoutingVector(routingVector, vectorOwner)
         if (!routingTable.isChanged) return
 
+        updateAllFlows()
+        shareRoutingVect(listOf(vectorOwner))
+    }
+
+    private fun exchangeRoutVect(routVect: RoutingVect, vectOwner: Node): RoutingVect {
+        routingTable.mergeRoutingVector(routVect, vectOwner)
+        if (!routingTable.isChanged) return routingTable.vector
+
+        updateAllFlows()
+        shareRoutingVect(except = listOf(vectOwner))
+
+        return routingTable.vector
+    }
+
+    private fun shareRoutingVect(except: Collection<Node> = listOf(), exchange: Boolean = false) {
         portToNode.forEach { (_, port) ->
             val adjNode: Node = port.linkIn?.opposite(port)?.node ?: return@forEach
-            if (adjNode !== vectorOwner) adjNode.pushRoutingVector(routingTable.routingVector, vectorOwner = this)
+            if (adjNode !in except) {
+                if (exchange) {
+                    val otherVect: RoutingVect = adjNode.exchangeRoutVect(routingTable.vector, vectOwner = this)
+                    routingTable.mergeRoutingVector(otherVect, vectOwner = adjNode)
+                    if (!routingTable.isChanged) return@forEach
+                    updateAllFlows()
+                    shareRoutingVect(except = except + adjNode, exchange = true)
+                    return
+                } else
+                    adjNode.pullRoutingVector(routingTable.vector, vectorOwner = this)
+            }
         }
     }
 
@@ -160,8 +225,8 @@ internal interface Node: FlowView {
      * It updates forwarding based on [forwardingPolicy].
      * @param[flow]     the incoming flow that has been updated.
      */
-    fun notifyFlowChange(flow: Flow) {
-        forwardingPolicy.forwardFlow(forwarder = this, flow.id, flow.finalDestId)
+    fun notifyFlowChange(flowId: FlowId) {
+        forwardingPolicy.forwardFlow(forwarder = this, flowId)
     }
 
     /**
@@ -174,6 +239,9 @@ internal interface Node: FlowView {
 
     override fun totOutgoingDataRateOf(flowId: FlowId): Kbps =
         ports.sumOf { it.outgoingFlows[flowId]?.dataRate ?: .0 }
+
+    override fun throughputOutOf(flowId: FlowId): Kbps =
+        ports.sumOf { it.throughputOutOf(flowId) }
 
     override fun allTransitingFlowsIds(): Collection<FlowId> =
         portToNode.flatMap { (_, port) ->

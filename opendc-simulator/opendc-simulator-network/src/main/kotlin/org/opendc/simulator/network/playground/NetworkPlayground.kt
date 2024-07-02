@@ -13,7 +13,9 @@ import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 import java.io.File
 import kotlin.system.exitProcess
@@ -23,7 +25,7 @@ public fun main(args: Array<String>): Unit = NetworkPlayground().main(args)
 
 
 @OptIn(ExperimentalSerializationApi::class)
-private class NetworkPlayground: CliktCommand(name = "bo") {
+private class NetworkPlayground: CliktCommand() {
 
     private val file: File = File("resources/examples/custom-network-topology-specs-example4.json")
     private val network: Network
@@ -32,11 +34,12 @@ private class NetworkPlayground: CliktCommand(name = "bo") {
 
     init {
         if (file.exists()) {
-            println("exists")
             val jsonReader = Json { ignoreUnknownKeys = true }
             val networkSpecs: Specs<Network> = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
             network = networkSpecs.buildFromSpecs()
         } else network = CustomNetwork()
+
+        StaticECMP.eToEFlows = network.endToEndFlows
 
         energyRecorder = NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
         env = PlaygroundEnv(network = network, energyRecorder = energyRecorder)
@@ -51,6 +54,7 @@ private class NetworkPlayground: CliktCommand(name = "bo") {
                 Cmd.NEW_SWITCH.regex { Cmd.NEW_SWITCH.exec(this, env) }
                 Cmd.NEW_FLOW.regex { Cmd.NEW_FLOW.exec(this, env) }
                 Cmd.NEW_LINK.regex { Cmd.NEW_LINK.exec(this, env) }
+                Cmd.RM_LINK.regex { Cmd.RM_LINK.exec(this, env) }
                 Cmd.ENERGY_REPORT.regex { Cmd.ENERGY_REPORT.exec(this, env) }
                 Cmd.FLOWS.regex { Cmd.FLOWS.exec(this, env) }
                 Cmd.FLOWS_OF.regex { Cmd.FLOWS_OF.exec(this, env) }
@@ -125,11 +129,26 @@ private enum class Cmd {
             val node2Id: NodeId = groups[2].toInt()
             val node1: Node = env.network.nodes[node1Id] ?: run { log.error("Invalid node id $node1Id"); return }
             val node2: Node = env.network.nodes[node2Id] ?: run { log.error("Invalid node id $node2Id"); return }
-            try {
-                node1.connect(node2)
-            } catch (e: Exception) { log.error(e.message); return}
 
-            log.info("link created")
+            when (node1.connect(node2)) {
+                Result.SUCCESS -> log.info("link created")
+                else -> log.error("unable to create link")
+            }
+        }
+    },
+    RM_LINK {
+        override val regex = Regex("\\s*rm\\s+(?:l|link)\\s+(\\d+)\\s*[- ]\\s*(\\d+)\\s*")
+        override fun exec(result: MatchResult, env: PlaygroundEnv) {
+            val groups: List<String> = result.groupValues
+            val node1Id: NodeId = groups[1].toInt()
+            val node2Id: NodeId = groups[2].toInt()
+            val node1: Node = env.network.nodes[node1Id] ?: run { log.error("Invalid node id $node1Id"); return }
+            val node2: Node = env.network.nodes[node2Id] ?: run { log.error("Invalid node id $node2Id"); return }
+
+            when (node1.disconnect(node2)) {
+                Result.SUCCESS -> log.info("nodes disconnected")
+                else -> log.error("unable to remove link")
+            }
         }
     },
     ENERGY_REPORT {

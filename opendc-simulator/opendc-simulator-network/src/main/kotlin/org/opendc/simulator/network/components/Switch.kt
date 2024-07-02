@@ -41,8 +41,8 @@ internal open class Switch(
         } }
 
 
-    override fun notifyFlowChange(flow: Flow) {
-        super<Node>.notifyFlowChange(flow)
+    override fun notifyFlowChange(flowId: FlowId) {
+        super<Node>.notifyFlowChange(flowId)
         enMonitor.update()
     }
 

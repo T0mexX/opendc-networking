@@ -2,6 +2,7 @@ package org.opendc.simulator.network.components
 
 import org.opendc.simulator.network.flow.EndToEndFlow
 import org.opendc.simulator.network.flow.Flow
+import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 
 /**
@@ -16,8 +17,8 @@ internal class CoreSwitch(
     override val incomingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
     override val outgoingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
 
-    override fun notifyFlowChange(flow: Flow) {
-        super<EndPointNode>.notifyFlowChange(flow)
+    override fun notifyFlowChange(flowId: FlowId) {
+        super<EndPointNode>.notifyFlowChange(flowId)
         enMonitor.update()
     }
 }

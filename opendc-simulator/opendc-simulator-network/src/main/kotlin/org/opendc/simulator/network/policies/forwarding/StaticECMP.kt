@@ -5,6 +5,7 @@ import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.internalstructs.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
+import org.opendc.simulator.network.flow.EndToEndFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 
@@ -16,18 +17,25 @@ import org.opendc.simulator.network.utils.Kbps
  */
 internal object StaticECMP: ForwardingPolicy {
 
-    override fun forwardFlow(forwarder: Node, flowId: FlowId, finalDestId: NodeId) {
+    lateinit var eToEFlows: Map<FlowId, EndToEndFlow>
+
+    override fun forwardFlow(forwarder: Node, flowId: FlowId) {
         val routTable: RoutingTable = forwarder.routingTable
         val portToNode: Map<NodeId, Port> = forwarder.portToNode
         val totDataRateToForward: Kbps = forwarder.totDataRateOf(flowId)
+        val finalDestId: NodeId = eToEFlows[flowId]?.destId ?: throw IllegalStateException("unable to forward flow, flow id $flowId not recognized")
 
-        if (totDataRateToForward == .0) return
 
         val portsToForwardTo: List<Port> =
             routTable.getPossiblePathsTo(finalDestId)
-                ?.map { path -> portToNode[path.nextHop.id]!! } !!
+                .onlyMinimal()
+                .map { path -> portToNode[path.nextHop.id]!! }
+
+        val portsToResetFlow: List<Port> = portToNode.values - portsToForwardTo.toSet()
+        portsToResetFlow.forEach { it.resetAndRmFlowOut(flowId) }
 
         val rateForEachPort: Kbps = totDataRateToForward / portsToForwardTo.size
+
         portsToForwardTo.forEach { it.pushFlowIntoLink(
             flowId = flowId,
             finalDestId = finalDestId,
@@ -35,6 +43,10 @@ internal object StaticECMP: ForwardingPolicy {
         ) }
     }
 
+    private fun Collection<RoutingTable.PossiblePath>.onlyMinimal(): Collection<RoutingTable.PossiblePath> {
+        val min: Int = this.minOfOrNull { it.numOfHops } ?: 0
+        return  this.filter { it.numOfHops == min }
+    }
 //    /**
 //     * Splits a [Flow] in `n` [Flow]s,
 //     * each with `dataRate` equal to `/n` the initial flow `dataRate`.
