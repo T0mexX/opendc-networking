@@ -166,6 +166,15 @@ internal interface Node: FlowView {
     }
 
     /**
+     * Disconnects all ports of ***this*** node.
+     */
+    fun disconnectAll() {
+        portToNode.toMap().forEach { (_, port) ->
+             port.remoteConnectedPort?. let { disconnect(it.node) }
+        }
+    }
+
+    /**
      * Merges [routVect] in the [routingTable], updating flows
      * and sharing its updated routing vector if needed.
      * @return      its own routing vector.
@@ -188,7 +197,7 @@ internal interface Node: FlowView {
      */
     private tailrec fun shareRoutingVect(except: Collection<Node> = listOf(), exchange: Boolean = false) {
         portToNode.forEach { (_, port) ->
-            val adjNode: Node = port.linkIn?.opposite(port)?.node ?: return@forEach
+            val adjNode: Node = port.remoteConnectedPort?.node ?: return@forEach
             if (adjNode !in except) {
                 if (exchange) {
                     val otherVect: RoutingVect = adjNode.exchangeRoutVect(routingTable.vector, vectOwner = this)
@@ -229,7 +238,7 @@ internal interface Node: FlowView {
      * Called by a [Port] whenever an incoming flow
      * has changed its data rate or a new flow is received.
      * It updates forwarding based on [forwardingPolicy].
-     * @param[flow]     the incoming flow that has been updated.
+     * @param[flowId]   the incoming flow that has changed.
      */
     fun notifyFlowChange(flowId: FlowId) {
         forwardingPolicy.forwardFlow(forwarder = this, flowId)

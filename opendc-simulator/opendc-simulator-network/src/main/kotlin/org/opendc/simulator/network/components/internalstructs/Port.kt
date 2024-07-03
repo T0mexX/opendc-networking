@@ -66,7 +66,7 @@ internal class Port(val speed: Kbps, val node: Node) {
     /**
      * The [Port] to which ***this*** port is connected.
      */
-    private val remoteConnectedPort: Port?
+    val remoteConnectedPort: Port?
         get() { return linkOut?.opposite(this) }
 
     /**
