@@ -41,16 +41,15 @@ internal class RoutingTable(private val ownerId: NodeId) {
     private fun addOrReplacePath(pathToAdd: PossiblePath) {
         val destId: NodeId = pathToAdd.destinationId
         if (destId == ownerId) return
+
+
         val possiblePaths = table[destId] ?: let {
             table[destId] = mutableMapOf(pathToAdd.nextHop.id to pathToAdd)
-            isChanged = true
             return
         }
 
-        if (possiblePaths[pathToAdd.nextHop.id] == pathToAdd) return
-
         possiblePaths[pathToAdd.nextHop.id] = pathToAdd
-        isChanged = true
+        filterOutNonOptimal(destId)
     }
 
     /**
@@ -63,7 +62,6 @@ internal class RoutingTable(private val ownerId: NodeId) {
         table[destId]?.remove(nextHopId)
         if (table[destId]?.isEmpty() == true)
             table.remove(destId)
-        isChanged = true
     }
 
     /**
@@ -78,7 +76,7 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * @param[routingVector]    routing vector of adjacent [Node], mapping destination id to its cost (number of hops).
      */
     fun mergeRoutingVector(routingVector: Map<NodeId, Int>, vectOwner: Node) {
-        isChanged = false
+        val routVectBefore = this.vector
         addOrReplacePath(PossiblePath(vectOwner.id, numOfHops = 1, nextHop = vectOwner))
 
         val destToRemove: Set<NodeId> = table.keys.toSet() - routingVector.keys.toSet() - vectOwner.id
@@ -94,6 +92,10 @@ internal class RoutingTable(private val ownerId: NodeId) {
                     )
                 )
             }
+
+        val routVectAfter = this.vector
+
+        isChanged = routVectAfter != routVectBefore
     }
 
     /**
@@ -104,6 +106,18 @@ internal class RoutingTable(private val ownerId: NodeId) {
             possPaths.remove(node.id)
         }
         table.values.removeAll { it.isEmpty() }
+    }
+
+    /**
+     * Filters out non-optimal paths associated with destination
+     * id [destId] if provided. Else it filters all destinations.
+     */
+    private fun filterOutNonOptimal(destId: NodeId? = null) {
+        destId?.let {
+            val minNumOfHops: Int = minNumOfHopsTo(destId) ?: return
+            table[destId]?.values?.removeAll { path -> path.numOfHops > minNumOfHops } ?: false
+            if (table[destId]?.isEmpty() == true) table.remove(destId)
+        } ?: table.keys.forEach { filterOutNonOptimal(it) }
     }
 
     /**
