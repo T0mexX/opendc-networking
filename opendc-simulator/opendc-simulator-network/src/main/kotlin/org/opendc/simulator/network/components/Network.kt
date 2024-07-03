@@ -2,8 +2,9 @@ package org.opendc.simulator.network.components
 
 import org.opendc.simulator.network.flow.EndToEndFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.Result.*
+import org.opendc.simulator.network.utils.Result
+import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -32,18 +33,24 @@ internal interface Network {
      * Starts a [EndToEndFlow] if the flow can be established.
      * @param[flow] the flow to be established.
      */
-    fun startFlow(flow: EndToEndFlow) {
-        if (flow.desiredDataRate <= 0) { log.warn("Unable to start flow, data rate should be positive.") }
-        if (flow.totalDataToTransmit <= 0) { log.warn("Unable to start flow. data size should be positive.") }
+    fun startFlow(flow: EndToEndFlow): Result {
+        if (flow.desiredDataRate <= 0)
+            return log.errAndGet("Unable to start flow, data rate should be positive.")
+
+        if (flow.totalDataToTransmit <= 0)
+            return log.errAndGet("Unable to start flow. data size should be positive.")
 
         val sender: EndPointNode = endPointNodes[flow.senderId]
-            ?: run { log.error("Unable to start flow $flow, sender does not exist or it is not able to start a flow"); return }
+            ?: return log.errAndGet("Unable to start flow $flow, sender does not exist or it is not able to start a flow")
+
         val receiver: EndPointNode = endPointNodes[flow.destId]
-            ?: run { log.error("Unable to start flow $flow, receiver does not exist or it is not able to start a flow"); return }
+            ?: return log.errAndGet("Unable to start flow $flow, receiver does not exist or it is not able to start a flow")
 
         endToEndFlows[flow.flowId] = flow
         receiver.addReceivingEtoEFlow(flow)
         sender.startFlow(flow)
+
+        return SUCCESS
     }
 
     /**
@@ -60,10 +67,7 @@ internal interface Network {
                 }?.also {
                     endToEndFlows.remove(flowId)
                 }
-        } ?: let {
-            log.error("unable to stop flow with id $flowId")
-            return FAILURE
-        }
+        } ?: return log.errAndGet("unable to stop flow with id $flowId")
 
         return SUCCESS
     }

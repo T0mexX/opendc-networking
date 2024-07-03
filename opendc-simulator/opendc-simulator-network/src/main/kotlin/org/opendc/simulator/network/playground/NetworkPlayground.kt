@@ -101,8 +101,10 @@ private enum class Cmd {
                     )
             }
 
-            customNet.addNode(newSwitch)
-            log.info("$newSwitch added to network")
+            when (val it = customNet.addNode(newSwitch)) {
+                is Result.ERROR -> log.error("unable to add switch. Reason: ${it.msg}")
+                is Result.SUCCESS -> log.info("successfully added $newSwitch to network")
+            }
         }
     },
     RM_NODE {
@@ -115,9 +117,9 @@ private enum class Cmd {
             val groups: List<String> = result.groupValues
             val nodeId: NodeId = groups[1].toInt()
 
-            when(customNet.rmNode(nodeId)) {
-                Result.SUCCESS -> log.info("node successfully removed")
-                else -> log.error("unable to remove node")
+            when(val it = customNet.rmNode(nodeId)) {
+                is Result.ERROR -> log.error("unable to remove node. Reason: ${it.msg}")
+                is Result.SUCCESS -> log.info("node successfully removed")
             }
         }
     },
@@ -136,8 +138,11 @@ private enum class Cmd {
                 destId = destId,
                 totalDataToTransmit = 1.0 // TODO: change
             )
-            env.network.startFlow(newFLow)
-            FLOWS.exec(result, env)
+
+            when (val it = env.network.startFlow(newFLow)) {
+                is Result.ERROR -> log.error("unable to create flow. Reason: ${it.msg}")
+                is Result.SUCCESS -> log.info("successfully create $newFLow")
+            }
         }
     },
     RM_FLOW {
@@ -146,9 +151,9 @@ private enum class Cmd {
             val groups: List<String> = result.groupValues
             val flowId: FlowId = groups[1].toInt()
 
-            when(env.network.stopFlow(flowId)) {
-                Result.SUCCESS -> log.info("flow successfully stopped")
-                else -> log.error("unable to stop flow")
+            when(val it = env.network.stopFlow(flowId)) {
+                is Result.ERROR -> log.error("unable to stop flow. Reason: ${it.msg}")
+                is Result.SUCCESS -> log.info("flow successfully stopped")
             }
         }
     },
@@ -161,9 +166,9 @@ private enum class Cmd {
             val node1: Node = env.network.nodes[node1Id] ?: run { log.error("Invalid node id $node1Id"); return }
             val node2: Node = env.network.nodes[node2Id] ?: run { log.error("Invalid node id $node2Id"); return }
 
-            when (node1.connect(node2)) {
-                Result.SUCCESS -> log.info("link created")
-                else -> log.error("unable to create link")
+            when (val it = node1.connect(node2)) {
+                is Result.ERROR -> log.error("unable to create link. Reason: ${it.msg}")
+                is Result.SUCCESS -> log.info("link successfully created")
             }
         }
     },
@@ -176,9 +181,9 @@ private enum class Cmd {
             val node1: Node = env.network.nodes[node1Id] ?: run { log.error("Invalid node id $node1Id"); return }
             val node2: Node = env.network.nodes[node2Id] ?: run { log.error("Invalid node id $node2Id"); return }
 
-            when (node1.disconnect(node2)) {
-                Result.SUCCESS -> log.info("nodes disconnected")
-                else -> log.error("unable to remove link")
+            when (val it = node1.disconnect(node2)) {
+                is Result.ERROR -> log.error("unable to remove link. Reason: ${it.msg}")
+                is Result.SUCCESS -> log.info("nodes successfully disconnected")
             }
         }
     },

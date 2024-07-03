@@ -13,6 +13,7 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.NonSerializable
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.Result.*
+import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -59,10 +60,12 @@ internal class CustomNetwork(
      * Adds a node to the network if a node with same id is not already present.
      * @param[node] node to add.
      */
-    fun addNode(node: Node) {
-        nodes[node.id]?.let { log.error("unable to add node $node, id already present"); return }
+    fun addNode(node: Node): Result {
+        nodes[node.id]?.let { return log.errAndGet("unable to add node $node, id already present") }
         nodes[node.id] = node
         (node as? EndPointNode)?.let { endPointNodes[node.id] = node }
+
+        return SUCCESS
     }
 
     /**
@@ -74,10 +77,7 @@ internal class CustomNetwork(
             rmEtoEFlowsGenBy(nodeId)
             nodes.remove(nodeId)
 
-        } ?: let {
-            log.error("unable to remove node, not present in the network")
-            return FAILURE
-        }
+        } ?: return log.errAndGet("unable to remove node, not present in the network")
 
         return SUCCESS
     }
@@ -152,7 +152,3 @@ internal class CustomNetwork(
         }
     }
 }
-
-
-
-

@@ -9,6 +9,7 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.Result.*
+import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.largerThanBy
 import org.opendc.simulator.network.utils.logger
 
@@ -113,10 +114,8 @@ internal class Port(val speed: Kbps, val node: Node) {
      * @return  [Result.SUCCESS] on success, [Result.FAILURE] otherwise.
      */
     fun disconnect(): Result {
-        if (linkIn == null || linkOut == null) {
-            log.error("unable to disconnect port, already disconnected")
-            return FAILURE
-        }
+        if (linkIn == null || linkOut == null)
+            return log.errAndGet("unable to disconnect port, already disconnected")
 
         `in`.disconnect()
         out.disconnect()
