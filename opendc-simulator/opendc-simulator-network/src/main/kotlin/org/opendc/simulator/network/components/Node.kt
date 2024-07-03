@@ -181,9 +181,11 @@ internal interface Node: FlowView {
      */
     private fun exchangeRoutVect(routVect: RoutingVect, vectOwner: Node): RoutingVect {
         routingTable.mergeRoutingVector(routVect, vectOwner)
-        if (!routingTable.isChanged) return routingTable.vector
 
+        if (!routingTable.isTableChanged) return routingTable.vector
         updateAllFlows()
+
+        if (!routingTable.isVectChanged) return routingTable.vector
         shareRoutingVect(except = listOf(vectOwner))
 
         return routingTable.vector
@@ -202,8 +204,9 @@ internal interface Node: FlowView {
                 if (exchange) {
                     val otherVect: RoutingVect = adjNode.exchangeRoutVect(routingTable.vector, vectOwner = this)
                     routingTable.mergeRoutingVector(otherVect, vectOwner = adjNode)
-                    if (!routingTable.isChanged) return@forEach
+                    if (!routingTable.isTableChanged) return@forEach
                     updateAllFlows()
+                    if (!routingTable.isVectChanged) return@forEach
                     shareRoutingVect(except = listOf(adjNode), exchange = true)
                     return
                 } else

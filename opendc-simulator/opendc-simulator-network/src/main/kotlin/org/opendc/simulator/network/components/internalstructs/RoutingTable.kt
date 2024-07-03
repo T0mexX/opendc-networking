@@ -25,7 +25,10 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * This bool is updated each time a vector is merged in the routing table.
      * It is true if the merge resulted in some changes, false otherwise
      */
-    var isChanged: Boolean = false
+    var isVectChanged: Boolean = false
+        private set
+
+    var isTableChanged: Boolean = false
         private set
 
     /**
@@ -45,11 +48,16 @@ internal class RoutingTable(private val ownerId: NodeId) {
 
         val possiblePaths = table[destId] ?: let {
             table[destId] = mutableMapOf(pathToAdd.nextHop.id to pathToAdd)
+            isTableChanged = true
             return
         }
 
+        if (pathToAdd == possiblePaths[pathToAdd.nextHop.id]) return
+
         possiblePaths[pathToAdd.nextHop.id] = pathToAdd
         filterOutNonOptimal(destId)
+        if (possiblePaths.containsKey(pathToAdd.nextHop.id))
+            isTableChanged = true
     }
 
     /**
@@ -59,7 +67,7 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * @param[nextHopId]    the next hop [NodeId] of the path to be removed.
      */
     private fun rmPath(destId: NodeId, nextHopId: NodeId) {
-        table[destId]?.remove(nextHopId)
+        isTableChanged = table[destId]?.remove(nextHopId) != null
         if (table[destId]?.isEmpty() == true)
             table.remove(destId)
     }
@@ -76,6 +84,7 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * @param[routingVector]    routing vector of adjacent [Node], mapping destination id to its cost (number of hops).
      */
     fun mergeRoutingVector(routingVector: Map<NodeId, Int>, vectOwner: Node) {
+        isTableChanged = false
         val routVectBefore = this.vector
         addOrReplacePath(PossiblePath(vectOwner.id, numOfHops = 1, nextHop = vectOwner))
 
@@ -94,8 +103,9 @@ internal class RoutingTable(private val ownerId: NodeId) {
             }
 
         val routVectAfter = this.vector
+        isVectChanged = routVectAfter != routVectBefore
 
-        isChanged = routVectAfter != routVectBefore
+        table
     }
 
     /**
