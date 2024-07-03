@@ -8,6 +8,7 @@ import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.Result
+import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -83,18 +84,14 @@ internal interface Node: FlowView {
      * @return          [Result.SUCCESS] on success, [Result.FAILURE] otherwise.
      */
     fun connect(other: Node): Result {
-        if (other.id in portToNode.keys) {
-            log.error("unable to connect $this to $other, nodes already connected")
-            return FAILURE
-        }
+        if (other.id in portToNode.keys)
+            return log.errAndGet("unable to connect $this to $other, nodes already connected")
 
         val freePort: Port = getFreePort()
-            ?: let {
-                log.error("unable to connect, maxi num of connected nodes reached ($numOfPorts).");
-                return FAILURE
-            }
+            ?: return log.errAndGet("unable to connect, maxi num of connected nodes reached ($numOfPorts).")
 
-        val otherPort: Port = other.accept(this, freePort) ?: return FAILURE
+        val otherPort: Port = other.accept(this, freePort)
+            ?: return log.errAndGet("unable to connect, node $other refused connection")
 
         portToNode[other.id] = freePort
         Link(freePort, otherPort)
@@ -142,18 +139,17 @@ internal interface Node: FlowView {
      */
     fun disconnect(other: Node, notifyOther: Boolean = true): Result {
         val portToOther: Port = portToNode[other.id]
-            ?: let {
-                log.error("unable to disconnect $this from $other, nodes are not connected")
-                return FAILURE
+            ?: return log.errAndGet("unable to disconnect $this from $other, nodes are not connected")
+
+
+        if (notifyOther)
+            other.disconnect(this, notifyOther = false). let {
+                if (it is ERROR) return log.errAndGet(it.msg)
             }
 
-
-        if (notifyOther &&
-            other.disconnect(this, notifyOther = false) == FAILURE)
-            return FAILURE
-
-        if (portToOther.disconnect() == FAILURE)
-            return FAILURE
+        portToOther.disconnect().let {
+            if (it is ERROR) return log.errAndGet(it.msg)
+        }
 
         routingTable.removeNextHop(other)
         portToNode.remove(other.id)
