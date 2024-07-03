@@ -25,7 +25,7 @@ import org.opendc.simulator.network.utils.Kbps
  * @param[forwardingPolicy] policy used to determine the links to which forward incoming flows.
  */
 internal open class Switch(
-    override val id: NodeId,
+    final override val id: NodeId,
     override val portSpeed: Kbps,
     override val numOfPorts: Int,
     override val forwardingPolicy: ForwardingPolicy = StaticECMP,
