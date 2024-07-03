@@ -53,6 +53,7 @@ private class NetworkPlayground: CliktCommand() {
             val str: String = readlnOrNull() ?: return
             whenMatch(str) {
                 Cmd.NEW_SWITCH.regex { Cmd.NEW_SWITCH.exec(this, env) }
+                Cmd.RM_NODE.regex {Cmd.RM_NODE.exec(this, env) }
                 Cmd.NEW_FLOW.regex { Cmd.NEW_FLOW.exec(this, env) }
                 Cmd.RM_FLOW.regex { Cmd.RM_FLOW.exec(this, env) }
                 Cmd.NEW_LINK.regex { Cmd.NEW_LINK.exec(this, env) }
@@ -102,6 +103,22 @@ private enum class Cmd {
 
             customNet.addNode(newSwitch)
             log.info("$newSwitch added to network")
+        }
+    },
+    RM_NODE {
+        override val regex = Regex("\\s*rm\\s+(?:n|node)\\s+(\\d+)\\s*")
+        override fun exec(result: MatchResult, env: PlaygroundEnv) {
+            val customNet: CustomNetwork = (env.network as? CustomNetwork) ?: let {
+                log.error("removing node is not allowed unless the network is of custom type")
+                return
+            }
+            val groups: List<String> = result.groupValues
+            val nodeId: NodeId = groups[1].toInt()
+
+            when(customNet.rmNode(nodeId)) {
+                Result.SUCCESS -> log.info("node successfully removed")
+                else -> log.error("unable to remove node")
+            }
         }
     },
     NEW_FLOW {
