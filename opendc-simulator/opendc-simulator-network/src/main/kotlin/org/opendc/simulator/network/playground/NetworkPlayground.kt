@@ -13,6 +13,7 @@ import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Result
@@ -53,6 +54,7 @@ private class NetworkPlayground: CliktCommand() {
             whenMatch(str) {
                 Cmd.NEW_SWITCH.regex { Cmd.NEW_SWITCH.exec(this, env) }
                 Cmd.NEW_FLOW.regex { Cmd.NEW_FLOW.exec(this, env) }
+                Cmd.RM_FLOW.regex { Cmd.RM_FLOW.exec(this, env) }
                 Cmd.NEW_LINK.regex { Cmd.NEW_LINK.exec(this, env) }
                 Cmd.RM_LINK.regex { Cmd.RM_LINK.exec(this, env) }
                 Cmd.ENERGY_REPORT.regex { Cmd.ENERGY_REPORT.exec(this, env) }
@@ -119,6 +121,18 @@ private enum class Cmd {
             )
             env.network.startFlow(newFLow)
             FLOWS.exec(result, env)
+        }
+    },
+    RM_FLOW {
+        override val regex = Regex("\\s*rm\\s+(?:f|flow)\\s+(\\d+)\\s*")
+        override fun exec(result: MatchResult, env: PlaygroundEnv) {
+            val groups: List<String> = result.groupValues
+            val flowId: FlowId = groups[1].toInt()
+
+            when(env.network.stopFlow(flowId)) {
+                Result.SUCCESS -> log.info("flow successfully stopped")
+                else -> log.error("unable to stop flow")
+            }
         }
     },
     NEW_LINK {

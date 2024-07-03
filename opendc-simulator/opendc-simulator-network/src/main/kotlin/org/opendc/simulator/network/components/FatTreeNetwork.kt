@@ -22,7 +22,7 @@ internal class FatTreeNetwork(
 ): Network {
 
     override val nodes: MutableMap<NodeId, Node> = HashMap()
-    override val networkEndPointNodes: Map<NodeId, EndPointNode>
+    override val endPointNodes: Map<NodeId, EndPointNode>
     override val endToEndFlows: MutableMap<Int, EndToEndFlow> = HashMap()
 
     /**
@@ -87,7 +87,7 @@ internal class FatTreeNetwork(
         leafs = pods.flatMap { it.clusters }
         nodes.putAll(leafs.associateBy { it.id })
 
-        networkEndPointNodes = (coreSwitches + leafs).associateBy { it.id }
+        endPointNodes = (coreSwitches + leafs).associateBy { it.id }
     }
 
 

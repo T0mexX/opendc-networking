@@ -29,7 +29,7 @@ internal class CustomNetwork(
     override val nodes: MutableMap<NodeId, Node> =
         nodes.associateBy { it.id }.toMutableMap()
 
-    override val networkEndPointNodes: MutableMap<NodeId, EndPointNode> =
+    override val endPointNodes: MutableMap<NodeId, EndPointNode> =
         nodes.filterIsInstance<EndPointNode>()
             .associateBy { it.id }.toMutableMap()
 
@@ -60,7 +60,7 @@ internal class CustomNetwork(
     fun addNode(node: Node) {
         nodes[node.id]?.let { log.error("unable to add node $node, id already present"); return }
         nodes[node.id] = node
-        (node as? EndPointNode)?.let { networkEndPointNodes[node.id] = node }
+        (node as? EndPointNode)?.let { endPointNodes[node.id] = node }
     }
 
 
