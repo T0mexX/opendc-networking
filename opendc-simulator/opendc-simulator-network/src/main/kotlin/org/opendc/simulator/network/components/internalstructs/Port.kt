@@ -130,11 +130,12 @@ internal class Port(val speed: Kbps, val node: Node) {
             linkIn != null && linkOut != null
 
     /**
+     * The port is assumed to be active any data pass through it.
+     * **The node is assumed to switch off ports that are not currently in use**.
      * @return  `true` if this port is active, `false` otherwise.
      */
     fun isActive(): Boolean =
-        // TODO: implement turn off feature
-        isConnected()
+        throughputIn > .0 || throughputOut > .0
 
     /**
      * Pushes a [Flow] into the [Link] this port is connected to.
