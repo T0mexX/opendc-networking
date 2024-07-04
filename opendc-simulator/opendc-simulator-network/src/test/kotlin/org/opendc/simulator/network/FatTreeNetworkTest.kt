@@ -48,7 +48,7 @@ class FatTreeNetworkTest: FunSpec({
             fatTree.torSwitches.size shouldBeExactly k * k / 2
             fatTree.aggregationSwitches.size shouldBeExactly k * k / 2
             fatTree.coreSwitches.size shouldBeExactly k * k / 4
-            fatTree.networkEndPointNodes.size shouldBeExactly (k * k * k) / 4 + k * k / 4
+            fatTree.endPointNodes.size shouldBeExactly (k * k * k) / 4 + k * k / 4
         }
     }
 })
