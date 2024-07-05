@@ -7,13 +7,12 @@
             [
                 {
                     "name": "H01",
-                    "cpus":
-                    [
+                    "cpu":
                         {
                             "coreCount": 8,
                             "coreSpeed": 3200
                         }
-                    ],
+                    ,
                     "memory": {
                         "memorySize": 128000
                     }
