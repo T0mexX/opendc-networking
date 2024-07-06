@@ -14,7 +14,7 @@ import org.opendc.simulator.network.utils.logger
 /**
  * Type alias for improved understandability.
  */
-internal typealias NodeId = Int
+internal typealias NodeId = Long
 
 /**
  * Type alias representing the routing vector of a [Node]. For improved readability.

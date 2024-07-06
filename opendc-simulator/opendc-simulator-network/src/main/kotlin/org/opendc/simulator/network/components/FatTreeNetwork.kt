@@ -2,8 +2,8 @@ package org.opendc.simulator.network.components
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.opendc.simulator.network.utils.IdDispatcher
-import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.utils.IdDispenser
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.NonSerializable
 import kotlin.math.pow
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
@@ -23,7 +23,7 @@ internal class FatTreeNetwork(
 
     override val nodes: MutableMap<NodeId, Node> = HashMap()
     override val endPointNodes: Map<NodeId, EndPointNode>
-    override val endToEndFlows: MutableMap<Int, EndToEndFlow> = HashMap()
+    override val endToEndFlows: MutableMap<Int, NetFlow> = HashMap()
 
     /**
      * Parameter that determines the topology which is defined as
@@ -116,7 +116,7 @@ internal class FatTreeNetwork(
         init {
             val k: Int = min(aggrSpecs.numOfPorts, torSpecs.numOfPorts)
             clusters = buildList {
-                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(Cluster(IdDispatcher.nextId, 1000.0, 1)) } // TODO: change Cluster building
+                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(Cluster(IdDispenser.nextStatic, 1000.0, 1)) } // TODO: change Cluster building
             }
 
             torSwitches = buildList {

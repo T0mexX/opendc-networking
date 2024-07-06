@@ -12,9 +12,9 @@ internal typealias FlowId = Int
 /**
  * Represent a flow that passes through a single medium.
  * It can either be a flow from [Node] to [Link] or from [Link] to [Node]
- * @param[id]                   id of the [EndToEndFlow] to which this port flow belongs.
+ * @param[id]                   id of the [NetFlow] to which this port flow belongs.
  * @param[sender]               node from which this flow is sent.
- * @param[finalDestId]          id of the node the corresponding [EndToEndFlow] is to be routed to.
+ * @param[finalDestId]          id of the node the corresponding [NetFlow] is to be routed to.
  * @param[dataRate]             initial data rate.
  */
 internal class Flow (

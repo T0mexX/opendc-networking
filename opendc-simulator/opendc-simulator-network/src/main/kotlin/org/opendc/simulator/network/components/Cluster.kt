@@ -2,16 +2,15 @@ package org.opendc.simulator.network.components
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.opendc.simulator.network.components.internalstructs.FlowsTable
 import org.opendc.simulator.network.components.internalstructs.Port
-import org.opendc.simulator.network.utils.IdDispatcher
-import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.utils.IdDispenser
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.energy.EnModel
 import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.energy.emodels.ClusterDfltEnModel
-import org.opendc.simulator.network.flow.Flow
+import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
@@ -27,9 +26,9 @@ internal class Cluster(
     override val numOfPorts: Int = 1,
     override val forwardingPolicy: ForwardingPolicy = StaticECMP
 ) : EnergyConsumer<Cluster>, EndPointNode {
-    override val outgoingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
+    override val outgoingEtoEFlows: MutableMap<FlowId, NetFlow> = HashMap()
 
-    override val incomingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
+    override val incomingEtoEFlows: MutableMap<FlowId, NetFlow> = HashMap()
 
     override val routingTable: RoutingTable = RoutingTable(this.id)
 
@@ -55,7 +54,7 @@ internal class Cluster(
         val numOfPorts: Int = 1
     ): Specs<Cluster> {
         override fun buildFromSpecs(): Cluster =
-            Cluster(id = id ?: IdDispatcher.nextId, portSpeed = portSpeed, numOfPorts = numOfPorts)
+            Cluster(id = id ?: IdDispenser.nextStatic, portSpeed = portSpeed, numOfPorts = numOfPorts)
     }
 }
 
