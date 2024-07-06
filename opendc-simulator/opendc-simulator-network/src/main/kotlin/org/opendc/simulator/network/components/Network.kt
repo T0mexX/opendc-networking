@@ -30,6 +30,8 @@ internal interface Network {
      */
     val endToEndFlows: MutableMap<FlowId, NetFlow>
 
+    val hostsById: MutableMap<NodeId, Cluster>
+
     /**
      * Starts a [NetFlow] if the flow can be established.
      * @param[flow] the flow to be established.
@@ -79,5 +81,10 @@ internal interface Network {
         sb.append("\n")
 
         return sb.toString()
+    }
+
+    fun advanceBy(ms: ms) {
+        // TODO: implement
+        TODO("Implement")
     }
 }
