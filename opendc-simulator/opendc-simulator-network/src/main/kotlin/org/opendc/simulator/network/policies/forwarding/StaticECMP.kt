@@ -5,7 +5,7 @@ import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.internalstructs.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
-import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 
@@ -18,15 +18,15 @@ import org.opendc.simulator.network.utils.Kbps
 internal object StaticECMP: ForwardingPolicy {
 
     /**
-     * The [EndToEndFlow] in the network. Needed to retrieve the destination id when forwarding a flow.
+     * The [NetFlow] in the network. Needed to retrieve the destination id when forwarding a flow.
      */
-    lateinit var eToEFlows: Map<FlowId, EndToEndFlow>
+    lateinit var eToEFlows: Map<FlowId, NetFlow>
 
     override fun forwardFlow(forwarder: Node, flowId: FlowId) {
         val routTable: RoutingTable = forwarder.routingTable
         val portToNode: Map<NodeId, Port> = forwarder.portToNode
         val totDataRateToForward: Kbps = forwarder.totDataRateOf(flowId)
-        val finalDestId: NodeId = eToEFlows[flowId]?.destId ?: throw IllegalStateException("unable to forward flow, flow id $flowId not recognized")
+        val finalDestId: NodeId = eToEFlows[flowId]?.destinationId ?: throw IllegalStateException("unable to forward flow, flow id $flowId not recognized")
 
 
         val portsToForwardTo: List<Port> =

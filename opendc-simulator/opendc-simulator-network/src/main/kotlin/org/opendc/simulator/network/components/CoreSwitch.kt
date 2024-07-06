@@ -1,21 +1,20 @@
 package org.opendc.simulator.network.components
 
-import org.opendc.simulator.network.flow.EndToEndFlow
-import org.opendc.simulator.network.flow.Flow
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 
 /**
  * Switch that also implements [EndPointNode].
- * This switch is able to start and receive [EndToEndFlow]s.
+ * This switch is able to start and receive [NetFlow]s.
  */
 internal class CoreSwitch(
     id: NodeId,
     portSpeed: Kbps,
     numOfPorts: Int
 ): Switch(id, portSpeed, numOfPorts), EndPointNode {
-    override val incomingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
-    override val outgoingEtoEFlows: MutableMap<NodeId, EndToEndFlow> = HashMap()
+    override val incomingEtoEFlows: MutableMap<FlowId, NetFlow> = HashMap()
+    override val outgoingEtoEFlows: MutableMap<FlowId, NetFlow> = HashMap()
 
     override fun notifyFlowChange(flowId: FlowId) {
         super<EndPointNode>.notifyFlowChange(flowId)

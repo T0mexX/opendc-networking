@@ -1,17 +1,18 @@
 package org.opendc.simulator.network.components
 
-import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.logger
+import org.opendc.simulator.network.utils.ms
 
 /**
  * Interface representing a network of [Node]s.
  */
 internal interface Network {
-    companion object { val log by logger() }
+    private companion object { private val log by logger() }
 
     /**
      * Maps [NodeId]s to their corresponding [Node]s, which are part of the [Network]
@@ -25,28 +26,25 @@ internal interface Network {
     val endPointNodes: Map<NodeId, EndPointNode>
 
     /**
-     * Maps flow ids to their corresponding [EndToEndFlow].
+     * Maps flow ids to their corresponding [NetFlow].
      */
-    val endToEndFlows: MutableMap<FlowId, EndToEndFlow>
+    val endToEndFlows: MutableMap<FlowId, NetFlow>
 
     /**
-     * Starts a [EndToEndFlow] if the flow can be established.
+     * Starts a [NetFlow] if the flow can be established.
      * @param[flow] the flow to be established.
      */
-    fun startFlow(flow: EndToEndFlow): Result {
+    fun startFlow(flow: NetFlow): Result {
         if (flow.desiredDataRate <= 0)
             return log.errAndGet("Unable to start flow, data rate should be positive.")
 
-        if (flow.totalDataToTransmit <= 0)
-            return log.errAndGet("Unable to start flow. data size should be positive.")
-
-        val sender: EndPointNode = endPointNodes[flow.senderId]
+        val sender: EndPointNode = endPointNodes[flow.transmitterId]
             ?: return log.errAndGet("Unable to start flow $flow, sender does not exist or it is not able to start a flow")
 
-        val receiver: EndPointNode = endPointNodes[flow.destId]
+        val receiver: EndPointNode = endPointNodes[flow.destinationId]
             ?: return log.errAndGet("Unable to start flow $flow, receiver does not exist or it is not able to start a flow")
 
-        endToEndFlows[flow.flowId] = flow
+        endToEndFlows[flow.id] = flow
         receiver.addReceivingEtoEFlow(flow)
         sender.startFlow(flow)
 
@@ -54,16 +52,16 @@ internal interface Network {
     }
 
     /**
-     * Stops a [EndToEndFlow] if the flow is running through the network.
+     * Stops a [NetFlow] if the flow is running through the network.
      * @param[flowId]   id of the flow to be stopped.
      */
     fun stopFlow(flowId: FlowId): Result {
         endToEndFlows[flowId]?. let { eToEFlow ->
-            endPointNodes[eToEFlow.senderId]
+            endPointNodes[eToEFlow.transmitterId]
                 ?.stopFlow(eToEFlow)
                 ?.also {
-                    endPointNodes[eToEFlow.destId]
-                        ?.rmReceivingEtoEFlow(eToEFlow.flowId)
+                    endPointNodes[eToEFlow.destinationId]
+                        ?.rmReceivingEtoEFlow(eToEFlow.id)
                 }?.also {
                     endToEndFlows.remove(flowId)
                 }

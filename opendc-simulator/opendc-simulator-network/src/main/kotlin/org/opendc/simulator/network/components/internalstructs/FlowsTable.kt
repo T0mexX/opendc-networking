@@ -2,7 +2,7 @@ package org.opendc.simulator.network.components.internalstructs
 
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.flow.Flow
-import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.utils.Kbps
@@ -14,14 +14,14 @@ import org.opendc.simulator.network.utils.Kbps
 internal class FlowsTable {
 
     /**
-     * Maps each [EndToEndFlow]'s ids to the corresponding incoming [Flow]s.
-     * Each incoming flow which is part of the same [EndToEndFlow] is received from a different adjacent [Node].
+     * Maps each [NetFlow]'s ids to the corresponding incoming [Flow]s.
+     * Each incoming flow which is part of the same [NetFlow] is received from a different adjacent [Node].
      */
     private val incomingFlows: MutableMap<FlowId, MutableSet<Flow>> = HashMap()
 
     /**
-     * Maps each [EndToEndFlow]'s id to the corresponding outgoing [Flow]s.
-     * Each outgoing flow which is part of the same [EndToEndFlow] is sent to a different adjacent [Node].
+     * Maps each [NetFlow]'s id to the corresponding outgoing [Flow]s.
+     * Each outgoing flow which is part of the same [NetFlow] is sent to a different adjacent [Node].
      */
     private val outgoingFlows: MutableMap<FlowId, MutableSet<Flow>> = HashMap()
 
@@ -47,22 +47,22 @@ internal class FlowsTable {
     }
 
     /**
-     * Returns all the outgoing flows that are part of the same [EndToEndFlow].
+     * Returns all the outgoing flows that are part of the same [NetFlow].
      * Each flow is forwarded to a different adjacent [Node].
-     * @param[flowId]   [EndToEndFlow] of which all the outgoing [Flow]s are to be returned.
+     * @param[flowId]   [NetFlow] of which all the outgoing [Flow]s are to be returned.
      */
     fun getOutGoingFlowsOf(flowId: FlowId): Set<Flow> =
         outgoingFlows[flowId] ?: setOf()
 
     /**
-     * Returns the sum of the data rates of all incoming flows which belong to the same [EndToEndFlow].
-     * @param[flowId]   [EndToEndFlow] id for which the total incoming data rate is to be returned.
+     * Returns the sum of the data rates of all incoming flows which belong to the same [NetFlow].
+     * @param[flowId]   [NetFlow] id for which the total incoming data rate is to be returned.
      */
     fun totalIncomingDataOf(flowId: FlowId): Kbps =
         incomingFlows[flowId]?.sumOf { it.dataRate } ?: 0.0
 
     /**
-     * Determines if the outgoing routs for the [EndToEndFlow]
+     * Determines if the outgoing routs for the [NetFlow]
      * corresponding to [flowId] have already been chosen.
      */
     fun hasOutgoingRoutsFor(flowId: FlowId): Boolean = outgoingFlows.containsKey(flowId)

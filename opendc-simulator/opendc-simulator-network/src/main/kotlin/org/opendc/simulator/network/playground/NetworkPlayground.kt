@@ -12,18 +12,27 @@ import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
-import org.opendc.simulator.network.flow.EndToEndFlow
+import org.opendc.simulator.network.energy.NetworkEnergyRecorder
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
+import org.slf4j.Logger
 import java.io.File
 import kotlin.system.exitProcess
 
 
 public fun main(args: Array<String>): Unit = NetworkPlayground().main(args)
 
+private fun Logger.invNode(id: NodeId) {
+    this.error("invalid node id $id")
+}
+
+private fun Logger.unableToParseId(str: String) {
+    this.error("unable to parse id $str")
+}
 
 @OptIn(ExperimentalSerializationApi::class)
 private class NetworkPlayground: CliktCommand() {
@@ -72,20 +81,19 @@ private enum class Cmd {
     NEW_SWITCH {
         override val regex = Regex("\\s*(c|core|)(?:s|switch)\\s+(\\d+)\\s+([\\d.]+)\\s+(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
-            val customNet: CustomNetwork = (env.network as? CustomNetwork) ?: let {
-                log.error("adding a switch is not allowed unless the network is custom type")
-                return
-            }
+            val customNet: CustomNetwork = (env.network as? CustomNetwork)
+                ?: return log.error("adding a switch is not allowed unless the network is custom type")
+
             val groups: List<String> = result.groupValues
-            val id: NodeId = groups[2].toIntOrNull()?.let {
-                if (customNet.nodes.containsKey(it)) {
-                    log.error("unable to add node, id $it already present")
-                    return
-                }
+            val id: NodeId = groups[2].toLongOrNull()?.let {
+                if (customNet.nodes.containsKey(it))
+                    return log.error("unable to add node, id $it already present")
+
                 it
-            } ?: let { log.error("unable to parse id"); return }
-            val portSpeed: Kbps = groups[3].toDoubleOrNull() ?: let { log.error("unable to parse port speed"); return }
-            val numOfPorts: Int = groups[4].toIntOrNull() ?: let { log.error("unable to parse number of ports"); return }
+            } ?: return log.error("unable to parse id")
+
+            val portSpeed: Kbps = groups[3].toDoubleOrNull() ?: return log.error("unable to parse port speed")
+            val numOfPorts: Int = groups[4].toIntOrNull() ?: return log.error("unable to parse number of ports")
             val newSwitch: Switch = let {
                 if (groups[1].isEmpty())
                     Switch(
@@ -110,12 +118,11 @@ private enum class Cmd {
     RM_NODE {
         override val regex = Regex("\\s*rm\\s+(?:n|node)\\s+(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
-            val customNet: CustomNetwork = (env.network as? CustomNetwork) ?: let {
-                log.error("removing node is not allowed unless the network is of custom type")
-                return
-            }
+            val customNet: CustomNetwork = (env.network as? CustomNetwork)
+                ?: return log.error("removing node is not allowed unless the network is of custom type")
+
             val groups: List<String> = result.groupValues
-            val nodeId: NodeId = groups[1].toInt()
+            val nodeId: NodeId = groups[1].toLongOrNull() ?: return log.unableToParseId(groups[1])
 
             when(val it = customNet.rmNode(nodeId)) {
                 is Result.ERROR -> log.error("unable to remove node. Reason: ${it.msg}")
@@ -127,16 +134,15 @@ private enum class Cmd {
         override val regex: Regex = Regex("\\s*(?:flow|f)\\s+(\\d+)\\s*(?:->| )\\s*(\\d+)\\s+(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
             val groups: List<String> = result.groupValues
-            val senderId: NodeId = groups[1].toInt()
-            val destId: NodeId = groups[2].toInt()
+            val senderId: NodeId = groups[1].toLongOrNull() ?: return log.unableToParseId(groups[1])
+            val destId: NodeId = groups[2].toLongOrNull() ?: return log.unableToParseId(groups[2])
             val dataRate: Double = groups[3].toDouble()
-            // TODO: add total data size
-            val newFLow = EndToEndFlow(
-                flowId = FlowIdDispatcher.nextId,
+
+            val newFLow = NetFlow(
+                id = FlowIdDispatcher.nextId,
                 desiredDataRate = dataRate,
-                senderId = senderId,
-                destId = destId,
-                totalDataToTransmit = 1.0 // TODO: change
+                transmitterId = senderId,
+                destinationId = destId,
             )
 
             when (val it = env.network.startFlow(newFLow)) {
@@ -149,7 +155,7 @@ private enum class Cmd {
         override val regex = Regex("\\s*rm\\s+(?:f|flow)\\s+(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
             val groups: List<String> = result.groupValues
-            val flowId: FlowId = groups[1].toInt()
+            val flowId: FlowId = groups[1].toIntOrNull() ?: return log.unableToParseId(groups[1])
 
             when(val it = env.network.stopFlow(flowId)) {
                 is Result.ERROR -> log.error("unable to stop flow. Reason: ${it.msg}")
@@ -161,10 +167,10 @@ private enum class Cmd {
         override val regex = Regex("\\s*(?:l|link)\\s+(\\d+)\\s*[- ]\\s*(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
             val groups: List<String> = result.groupValues
-            val node1Id: NodeId = groups[1].toInt()
-            val node2Id: NodeId = groups[2].toInt()
-            val node1: Node = env.network.nodes[node1Id] ?: run { log.error("Invalid node id $node1Id"); return }
-            val node2: Node = env.network.nodes[node2Id] ?: run { log.error("Invalid node id $node2Id"); return }
+            val node1Id: NodeId = groups[1].toLongOrNull() ?: return log.unableToParseId(groups[1])
+            val node2Id: NodeId = groups[2].toLongOrNull() ?: return log.unableToParseId(groups[2])
+            val node1: Node = env.network.nodes[node1Id] ?: return log.invNode(node1Id)
+            val node2: Node = env.network.nodes[node2Id] ?: return log.invNode(node2Id)
 
             when (val it = node1.connect(node2)) {
                 is Result.ERROR -> log.error("unable to create link. Reason: ${it.msg}")
@@ -176,10 +182,10 @@ private enum class Cmd {
         override val regex = Regex("\\s*rm\\s+(?:l|link)\\s+(\\d+)\\s*[- ]\\s*(\\d+)\\s*")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
             val groups: List<String> = result.groupValues
-            val node1Id: NodeId = groups[1].toInt()
-            val node2Id: NodeId = groups[2].toInt()
-            val node1: Node = env.network.nodes[node1Id] ?: run { log.error("Invalid node id $node1Id"); return }
-            val node2: Node = env.network.nodes[node2Id] ?: run { log.error("Invalid node id $node2Id"); return }
+            val node1Id: NodeId = groups[1].toLongOrNull() ?: return log.unableToParseId(groups[1])
+            val node2Id: NodeId = groups[2].toLongOrNull() ?: return log.unableToParseId(groups[2])
+            val node1: Node = env.network.nodes[node1Id] ?: return log.invNode(node1Id)
+            val node2: Node = env.network.nodes[node2Id] ?: return log.invNode(node2Id)
 
             when (val it = node1.disconnect(node2)) {
                 is Result.ERROR -> log.error("unable to remove link. Reason: ${it.msg}")
@@ -206,11 +212,11 @@ private enum class Cmd {
             )
             env.network.endToEndFlows.values.forEach { flow ->
                 println(
-                    flow.flowId.toString().padEnd(5) +
-                    flow.senderId.toString().padEnd(10) +
-                    flow.destId.toString().padEnd(10) +
+                    flow.id.toString().padEnd(5) +
+                    flow.transmitterId.toString().padEnd(10) +
+                    flow.destinationId.toString().padEnd(10) +
                     flow.desiredDataRate.toString().padEnd(20) +
-                    flow.currDataRate.toString().padEnd(20)
+                    flow.throughput.toString().padEnd(20)
                 )
             }
         }
@@ -218,9 +224,8 @@ private enum class Cmd {
     FLOWS_OF {
         override val regex = Regex("(?:flows|f) (\\d+)")
         override fun exec(result: MatchResult, env: PlaygroundEnv) {
-            val nodeId: NodeId = result.groupValues[1].toInt()
-            val node: Node = env.network.nodes[nodeId]
-                ?: run { println("No node is assiciated with id $nodeId"); return }
+            val nodeId: NodeId = result.groupValues[1].toLongOrNull() ?: return log.unableToParseId(result.groupValues[1])
+            val node: Node = env.network.nodes[nodeId] ?: return log.invNode(nodeId)
             println("\n==== Flows in node $nodeId ====")
             println(node.getFmtFlows())
         }
