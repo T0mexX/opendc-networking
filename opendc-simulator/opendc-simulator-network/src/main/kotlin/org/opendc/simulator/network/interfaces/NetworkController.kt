@@ -3,6 +3,7 @@ package org.opendc.simulator.network.interfaces
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.NodeId
@@ -37,10 +38,12 @@ public class NetworkController internal constructor(private val network: Network
     public val energyRecorder: NetworkEnergyRecorder =
         NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
 
+
     private val hostNodes = mutableMapOf<NodeId, HostNode>()
+    private val coreNodes = mutableMapOf<NodeId, CoreSwitch>()
     private val flowsById = mutableMapOf<FlowId, NetFlow>()
 
-    public fun claimNextNode(): NetNodeInterface? =
+    public fun claimNextHostNode(): NetNodeInterface? =
         network.hostsById.keys
             .filterNot { it in hostNodes.keys }
             .firstOrNull()
@@ -48,6 +51,17 @@ public class NetworkController internal constructor(private val network: Network
                 hostNodes[it] = network.hostsById[it] !!
                 getNetInterfaceOf(it)
         }
+
+    public fun claimNextCoreNode(): NetNodeInterface? =
+        network.nodes
+            .filterValues { it is CoreSwitch }
+            .keys
+            .filterNot { it in hostNodes.keys }
+            .firstOrNull()
+            ?. let {
+                hostNodes[it] = network.hostsById[it] !!
+                getNetInterfaceOf(it)
+            }
 
     public fun claimNode(uuid: UUID): NetNodeInterface? =
         claimNode(uuid.node())
@@ -177,7 +191,6 @@ public class NetworkController internal constructor(private val network: Network
             TODO("Not yet implemented")
             // TODO: implement
         }
-
     }
 }
 
