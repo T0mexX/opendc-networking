@@ -36,8 +36,10 @@ internal class CustomNetwork(
         nodes.filterIsInstance<EndPointNode>()
             .associateBy { it.id }.toMutableMap()
 
-    override val hostsById = mutableMapOf<NodeId, HostNode>()
-
+    override val internet: Internet =
+        Internet.excludingIds(this.nodes.keys).connectedTo(
+            coreSwitches = this.nodes.values.filterIsInstance<CoreSwitch>()
+        )
 
     /**
      * Connects [Node]s of ***this*** based on link-list passed as parameter.

@@ -8,6 +8,7 @@ import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
+import org.opendc.simulator.network.components.getNodesById
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
@@ -38,40 +39,47 @@ public class NetworkController internal constructor(private val network: Network
     public val energyRecorder: NetworkEnergyRecorder =
         NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
 
+    public val internetNetworkInterface: NetNodeInterface =
+        getNetInterfaceOf(network.internet.id)
+            ?: throw IllegalStateException("network did not initialize the internet abstract node correctly")
 
-    private val hostNodes = mutableMapOf<NodeId, HostNode>()
-    private val coreNodes = mutableMapOf<NodeId, CoreSwitch>()
+    private val claimedHostsById = mutableMapOf<NodeId, HostNode>()
+    private val claimedCoreNodesById = mutableMapOf<NodeId, CoreSwitch>()
     private val flowsById = mutableMapOf<FlowId, NetFlow>()
 
-    public fun claimNextHostNode(): NetNodeInterface? =
-        network.hostsById.keys
-            .filterNot { it in hostNodes.keys }
-            .firstOrNull()
-            ?. let {
-                hostNodes[it] = network.hostsById[it] !!
-                getNetInterfaceOf(it)
-        }
 
-    public fun claimNextCoreNode(): NetNodeInterface? =
-        network.nodes
-            .filterValues { it is CoreSwitch }
-            .keys
-            .filterNot { it in hostNodes.keys }
+    public fun claimNextHostNode(): NetNodeInterface? {
+        val hostsById = network.getNodesById<HostNode>()
+        return hostsById.keys
+            .filterNot { it in claimedHostsById.keys }
             .firstOrNull()
-            ?. let {
-                hostNodes[it] = network.hostsById[it] !!
+            ?.let {
+                claimedHostsById[it] = hostsById[it]!!
                 getNetInterfaceOf(it)
             }
+    }
+
+    public fun claimNextCoreNode(): NetNodeInterface? {
+        val coreSwitches = network.getNodesById<CoreSwitch>()
+        return coreSwitches
+            .keys
+            .filterNot { it in claimedHostsById.keys }
+            .firstOrNull()
+            ?.let {
+                claimedCoreNodesById[it] = coreSwitches[it] !!
+                getNetInterfaceOf(it)
+            }
+    }
 
     public fun claimNode(uuid: UUID): NetNodeInterface? =
         claimNode(uuid.node())
 
     public fun claimNode(nodeId: NodeId): NetNodeInterface? {
-        check (nodeId in hostNodes)
+        check (nodeId in claimedHostsById)
         { "unable to claim node nodeId $nodeId, nodeId already claimed" }
 
-        network.hostsById[nodeId]?.let {
-            hostNodes[nodeId] = it
+        network.getNodesById<HostNode>()[nodeId]?.let {
+            claimedHostsById[nodeId] = it
         } ?: throw IllegalArgumentException(
             "unable to claim node nodeId $nodeId, nodeId not existent or not associated to a host node"
         )
@@ -101,7 +109,7 @@ public class NetworkController internal constructor(private val network: Network
     }
 
     public fun startFlow(netFlow: NetFlow): NetFlow? {
-        if (netFlow.transmitterId !in hostNodes)
+        if (netFlow.transmitterId !in claimedHostsById)
             return log.errAndNull("unable to start network flow from node ${netFlow.transmitterId}, " +
                 "node does not exist or is not an end-point node")
 
