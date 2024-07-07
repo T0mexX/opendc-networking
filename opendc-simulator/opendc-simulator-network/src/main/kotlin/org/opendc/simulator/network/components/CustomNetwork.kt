@@ -27,7 +27,7 @@ internal class CustomNetwork(
 ): Network {
     companion object { val log by logger() }
 
-    override val endToEndFlows: MutableMap<FlowId, NetFlow> = HashMap()
+    override val netFlowById: MutableMap<FlowId, NetFlow> = HashMap()
 
     override val nodes: MutableMap<NodeId, Node> =
         nodes.associateBy { it.id }.toMutableMap()
@@ -89,11 +89,11 @@ internal class CustomNetwork(
      */
     private fun rmEtoEFlowsGenBy(nodeId: NodeId) {
         val flowsTOBeRemoved: Map<FlowId, NetFlow> =
-            endToEndFlows.filter { it.value.transmitterId == nodeId }
+            netFlowById.filter { it.value.transmitterId == nodeId }
 
         flowsTOBeRemoved.forEach { (flowId, _) ->
             super<Network>.stopFlow(flowId)
-            endToEndFlows.remove(flowId)
+            netFlowById.remove(flowId)
         }
     }
 

@@ -12,7 +12,7 @@ import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
-import org.opendc.simulator.network.energy.NetworkEnergyRecorder
+import org.opendc.simulator.network.interfaces.NetworkEnergyRecorder
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
@@ -49,7 +49,7 @@ private class NetworkPlayground: CliktCommand() {
             network = networkSpecs.buildFromSpecs()
         } else network = CustomNetwork()
 
-        StaticECMP.eToEFlows = network.endToEndFlows
+        StaticECMP.eToEFlows = network.netFlowById
 
         energyRecorder = NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
         env = PlaygroundEnv(network = network, energyRecorder = energyRecorder)
@@ -210,7 +210,7 @@ private enum class Cmd {
                 "desired data rate".padEnd(20) +
                 "actual data rate".padEnd(20)
             )
-            env.network.endToEndFlows.values.forEach { flow ->
+            env.network.netFlowById.values.forEach { flow ->
                 println(
                     flow.id.toString().padEnd(5) +
                     flow.transmitterId.toString().padEnd(10) +

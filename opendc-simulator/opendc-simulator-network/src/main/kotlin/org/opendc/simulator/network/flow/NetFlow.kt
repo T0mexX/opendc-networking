@@ -2,10 +2,12 @@ package org.opendc.simulator.network.flow
 
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.utils.Kb
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.OnChangeHandler
+import org.opendc.simulator.network.utils.ms
+import java.time.Duration
 import kotlin.properties.Delegates
-import kotlin.time.Duration
 
 /**
  * Represents an end-to-end flow, meaning the flow from one [EndPointNode] to another.
@@ -25,6 +27,8 @@ public class NetFlow(
 
     private val throughputOnChangeHandlers = mutableListOf<OnChangeHandler<NetFlow, Kbps>>()
 
+    private var totDataTransmitted: Kb = .0
+
     /**
      * The end-to-end data rate of the flow.
      */
@@ -39,12 +43,17 @@ public class NetFlow(
         return this
     }
 
-    /**
-     * Advances time by [timeSpan], adjusting [remDataToTransmit] accordingly.
-     */
+//    /** TODO
+//     * Advances time by [timeSpan], adjusting [remDataToTransmit] accordingly.
+//     */
     internal fun advanceBy(timeSpan: Duration) {
-        TODO("implement")
-        // TODO: implement
+        advanceBy(timeSpan.toMillis())
+    }
+
+    internal fun advanceBy(ms: ms) {
+        fun ms.toSeconds(): Double = this.toDouble() / 1000
+
+        totDataTransmitted += throughput * ms.toSeconds()
     }
 }
 

@@ -1,9 +1,13 @@
-package org.opendc.simulator.network.energy
+package org.opendc.simulator.network.interfaces
 
 import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.energy.EnMonitor
+import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.Watts
 import org.opendc.simulator.network.utils.logger
+import org.opendc.simulator.network.utils.ms
+import java.time.Duration
 
 public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyConsumer<*>>) {
     private companion object { private val log by logger() }
@@ -31,5 +35,11 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
             Current Energy Consumption: ${currentConsumption}W
             =====================
         """.trimIndent()
+    }
+
+    internal fun advanceBy(ms: ms) {
+        fun ms.toSeconds(): Double = this.toDouble() / 1000
+
+        totalConsumption += currentConsumption * ms.toSeconds()
     }
 }

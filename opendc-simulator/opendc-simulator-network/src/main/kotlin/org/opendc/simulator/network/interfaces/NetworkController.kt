@@ -8,7 +8,6 @@ import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.energy.EnergyConsumer
-import org.opendc.simulator.network.energy.NetworkEnergyRecorder
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.IdDispenser
@@ -126,7 +125,10 @@ public class NetworkController internal constructor(private val network: Network
 
     public fun advanceBy(duration: Duration) { advanceBy(duration.toMillis()) }
 
-    public fun advanceBy(ms: ms) { network.advanceBy(ms) }
+    public fun advanceBy(ms: ms) {
+        network.advanceBy(ms)
+        energyRecorder.advanceBy(ms)
+    }
 
     private inner class NetNodeInterfaceImpl(val nodeId: NodeId): NetNodeInterface {
 
