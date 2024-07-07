@@ -121,6 +121,11 @@ public class NetworkController internal constructor(private val network: Network
             return log.errAndNull("unable to start network flow with nodeId ${netFlow.id}, " +
                 "a flow with nodeId ${netFlow.id} already exists")
 
+        if (netFlow.transmitterId in claimedHostsById.keys
+            || netFlow.transmitterId in claimedCoreNodesById)
+            log.warn("starting flow through controller interface from node whose interface was claimed, " +
+                "best practice would be to use either only the controller or the node interface for each node")
+
         flowsById[netFlow.id] = netFlow
         network.startFlow(netFlow)
 
