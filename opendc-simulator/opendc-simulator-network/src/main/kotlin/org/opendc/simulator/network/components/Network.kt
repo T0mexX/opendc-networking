@@ -28,7 +28,7 @@ internal interface Network {
     /**
      * Maps flow ids to their corresponding [NetFlow].
      */
-    val endToEndFlows: MutableMap<FlowId, NetFlow>
+    val netFlowById: MutableMap<FlowId, NetFlow>
 
     val hostsById: MutableMap<NodeId, HostNode>
 
@@ -46,7 +46,7 @@ internal interface Network {
         val receiver: EndPointNode = endPointNodes[flow.destinationId]
             ?: return log.errAndGet("Unable to start flow $flow, receiver does not exist or it is not able to start a flow")
 
-        endToEndFlows[flow.id] = flow
+        netFlowById[flow.id] = flow
         receiver.addReceivingEtoEFlow(flow)
         sender.startFlow(flow)
 
@@ -58,14 +58,14 @@ internal interface Network {
      * @param[flowId]   id of the flow to be stopped.
      */
     fun stopFlow(flowId: FlowId): Result {
-        endToEndFlows[flowId]?. let { eToEFlow ->
+        netFlowById[flowId]?. let { eToEFlow ->
             endPointNodes[eToEFlow.transmitterId]
                 ?.stopFlow(eToEFlow)
                 ?.also {
                     endPointNodes[eToEFlow.destinationId]
                         ?.rmReceivingEtoEFlow(eToEFlow.id)
                 }?.also {
-                    endToEndFlows.remove(flowId)
+                    netFlowById.remove(flowId)
                 }
         } ?: return log.errAndGet("unable to stop flow with id $flowId")
 
@@ -84,7 +84,6 @@ internal interface Network {
     }
 
     fun advanceBy(ms: ms) {
-        // TODO: implement
-        TODO("Implement")
+        netFlowById.values.forEach { it.advanceBy(ms) }
     }
 }
