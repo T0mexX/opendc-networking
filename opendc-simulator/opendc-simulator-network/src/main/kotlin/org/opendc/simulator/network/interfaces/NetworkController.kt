@@ -89,7 +89,7 @@ public class NetworkController internal constructor(private val network: Network
 
     public fun startFlow(
         transmitterId: NodeId,
-        destinationId: NodeId = -1, // TODO: understand how multiple core switches work
+        destinationId: NodeId = internetNetworkInterface.nodeId, // TODO: understand how multiple core switches work
         desiredDataRate: Kbps = .0,
         flowId: FlowId = IdDispenser.nextFlowId,
         dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
@@ -157,19 +157,21 @@ public class NetworkController internal constructor(private val network: Network
         energyRecorder.advanceBy(ms)
     }
 
-    private inner class NetNodeInterfaceImpl(val nodeId: NodeId): NetNodeInterface {
+
+
+
+    private inner class NetNodeInterfaceImpl(override val nodeId: NodeId): NetNodeInterface {
 
         override fun startFlow(
-            destinationId: NodeId, // TODO: understand how multiple core switches work
+            destinationId: NodeId?, // TODO: understand how multiple core switches work
             desiredDataRate: Kbps,
-            flowId: FlowId,
             dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
         ): NetFlow? {
             val netFlow = NetFlow(
                     transmitterId = this.nodeId,
-                    destinationId = destinationId,
-                    id = flowId,
-                    desiredDataRate = desiredDataRate,
+                    destinationId = destinationId ?: internetNetworkInterface.nodeId,
+                    id = IdDispenser.nextFlowId,
+                    desiredDataRate = desiredDataRate
                 )
 
             dataRateOnChangeHandler?.let {
@@ -197,12 +199,14 @@ public class NetworkController internal constructor(private val network: Network
         }
 
         override fun fromInternet(
-            flowId: FlowId,
             desiredDataRate: Kbps,
             dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
         ): NetFlow {
-            TODO("Not yet implemented")
-            // TODO: implement
+            return internetNetworkInterface.startFlow(
+                destinationId = this.nodeId,
+                desiredDataRate = desiredDataRate,
+                dataRateOnChangeHandler = dataRateOnChangeHandler
+            ) !!
         }
     }
 }

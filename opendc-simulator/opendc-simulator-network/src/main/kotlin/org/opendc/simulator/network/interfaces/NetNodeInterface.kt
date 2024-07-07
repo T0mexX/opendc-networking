@@ -7,10 +7,10 @@ import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
 
 public interface NetNodeInterface {
+    public val nodeId: NodeId
     public fun startFlow(
-        destinationId: NodeId = -1,
+        destinationId: NodeId? = null,
         desiredDataRate: Kbps = .0,
-        flowId: FlowId = IdDispenser.nextFlowId,
         dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
     ): NetFlow?
 
@@ -19,7 +19,6 @@ public interface NetNodeInterface {
     public fun getMyFlow(id: FlowId): NetFlow?
 
     public fun fromInternet(
-        flowId: FlowId = IdDispenser.nextFlowId,
         desiredDataRate: Kbps = .0,
         dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
     ): NetFlow
