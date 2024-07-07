@@ -30,7 +30,7 @@ internal interface Network {
      */
     val endToEndFlows: MutableMap<FlowId, NetFlow>
 
-    val hostsById: MutableMap<NodeId, Cluster>
+    val hostsById: MutableMap<NodeId, HostNode>
 
     /**
      * Starts a [NetFlow] if the flow can be established.

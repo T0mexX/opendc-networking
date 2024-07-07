@@ -58,9 +58,9 @@ internal open class Switch(
         val portSpeed: Kbps,
         val id: NodeId? = null
     ): Specs<Switch> {
-        override fun buildFromSpecs(): Switch = Switch(id = id ?: IdDispenser.nextStatic, portSpeed, numOfPorts)
+        override fun buildFromSpecs(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts)
 
-        fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextStatic, portSpeed, numOfPorts)
+        fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts)
     }
 }
 

@@ -24,6 +24,8 @@ internal class FatTreeNetwork(
     override val nodes: MutableMap<NodeId, Node> = HashMap()
     override val endPointNodes: Map<NodeId, EndPointNode>
     override val endToEndFlows: MutableMap<Int, NetFlow> = HashMap()
+    override val hostsById = mutableMapOf<NodeId, HostNode>()
+
 
     /**
      * Parameter that determines the topology which is defined as
@@ -45,9 +47,9 @@ internal class FatTreeNetwork(
     val coreSwitches: List<Switch>
 
     /**
-     * The [Cluster]s that belong to ***this*** [FatTreeNetwork].
+     * The [HostNode]s that belong to ***this*** [FatTreeNetwork].
      */
-    val leafs: List<Cluster>
+    val leafs: List<HostNode>
 
     /**
      * The aggregation [Switch]es that belong to ***this*** [FatTreeNetwork].
@@ -84,7 +86,7 @@ internal class FatTreeNetwork(
         torSwitches = pods.flatMap { it.torSwitches }
         nodes.putAll(torSwitches.associateBy { it.id })
 
-        leafs = pods.flatMap { it.clusters }
+        leafs = pods.flatMap { it.hostNodes }
         nodes.putAll(leafs.associateBy { it.id })
 
         endPointNodes = (coreSwitches + leafs).associateBy { it.id }
@@ -98,9 +100,9 @@ internal class FatTreeNetwork(
      */
     inner class FatTreePod(aggrSpecs: SwitchSpecs, torSpecs: SwitchSpecs) {
         /**
-         * [Cluster]s that belong to ***this*** pod.
+         * [HostNode]s that belong to ***this*** pod.
          */
-        val clusters: List<Cluster>
+        val hostNodes: List<HostNode>
 
         /**
          * ToR [Switch]es that belong to ***this*** pod.
@@ -115,15 +117,15 @@ internal class FatTreeNetwork(
 
         init {
             val k: Int = min(aggrSpecs.numOfPorts, torSpecs.numOfPorts)
-            clusters = buildList {
-                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(Cluster(IdDispenser.nextStatic, 1000.0, 1)) } // TODO: change Cluster building
+            hostNodes = buildList {
+                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(HostNode(IdDispenser.nextNodeId, 1000.0, 1)) } // TODO: change HostNode building
             }
 
             torSwitches = buildList {
                     repeat (k / 2) { add(torSpecs.buildFromSpecs()) }
                 }
 
-            clusters.forEachIndexed { index, server ->
+            hostNodes.forEachIndexed { index, server ->
                 server.connect( torSwitches[index / (k / 2)] )
             }
 
