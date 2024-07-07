@@ -17,7 +17,7 @@ internal interface Network {
     /**
      * Maps [NodeId]s to their corresponding [Node]s, which are part of the [Network]
      */
-    val nodes: MutableMap<NodeId, Node>
+    val nodes: Map<NodeId, Node>
 
     /**
      * Maps [NodeId]s to their corresponding [EndPointNode]s, which are part of the [Network].
@@ -30,7 +30,7 @@ internal interface Network {
      */
     val netFlowById: MutableMap<FlowId, NetFlow>
 
-    val hostsById: MutableMap<NodeId, HostNode>
+    val internet: Internet
 
     /**
      * Starts a [NetFlow] if the flow can be established.
@@ -86,4 +86,8 @@ internal interface Network {
     fun advanceBy(ms: ms) {
         netFlowById.values.forEach { it.advanceBy(ms) }
     }
+}
+
+internal inline fun <reified T> Network.getNodesById(): Map<NodeId, T> {
+    return nodes.values.filterIsInstance<T>().associateBy { (it as Node).id }
 }

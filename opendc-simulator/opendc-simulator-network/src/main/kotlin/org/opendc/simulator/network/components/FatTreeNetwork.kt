@@ -21,10 +21,9 @@ internal class FatTreeNetwork(
     torSpecs: SwitchSpecs
 ): Network {
 
-    override val nodes: MutableMap<NodeId, Node> = HashMap()
+    override val nodes: Map<NodeId, Node>
     override val endPointNodes: Map<NodeId, EndPointNode>
     override val netFlowById: MutableMap<Int, NetFlow> = HashMap()
-    override val hostsById = mutableMapOf<NodeId, HostNode>()
 
 
     /**
@@ -61,6 +60,7 @@ internal class FatTreeNetwork(
      */
     val torSwitches: List<Switch>
 
+    override val internet: Internet
 
     init {
         require(k.isEven() && k > 2) { "Fat tree can only be built with even-port-number (>2) switches" }
@@ -77,19 +77,18 @@ internal class FatTreeNetwork(
         }
 
         coreSwitches = coreSwitchesChunked.flatten()
-        nodes.putAll(coreSwitches.associateBy { it.id })
-
 
         aggregationSwitches = pods.flatMap { it.aggrSwitches }
-        nodes.putAll(aggregationSwitches.associateBy { it.id })
 
         torSwitches = pods.flatMap { it.torSwitches }
-        nodes.putAll(torSwitches.associateBy { it.id })
 
         leafs = pods.flatMap { it.hostNodes }
-        nodes.putAll(leafs.associateBy { it.id })
+
+        nodes = (leafs + torSwitches + aggregationSwitches + coreSwitches).associateBy { it.id }
 
         endPointNodes = (coreSwitches + leafs).associateBy { it.id }
+
+        internet = Internet.excludingIds(nodes.keys).connectedTo(coreSwitches)
     }
 
 
