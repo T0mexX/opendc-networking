@@ -72,6 +72,10 @@ internal interface Network {
         return SUCCESS
     }
 
+    fun resetFlows() {
+        netFlowById.keys.forEach { stopFlow(it) }
+    }
+
     /**
      * Returns a string with all [nodes] string representations, each in one line.
      */
