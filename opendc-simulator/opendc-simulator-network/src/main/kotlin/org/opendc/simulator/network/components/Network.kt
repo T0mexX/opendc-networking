@@ -9,6 +9,12 @@ import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
 
 /**
+ * [NodeId] reserved for internet representation (for inter-datacenter communication).
+ */
+public const val INTERNET_ID: NodeId = NodeId.MIN_VALUE
+
+
+/**
  * Interface representing a network of [Node]s.
  */
 internal interface Network {

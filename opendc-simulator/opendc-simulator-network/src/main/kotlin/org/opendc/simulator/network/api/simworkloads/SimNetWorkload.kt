@@ -1,6 +1,7 @@
 package org.opendc.simulator.network.api.simworkloads
 
 import org.opendc.simulator.network.api.NetworkController
+import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
@@ -15,7 +16,6 @@ public class SimNetWorkload internal constructor(
     coreIds: Collection<NodeId> = listOf(),
     hostIds: Collection<NodeId> = listOf(),
     // TODO: add end-point node category
-    private val internetId: NodeId?
 ): SimWorkload {
     private companion object { private val log by logger() }
 
@@ -23,7 +23,7 @@ public class SimNetWorkload internal constructor(
     private val hostIds: Set<NodeId> = hostIds.toSet()
 
     init {
-        check(hostIds.none { it in coreIds } && internetId !in coreIds && internetId !in hostIds)
+        check(hostIds.none { it in coreIds } && INTERNET_ID !in coreIds && INTERNET_ID !in hostIds)
         { "unable to create workload, conflicting ids" }
     }
 
@@ -67,15 +67,12 @@ public class SimNetWorkload internal constructor(
         }
 
         val allMappedIds: Set<NodeId> =
-            coreIds + hostIds + (internetId?.let { setOf(internetId) } ?: setOf())
+            coreIds + hostIds
 
         // warns if any node id present in the workload has not been mapped
         if (allWorkLoadIds.any { it !in  allMappedIds})
             log.warn("not all workload ids have been mapped to physical network, " +
                 "some ids were not categorizable as specific node types")
-
-        // map internet id of the workload to internet id of the network instance
-        if (internetId != null) controller.virtualMap(internetId, controller.internetNetworkInterface.nodeId)
     }
 
     internal fun execAll(controller: NetworkController) {

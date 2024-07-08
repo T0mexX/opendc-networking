@@ -37,9 +37,14 @@ internal class CustomNetwork(
             .associateBy { it.id }.toMutableMap()
 
     override val internet: Internet =
-        Internet.excludingIds(this.nodes.keys).connectedTo(
+        Internet().connectedTo(
             coreSwitches = this.nodes.values.filterIsInstance<CoreSwitch>()
         )
+
+    init {
+        this.nodes[internet.id] = internet
+        endPointNodes[internet.id] = internet
+    }
 
     /**
      * Connects [Node]s of ***this*** based on link-list passed as parameter.
@@ -65,6 +70,7 @@ internal class CustomNetwork(
      * @param[node] node to add.
      */
     fun addNode(node: Node): Result {
+        if (node.id == internet.id) return log.errAndGet("unable to add node $node, id is reserved for internet abstraction")
         nodes[node.id]?.let { return log.errAndGet("unable to add node $node, id already present") }
         nodes[node.id] = node
         (node as? EndPointNode)?.let { endPointNodes[node.id] = node }
