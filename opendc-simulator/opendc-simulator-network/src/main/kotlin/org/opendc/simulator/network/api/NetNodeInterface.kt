@@ -1,9 +1,8 @@
-package org.opendc.simulator.network.interfaces
+package org.opendc.simulator.network.api
 
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
 
 public interface NetNodeInterface {

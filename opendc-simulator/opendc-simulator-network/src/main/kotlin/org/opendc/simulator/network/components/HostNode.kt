@@ -11,7 +11,6 @@ import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.energy.emodels.ClusterDfltEnModel
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.interfaces.NetNodeInterface
 import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps

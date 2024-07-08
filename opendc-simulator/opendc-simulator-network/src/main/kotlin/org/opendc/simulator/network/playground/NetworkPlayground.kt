@@ -12,7 +12,7 @@ import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
-import org.opendc.simulator.network.interfaces.NetworkEnergyRecorder
+import org.opendc.simulator.network.api.NetworkEnergyRecorder
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.StaticECMP

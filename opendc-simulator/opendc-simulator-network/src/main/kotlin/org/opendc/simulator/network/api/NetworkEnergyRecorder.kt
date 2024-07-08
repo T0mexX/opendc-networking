@@ -1,4 +1,4 @@
-package org.opendc.simulator.network.interfaces
+package org.opendc.simulator.network.api
 
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.energy.EnMonitor
@@ -7,7 +7,6 @@ import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.Watts
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
-import java.time.Duration
 
 public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyConsumer<*>>) {
     private companion object { private val log by logger() }
