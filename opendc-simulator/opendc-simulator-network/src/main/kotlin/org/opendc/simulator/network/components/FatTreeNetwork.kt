@@ -84,11 +84,16 @@ internal class FatTreeNetwork(
 
         leafs = pods.flatMap { it.hostNodes }
 
-        nodes = (leafs + torSwitches + aggregationSwitches + coreSwitches).associateBy { it.id }
+        internet = Internet().connectedTo(coreSwitches)
 
-        endPointNodes = (coreSwitches + leafs).associateBy { it.id }
+        nodes = buildMap {
+            plus((leafs + torSwitches + aggregationSwitches + coreSwitches).associateBy { it.id })
+            check(internet.id !in this)
+            { "unable to create network: one node has id $INTERNET_ID, which is reserved for internet abstraction" }
+            put(internet.id, internet)
+        }
 
-        internet = Internet.excludingIds(nodes.keys).connectedTo(coreSwitches)
+        endPointNodes = (coreSwitches + leafs + internet).associateBy { it.id }
     }
 
 

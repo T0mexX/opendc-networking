@@ -5,10 +5,14 @@ import java.time.Duration
 import java.time.Instant
 import java.util.UUID
 
-public class ColReader<C>(
+public class ColReader<C, P>(
     private val colName: String,
     private val type: ColType<C>,
+    private val process: ((C) -> P) = { throw RuntimeException("process function not set") }
     ) {
+
+    public fun processed(tr: TableReader): P =
+        process.invoke(read(tr))
 
     private var idx: Int? = null
 
@@ -60,6 +64,11 @@ public class ColReader<C>(
     public object BooleanType: ColType<Boolean>() {
         override val read: TableReader.(Int) -> Boolean = TableReader::getBoolean
         override fun getClass(): Class<Boolean> = Boolean::class.java
+    }
+
+    public object StringType: ColType<String>() {
+        override val read: TableReader.(Int) -> String = { this.getString(it)!! }
+        override fun getClass(): Class<String> = String::class.java
     }
 
     public object UUIDType: ColType<UUID>() {

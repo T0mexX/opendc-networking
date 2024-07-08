@@ -11,17 +11,20 @@ import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.Result.ERROR
 
 internal class Internet(
-    override val id: NodeId = NodeId.MIN_VALUE,
     override val forwardingPolicy: ForwardingPolicy = StaticECMP
 ): EndPointNode {
 
-    companion object {
-        fun excludingIds(ids: Collection<NodeId>): Internet {
-            var internetId = NodeId.MIN_VALUE
-            while (internetId in ids) internetId++
+    override val id: NodeId = INTERNET_ID
 
-            return Internet(id = internetId)
-        }
+    companion object {
+
+        // not needed anymore
+//        fun excludingIds(ids: Collection<NodeId>): Internet {
+//            var internetId = NodeId.MIN_VALUE
+//            while (internetId in ids) internetId++
+//
+//            return Internet(id = internetId)
+//        }
     }
 
     fun connectedTo(coreSwitches: Collection<CoreSwitch>): Internet {
