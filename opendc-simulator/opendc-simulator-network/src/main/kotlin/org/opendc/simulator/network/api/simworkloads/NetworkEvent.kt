@@ -1,4 +1,4 @@
-package org.opendc.simulator.network.workload
+package org.opendc.simulator.network.api.simworkloads
 
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.components.NodeId
@@ -9,19 +9,22 @@ import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
 
-internal abstract class NetworkEvent(val deadline: ms) {
+internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent> {
     private companion object { private val log by logger() }
     lateinit var targetFlow: NetFlow
     protected abstract fun exec(controller: NetworkController)
 
     fun execIfNotPassed(controller: NetworkController) {
-        val msSinceLastUpdate: ms = deadline - controller.instantSource.millis()
+        val msSinceLastUpdate: ms = deadline - controller.instantSrc.millis()
         if (msSinceLastUpdate < 0)
             return log.error("unable to execute network event, deadline is passed")
 
         controller.advanceBy(msSinceLastUpdate)
         this.exec(controller)
     }
+
+    override fun compareTo(other: NetworkEvent): Int =
+        (this.deadline - other.deadline).toInt()
 
     /**
      * Only one flow is allowed between 2 nodes.

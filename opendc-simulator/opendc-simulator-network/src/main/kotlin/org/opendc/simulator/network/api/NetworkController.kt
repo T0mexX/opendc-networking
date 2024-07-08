@@ -17,9 +17,11 @@ import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
+import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.slf4j.Logger
 import java.io.File
 import java.time.Duration
+import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
 
@@ -28,16 +30,27 @@ import java.util.UUID
 @OptIn(ExperimentalSerializationApi::class)
 public class NetworkController internal constructor(
     private val network: Network,
-    public val instantSource: InstantSource
+    instantSource: InstantSource? = null,
 ) {
     public companion object {
-        private val log by logger()
+        internal val log by logger()
 
-        public fun fromFile(file: File, instantSource: InstantSource): NetworkController {
+        public fun fromFile(file: File, instantSource: InstantSource? = null): NetworkController {
             val jsonReader = Json() { ignoreUnknownKeys = true }
             val netSpec = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
             return NetworkController(netSpec.buildFromSpecs(), instantSource)
         }
+    }
+
+    internal val instantSrc: NetworkInstantSrc = NetworkInstantSrc(instantSource)
+
+    public val currentInstant: Instant
+        get() = instantSrc.instant()
+
+    private var lastUpdate: Instant = Instant.ofEpochMilli(ms.MIN_VALUE)
+
+    init {
+        instantSource?.let { lastUpdate = it.instant() }
     }
 
     public val energyRecorder: NetworkEnergyRecorder =
@@ -114,15 +127,15 @@ public class NetworkController internal constructor(
 
     public fun startFlow(netFlow: NetFlow): NetFlow? {
         if (netFlow.transmitterId !in claimedHostsById)
-            return log.errAndNull("unable to start network flow from node ${netFlow.transmitterId}, " +
+            return log.errAndNull("unable to startInstant network flow from node ${netFlow.transmitterId}, " +
                 "node does not exist or is not an end-point node")
 
         if (netFlow.destinationId !in network.endPointNodes)
-            return log.errAndNull("unable to start network flow directed to node ${netFlow.destinationId}, " +
+            return log.errAndNull("unable to startInstant network flow directed to node ${netFlow.destinationId}, " +
                 "node does not exist or it is not an end-point-node")
 
         if (netFlow.id in flowsById)
-            return log.errAndNull("unable to start network flow with nodeId ${netFlow.id}, " +
+            return log.errAndNull("unable to startInstant network flow with nodeId ${netFlow.id}, " +
                 "a flow with nodeId ${netFlow.id} already exists")
 
         if (netFlow.transmitterId in claimedHostsById.keys
@@ -177,11 +190,45 @@ public class NetworkController internal constructor(
         return NetNodeInterfaceImpl(nodeId)
     }
 
-    public fun advanceBy(duration: Duration) { advanceBy(duration.toMillis()) }
+    public fun sync() {
+        if (instantSrc.isExternalSource) {
+            val timeSpan = instantSrc.millis() - lastUpdate.toEpochMilli()
+            advanceBy(timeSpan, suppressWarn = true)
+        } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
+    }
 
-    public fun advanceBy(ms: ms) {
+    public fun advanceBy(duration: Duration, suppressWarn: Boolean = false) {
+        advanceBy(duration.toMillis(), suppressWarn)
+    }
+
+    public fun advanceBy(ms: ms, suppressWarn: Boolean = false) {
+        if (!instantSrc.isExternalSource)
+            instantSrc.advanceTime(ms)
+        else (!suppressWarn)
+            log.warn("advancing time directly while instant source is set, this can cause ambiguity. " +
+                "You can synchronize the network according to the instant source with 'sync()'")
+
         network.advanceBy(ms)
         energyRecorder.advanceBy(ms)
+    }
+
+    public fun execWorkload(
+        netWorkload: SimNetWorkload,
+        resetFlows: Boolean = true,
+        resetTime: Boolean = true,
+        resetEnergy: Boolean = true
+    ) {
+        if (instantSrc.isExternalSource)
+            return log.error("unable to run a workload while controller has an external time source")
+
+        if (resetTime)
+            instantSrc.internal = netWorkload.startInstant.toEpochMilli()
+
+        if (resetFlows) network.resetFlows()
+
+        // TODO: add reset energy
+
+        netWorkload.execAll(controller = this)
     }
 
 
