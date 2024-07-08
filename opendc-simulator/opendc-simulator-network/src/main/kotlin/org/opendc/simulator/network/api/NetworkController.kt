@@ -1,4 +1,4 @@
-package org.opendc.simulator.network.interfaces
+package org.opendc.simulator.network.api
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
@@ -20,19 +20,23 @@ import org.opendc.simulator.network.utils.ms
 import org.slf4j.Logger
 import java.io.File
 import java.time.Duration
+import java.time.InstantSource
 import java.util.UUID
 
 
 
 @OptIn(ExperimentalSerializationApi::class)
-public class NetworkController internal constructor(private val network: Network) {
+public class NetworkController internal constructor(
+    private val network: Network,
+    public val instantSource: InstantSource
+) {
     public companion object {
         private val log by logger()
 
-        public fun fromFile(file: File): NetworkController {
+        public fun fromFile(file: File, instantSource: InstantSource): NetworkController {
             val jsonReader = Json() { ignoreUnknownKeys = true }
             val netSpec = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
-            return NetworkController(netSpec.buildFromSpecs())
+            return NetworkController(netSpec.buildFromSpecs(), instantSource)
         }
     }
 
@@ -45,7 +49,7 @@ public class NetworkController internal constructor(private val network: Network
 
     private val claimedHostsById = mutableMapOf<NodeId, HostNode>()
     private val claimedCoreNodesById = mutableMapOf<NodeId, CoreSwitch>()
-    private val flowsById = mutableMapOf<FlowId, NetFlow>()
+    internal val flowsById = mutableMapOf<FlowId, NetFlow>()
 
 
     public fun claimNextHostNode(): NetNodeInterface? {
@@ -132,11 +136,34 @@ public class NetworkController internal constructor(private val network: Network
         return netFlow
     }
 
-    public fun stopFlow(flowId: FlowId): Boolean {
-        return when (network.stopFlow(flowId)) {
-            Result.SUCCESS -> true
-            else -> false
-        }
+    public fun startOrUpdateFlow(
+        transmitterId: NodeId,
+        destinationId: NodeId = internetNetworkInterface.nodeId,
+        desiredDataRate: Kbps = .0,
+        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+    ): NetFlow? {
+        flowsById.values.find {
+            it.transmitterId == transmitterId && it.destinationId == destinationId
+        } ?. let {
+            it.desiredDataRate = desiredDataRate
+            if (dataRateOnChangeHandler != null) it.withDataRateOnChangeHandler(dataRateOnChangeHandler)
+            return it
+        } ?: return startFlow(
+            transmitterId = transmitterId,
+            destinationId = destinationId,
+            desiredDataRate = desiredDataRate,
+            dataRateOnChangeHandler = dataRateOnChangeHandler
+        )
+    }
+
+    public fun stopFlow(flowId: FlowId): NetFlow? {
+        return network.netFlowById[flowId]
+            ?. let {
+                when (network.stopFlow(flowId)) {
+                    Result.SUCCESS -> it
+                    else -> null
+                }
+            }
     }
 
     public fun getNetInterfaceOf(uuid: UUID): NetNodeInterface? =
