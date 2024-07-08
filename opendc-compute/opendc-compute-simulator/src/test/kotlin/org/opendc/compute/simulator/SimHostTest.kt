@@ -37,12 +37,12 @@ import org.opendc.compute.api.ServerWatcher
 import org.opendc.compute.service.driver.Host
 import org.opendc.compute.service.driver.HostListener
 import org.opendc.simulator.compute.SimBareMetalMachine
-import org.opendc.simulator.compute.kernel.SimHypervisor
+import org.opendc.simulator.compute.kernel.SimCompHypervisor
 import org.opendc.simulator.compute.model.MachineModel
 import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
-import org.opendc.simulator.compute.workload.SimTrace
+import org.opendc.simulator.compute.workload.SimCompTrace
 import org.opendc.simulator.compute.workload.SimTraceFragment
 import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.flow2.mux.FlowMultiplexerFactory
@@ -83,7 +83,7 @@ internal class SimHostTest {
             val graph = engine.newGraph()
 
             val machine = SimBareMetalMachine.create(graph, machineModel)
-            val hypervisor = SimHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
+            val hypervisor = SimCompHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
 
             val host =
                 SimHost(
@@ -101,7 +101,7 @@ internal class SimHostTest {
                     emptyMap(),
                     mapOf(
                         "workload" to
-                            SimTrace.ofFragments(
+                            SimCompTrace.ofFragments(
                                 SimTraceFragment(0, duration * 1000, 2 * 28.0, 2),
                                 SimTraceFragment(duration * 1000, duration * 1000, 2 * 3500.0, 2),
                                 SimTraceFragment(duration * 2000, duration * 1000, 0.0, 2),
@@ -159,7 +159,7 @@ internal class SimHostTest {
             val graph = engine.newGraph()
 
             val machine = SimBareMetalMachine.create(graph, machineModel)
-            val hypervisor = SimHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
+            val hypervisor = SimCompHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
 
             val host =
                 SimHost(
@@ -177,7 +177,7 @@ internal class SimHostTest {
                     emptyMap(),
                     mapOf(
                         "workload" to
-                            SimTrace.ofFragments(
+                            SimCompTrace.ofFragments(
                                 SimTraceFragment(0, duration * 1000, 2 * 28.0, 2),
                                 SimTraceFragment(duration * 1000, duration * 1000, 2 * 3500.0, 2),
                                 SimTraceFragment(duration * 2000, duration * 1000, 0.0, 2),
@@ -192,7 +192,7 @@ internal class SimHostTest {
                     emptyMap(),
                     mapOf(
                         "workload" to
-                            SimTrace.ofFragments(
+                            SimCompTrace.ofFragments(
                                 SimTraceFragment(0, duration * 1000, 2 * 28.0, 2),
                                 SimTraceFragment(duration * 1000, duration * 1000, 2 * 3100.0, 2),
                                 SimTraceFragment(duration * 2000, duration * 1000, 0.0, 2),
@@ -256,7 +256,7 @@ internal class SimHostTest {
             val graph = engine.newGraph()
 
             val machine = SimBareMetalMachine.create(graph, machineModel)
-            val hypervisor = SimHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
+            val hypervisor = SimCompHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
             val host =
                 SimHost(
                     uid = UUID.randomUUID(),
@@ -273,7 +273,7 @@ internal class SimHostTest {
                     emptyMap(),
                     mapOf(
                         "workload" to
-                            SimTrace.ofFragments(
+                            SimCompTrace.ofFragments(
                                 SimTraceFragment(0, duration * 1000, 2 * 28.0, 2),
                                 SimTraceFragment(duration * 1000L, duration * 1000, 2 * 3500.0, 2),
                                 SimTraceFragment(duration * 2000L, duration * 1000, 0.0, 2),

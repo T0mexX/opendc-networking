@@ -52,7 +52,7 @@ import org.opendc.compute.service.driver.HostModel;
 import org.opendc.compute.service.driver.HostState;
 import org.opendc.compute.service.scheduler.ComputeScheduler;
 import org.opendc.compute.service.telemetry.SchedulerStats;
-import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.compute.workload.SimCompWorkload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -593,7 +593,7 @@ public final class ComputeService implements AutoCloseable {
 
         @Nullable
         @Override
-        public void rescheduleServer(@NotNull Server server, @NotNull SimWorkload workload) {
+        public void rescheduleServer(@NotNull Server server, @NotNull SimCompWorkload workload) {
             ServiceServer internalServer = (ServiceServer) findServer(server.getUid());
             Host from = service.lookupHost(internalServer);
 

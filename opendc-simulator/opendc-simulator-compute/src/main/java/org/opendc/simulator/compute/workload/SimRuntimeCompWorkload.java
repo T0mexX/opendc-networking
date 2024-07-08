@@ -31,9 +31,9 @@ import org.opendc.simulator.flow2.FlowStageLogic;
 import org.opendc.simulator.flow2.OutPort;
 
 /**
- * A [SimWorkload] that models application execution as a single duration.
+ * A [SimCompWorkload] that models application execution as a single duration.
  */
-public class SimRuntimeWorkload implements SimWorkload, FlowStageLogic {
+public class SimRuntimeCompWorkload implements SimCompWorkload, FlowStageLogic {
     private long duration;
     private final double utilization;
 
@@ -48,7 +48,7 @@ public class SimRuntimeWorkload implements SimWorkload, FlowStageLogic {
     private long checkpointWait; // How long to wait until a new checkpoint is made?
     private long totalChecks;
 
-    public SimRuntimeWorkload(long duration, double utilization) {
+    public SimRuntimeCompWorkload(long duration, double utilization) {
         this(duration, utilization, 0, 0);
         //        if (duration < 0) {
         //            throw new IllegalArgumentException("Duration must be positive");
@@ -65,12 +65,12 @@ public class SimRuntimeWorkload implements SimWorkload, FlowStageLogic {
     }
 
     /**
-     * Construct a new {@link SimRuntimeWorkload}.
+     * Construct a new {@link SimRuntimeCompWorkload}.
      *
      * @param duration The duration of the workload in milliseconds.
      * @param utilization The CPU utilization of the workload.
      */
-    public SimRuntimeWorkload(long duration, double utilization, long checkpointTime, long checkpointWait) {
+    public SimRuntimeCompWorkload(long duration, double utilization, long checkpointTime, long checkpointWait) {
         if (duration < 0) {
             throw new IllegalArgumentException("Duration must be positive");
         } else if (utilization <= 0.0 || utilization > 1.0) {
@@ -134,7 +134,7 @@ public class SimRuntimeWorkload implements SimWorkload, FlowStageLogic {
     }
 
     @Override
-    public SimRuntimeWorkload snapshot() {
+    public SimRuntimeCompWorkload snapshot() {
         final FlowStage stage = this.stage;
         if (stage != null) {
             stage.sync();
@@ -158,7 +158,7 @@ public class SimRuntimeWorkload implements SimWorkload, FlowStageLogic {
             remaining_time = duration;
         }
 
-        return new SimRuntimeWorkload(remaining_time, utilization, this.checkpointTime, this.checkpointWait);
+        return new SimRuntimeCompWorkload(remaining_time, utilization, this.checkpointTime, this.checkpointWait);
     }
 
     @Override

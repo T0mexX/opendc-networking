@@ -30,7 +30,7 @@ import java.util.function.Consumer;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
 import org.opendc.simulator.compute.model.ProcessingUnit;
-import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.compute.workload.SimCompWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.InPort;
 import org.opendc.simulator.flow2.Inlet;
@@ -40,7 +40,7 @@ import org.opendc.simulator.flow2.Inlet;
  *
  * <p>
  * A {@link SimBareMetalMachine} is a stateful object, and you should be careful when operating this object concurrently. For
- * example, the class expects only a single concurrent call to {@link #startWorkload(SimWorkload, Map, Consumer)} )}.
+ * example, the class expects only a single concurrent call to {@link #startWorkload(SimCompWorkload, Map, Consumer)} )}.
  */
 public final class SimBareMetalMachine extends SimAbstractMachine {
     /**
@@ -194,7 +194,7 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
 
     @Override
     protected SimAbstractMachine.Context createContext(
-            SimWorkload workload, Map<String, Object> meta, Consumer<Exception> completion) {
+            SimCompWorkload workload, Map<String, Object> meta, Consumer<Exception> completion) {
         return new Context(this, workload, meta, completion);
     }
 
@@ -210,7 +210,7 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
 
         private Context(
                 SimBareMetalMachine machine,
-                SimWorkload workload,
+                SimCompWorkload workload,
                 Map<String, Object> meta,
                 Consumer<Exception> completion) {
             super(machine, workload, meta, completion);

@@ -25,7 +25,7 @@ package org.opendc.simulator.compute;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.compute.workload.SimCompWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
 
 /**
@@ -44,7 +44,7 @@ public interface SimMachineContext {
     /**
      * Return the metadata associated with the context.
      * <p>
-     * Users can pass this metadata to the workload via {@link SimMachine#startWorkload(SimWorkload, Map, Consumer)}.
+     * Users can pass this metadata to the workload via {@link SimMachine#startWorkload(SimCompWorkload, Map, Consumer)}.
      */
     Map<String, Object> getMeta();
 
@@ -69,11 +69,11 @@ public interface SimMachineContext {
     List<? extends SimStorageInterface> getStorageInterfaces();
 
     /**
-     * Create a snapshot of the {@link SimWorkload} running on this machine.
+     * Create a snapshot of the {@link SimCompWorkload} running on this machine.
      *
      * @throws UnsupportedOperationException if the workload does not support snapshotting.
      */
-    SimWorkload snapshot();
+    SimCompWorkload snapshot();
 
     /**
      * Reset all resources of the machine.

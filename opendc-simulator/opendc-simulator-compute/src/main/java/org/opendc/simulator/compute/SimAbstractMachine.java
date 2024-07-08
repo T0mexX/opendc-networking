@@ -29,7 +29,7 @@ import java.util.function.Consumer;
 import org.opendc.simulator.compute.device.SimNetworkAdapter;
 import org.opendc.simulator.compute.model.MachineModel;
 import org.opendc.simulator.compute.model.MemoryUnit;
-import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.compute.workload.SimCompWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.Inlet;
 import org.opendc.simulator.flow2.Outlet;
@@ -61,7 +61,7 @@ public abstract class SimAbstractMachine implements SimMachine {
 
     @Override
     public final SimMachineContext startWorkload(
-            SimWorkload workload, Map<String, Object> meta, Consumer<Exception> completion) {
+        SimCompWorkload workload, Map<String, Object> meta, Consumer<Exception> completion) {
         if (activeContext != null) {
             throw new IllegalStateException("A machine cannot run multiple workloads concurrently");
         }
@@ -87,7 +87,7 @@ public abstract class SimAbstractMachine implements SimMachine {
      * @param completion A block that is invoked when the workload completes carrying an exception if thrown by the workload.
      */
     protected abstract Context createContext(
-            SimWorkload workload, Map<String, Object> meta, Consumer<Exception> completion);
+        SimCompWorkload workload, Map<String, Object> meta, Consumer<Exception> completion);
 
     /**
      * Return the active {@link Context} instance (if any).
@@ -101,7 +101,7 @@ public abstract class SimAbstractMachine implements SimMachine {
      */
     public abstract static class Context implements SimMachineContext {
         private final SimAbstractMachine machine;
-        private final SimWorkload workload;
+        private final SimCompWorkload workload;
         private final Map<String, Object> meta;
         private final Consumer<Exception> completion;
         private boolean isClosed;
@@ -110,13 +110,13 @@ public abstract class SimAbstractMachine implements SimMachine {
          * Construct a new {@link Context} instance.
          *
          * @param machine The {@link SimAbstractMachine} to which the context belongs.
-         * @param workload The {@link SimWorkload} to which the context belongs.
+         * @param workload The {@link SimCompWorkload} to which the context belongs.
          * @param meta The metadata passed to the context.
          * @param completion A block that is invoked when the workload completes carrying an exception if thrown by the workload.
          */
         public Context(
                 SimAbstractMachine machine,
-                SimWorkload workload,
+                SimCompWorkload workload,
                 Map<String, Object> meta,
                 Consumer<Exception> completion) {
             this.machine = machine;
@@ -131,7 +131,7 @@ public abstract class SimAbstractMachine implements SimMachine {
         }
 
         @Override
-        public SimWorkload snapshot() {
+        public SimCompWorkload snapshot() {
             return workload.snapshot();
         }
 

@@ -26,12 +26,12 @@ import org.opendc.faas.api.FaaSFunction
 import org.opendc.faas.service.FunctionObject
 
 /**
- * A [SimFaaSWorkloadMapper] is responsible for mapping a [FaaSFunction] to a [SimFaaSWorkload] that
+ * A [SimFaaSWorkloadMapper] is responsible for mapping a [FaaSFunction] to a [SimFaaSCompWorkload] that
  * can be simulated.
  */
 public fun interface SimFaaSWorkloadMapper {
     /**
-     * Map the specified [function] to a [SimFaaSWorkload] that can be simulated.
+     * Map the specified [function] to a [SimFaaSCompWorkload] that can be simulated.
      */
-    public fun createWorkload(function: FunctionObject): SimFaaSWorkload
+    public fun createWorkload(function: FunctionObject): SimFaaSCompWorkload
 }
