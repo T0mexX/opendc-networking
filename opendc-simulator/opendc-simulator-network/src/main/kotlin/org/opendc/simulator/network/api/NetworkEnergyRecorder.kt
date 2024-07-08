@@ -41,4 +41,8 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
 
         totalConsumption += currentConsumption * ms.toSeconds()
     }
+
+    internal fun reset() {
+        totalConsumption = .0
+    }
 }
