@@ -38,7 +38,7 @@ import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
 import org.opendc.simulator.compute.runWorkload
-import org.opendc.simulator.compute.workload.SimTrace
+import org.opendc.simulator.compute.workload.SimCompTrace
 import org.opendc.simulator.compute.workload.SimTraceFragment
 import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.flow2.mux.FlowMultiplexerFactory
@@ -46,7 +46,7 @@ import org.opendc.simulator.kotlin.runSimulation
 import java.util.SplittableRandom
 
 /**
- * Test suite for the [SimHypervisor] class.
+ * Test suite for the [SimCompHypervisor] class.
  */
 internal class SimFairShareHypervisorTest {
     private lateinit var model: MachineModel
@@ -71,7 +71,7 @@ internal class SimFairShareHypervisorTest {
         runSimulation {
             val duration = 5 * 60L
             val workloadA =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, duration * 1000, 28.0, 1),
                     SimTraceFragment(duration * 1000, duration * 1000, 3500.0, 1),
                     SimTraceFragment(duration * 2000, duration * 1000, 0.0, 1),
@@ -83,7 +83,7 @@ internal class SimFairShareHypervisorTest {
 
             val machine = SimBareMetalMachine.create(graph, model)
             val hypervisor =
-                SimHypervisor.create(
+                SimCompHypervisor.create(
                     FlowMultiplexerFactory.maxMinMultiplexer(),
                     SplittableRandom(0L),
                     ScalingGovernors.performance(),
@@ -114,14 +114,14 @@ internal class SimFairShareHypervisorTest {
         runSimulation {
             val duration = 5 * 60L
             val workloadA =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, duration * 1000, 28.0, 1),
                     SimTraceFragment(duration * 1000, duration * 1000, 3500.0, 1),
                     SimTraceFragment(duration * 2000, duration * 1000, 0.0, 1),
                     SimTraceFragment(duration * 3000, duration * 1000, 183.0, 1),
                 ).createWorkload(0)
             val workloadB =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, duration * 1000, 28.0, 1),
                     SimTraceFragment(duration * 1000, duration * 1000, 3100.0, 1),
                     SimTraceFragment(duration * 2000, duration * 1000, 0.0, 1),
@@ -133,7 +133,7 @@ internal class SimFairShareHypervisorTest {
 
             val machine = SimBareMetalMachine.create(graph, model)
             val hypervisor =
-                SimHypervisor.create(
+                SimCompHypervisor.create(
                     FlowMultiplexerFactory.maxMinMultiplexer(),
                     SplittableRandom(0L),
                     ScalingGovernors.performance(),
@@ -181,7 +181,7 @@ internal class SimFairShareHypervisorTest {
 
             val machine = SimBareMetalMachine.create(graph, model)
             val hypervisor =
-                SimHypervisor.create(
+                SimCompHypervisor.create(
                     FlowMultiplexerFactory.maxMinMultiplexer(),
                     SplittableRandom(0L),
                     ScalingGovernors.performance(),
@@ -217,18 +217,18 @@ internal class SimFairShareHypervisorTest {
             val graph = engine.newGraph()
 
             val machine = SimBareMetalMachine.create(graph, model)
-            val hypervisor = SimHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(0L))
+            val hypervisor = SimCompHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(0L))
 
             val duration = 5 * 60L
             val workloadA =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, duration * 1000, 0.0, 1),
                     SimTraceFragment(duration * 1000, duration * 1000, 28.0, 1),
                     SimTraceFragment(duration * 2000, duration * 1000, 3500.0, 1),
                     SimTraceFragment(duration * 3000, duration * 1000, 183.0, 1),
                 ).createWorkload(0)
             val workloadB =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, duration * 1000, 0.0, 1),
                     SimTraceFragment(duration * 1000, duration * 1000, 28.0, 1),
                     SimTraceFragment(duration * 2000, duration * 1000, 3100.0, 1),

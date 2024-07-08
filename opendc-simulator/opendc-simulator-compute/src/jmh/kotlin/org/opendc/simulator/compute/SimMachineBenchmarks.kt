@@ -24,12 +24,12 @@ package org.opendc.simulator.compute
 
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import org.opendc.simulator.compute.kernel.SimHypervisor
+import org.opendc.simulator.compute.kernel.SimCompHypervisor
 import org.opendc.simulator.compute.model.MachineModel
 import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
-import org.opendc.simulator.compute.workload.SimTrace
+import org.opendc.simulator.compute.workload.SimCompTrace
 import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.flow2.mux.FlowMultiplexerFactory
 import org.opendc.simulator.kotlin.runSimulation
@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit
 @Measurement(iterations = 5, time = 3, timeUnit = TimeUnit.SECONDS)
 class SimMachineBenchmarks {
     private lateinit var machineModel: MachineModel
-    private lateinit var trace: SimTrace
+    private lateinit var trace: SimCompTrace
 
     @Setup
     fun setUp() {
@@ -65,7 +65,7 @@ class SimMachineBenchmarks {
             )
 
         val random = ThreadLocalRandom.current()
-        val builder = SimTrace.builder()
+        val builder = SimCompTrace.builder()
         repeat(1000000) {
             val timestamp = it.toLong() * 1000
             val deadline = timestamp + 1000
@@ -90,7 +90,7 @@ class SimMachineBenchmarks {
             val engine = FlowEngine.create(dispatcher)
             val graph = engine.newGraph()
             val machine = SimBareMetalMachine.create(graph, machineModel)
-            val hypervisor = SimHypervisor.create(FlowMultiplexerFactory.forwardingMultiplexer(), SplittableRandom(1))
+            val hypervisor = SimCompHypervisor.create(FlowMultiplexerFactory.forwardingMultiplexer(), SplittableRandom(1))
 
             launch { machine.runWorkload(hypervisor) }
 
@@ -111,7 +111,7 @@ class SimMachineBenchmarks {
             val engine = FlowEngine.create(dispatcher)
             val graph = engine.newGraph()
             val machine = SimBareMetalMachine.create(graph, machineModel)
-            val hypervisor = SimHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
+            val hypervisor = SimCompHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
 
             launch { machine.runWorkload(hypervisor) }
 
@@ -132,7 +132,7 @@ class SimMachineBenchmarks {
             val engine = FlowEngine.create(dispatcher)
             val graph = engine.newGraph()
             val machine = SimBareMetalMachine.create(graph, machineModel)
-            val hypervisor = SimHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
+            val hypervisor = SimCompHypervisor.create(FlowMultiplexerFactory.maxMinMultiplexer(), SplittableRandom(1))
 
             launch { machine.runWorkload(hypervisor) }
 

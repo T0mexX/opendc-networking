@@ -36,9 +36,9 @@ import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.kotlin.runSimulation
 
 /**
- * Test suite for the [SimTraceWorkloadTest] class.
+ * Test suite for the [SimCompTraceWorkloadTest] class.
  */
-class SimTraceWorkloadTest {
+class SimCompTraceWorkloadTest {
     private lateinit var machineModel: MachineModel
 
     @BeforeEach
@@ -67,7 +67,7 @@ class SimTraceWorkloadTest {
                 )
 
             val workload =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, 1000, 2 * 28.0, 2),
                     SimTraceFragment(1000, 1000, 2 * 3100.0, 2),
                     SimTraceFragment(2000, 1000, 0.0, 2),
@@ -92,7 +92,7 @@ class SimTraceWorkloadTest {
                 )
 
             val workload =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, 1000, 2 * 28.0, 2),
                     SimTraceFragment(1000, 1000, 2 * 3100.0, 2),
                     SimTraceFragment(2000, 1000, 0.0, 2),
@@ -117,7 +117,7 @@ class SimTraceWorkloadTest {
                 )
 
             val workload =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, 1000, 2 * 28.0, 2),
                     SimTraceFragment(1000, 1000, 2 * 3100.0, 2),
                     SimTraceFragment(2000, 1000, 0.0, 2),
@@ -143,7 +143,7 @@ class SimTraceWorkloadTest {
                 )
 
             val workload =
-                SimTrace.ofFragments(
+                SimCompTrace.ofFragments(
                     SimTraceFragment(0, 1000, 2 * 28.0, 2),
                     SimTraceFragment(1000, 1000, 2 * 3100.0, 2),
                     SimTraceFragment(2000, 1000, 0.0, 0),

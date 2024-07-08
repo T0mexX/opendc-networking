@@ -30,9 +30,9 @@ import org.opendc.compute.service.driver.telemetry.GuestSystemStats
 import org.opendc.compute.simulator.SimHost
 import org.opendc.compute.simulator.SimWorkloadMapper
 import org.opendc.simulator.compute.SimMachineContext
-import org.opendc.simulator.compute.kernel.SimHypervisor
+import org.opendc.simulator.compute.kernel.SimCompHypervisor
 import org.opendc.simulator.compute.kernel.SimVirtualMachine
-import org.opendc.simulator.compute.workload.SimWorkload
+import org.opendc.simulator.compute.workload.SimCompWorkload
 import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
@@ -43,7 +43,7 @@ import java.time.InstantSource
 internal class Guest(
     private val clock: InstantSource,
     val host: SimHost,
-    private val hypervisor: SimHypervisor,
+    private val hypervisor: SimCompHypervisor,
     private val mapper: SimWorkloadMapper,
     private val listener: GuestListener,
     val server: Server,
@@ -170,7 +170,7 @@ internal class Guest(
 
         onStart()
 
-        val workload: SimWorkload = mapper.createWorkload(server)
+        val workload: SimCompWorkload = mapper.createWorkload(server)
         workload.setOffset(clock.millis())
         val meta = mapOf("driver" to host, "server" to server) + server.meta
         ctx =

@@ -33,7 +33,7 @@ import org.opendc.simulator.compute.model.MachineModel
 import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingUnit
 import org.opendc.simulator.compute.power.CpuPowerModel
-import org.opendc.simulator.compute.workload.SimWorkload
+import org.opendc.simulator.compute.workload.SimCompWorkload
 import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.flow2.FlowStage
 import org.opendc.simulator.flow2.FlowStageLogic
@@ -70,7 +70,7 @@ public class SimTFDevice(
      * The workload that will be run by the device.
      */
     private val workload =
-        object : SimWorkload, FlowStageLogic {
+        object : SimCompWorkload, FlowStageLogic {
             /**
              * The [FlowStage] of the workload.
              */
@@ -119,7 +119,7 @@ public class SimTFDevice(
 
             override fun setOffset(now: Long) {}
 
-            override fun snapshot(): SimWorkload = throw UnsupportedOperationException()
+            override fun snapshot(): SimCompWorkload = throw UnsupportedOperationException()
 
             override fun onUpdate(
                 ctx: FlowStage,

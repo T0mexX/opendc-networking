@@ -22,17 +22,17 @@
 
 package org.opendc.experiments.faas
 
-import org.opendc.faas.simulator.workload.SimFaaSWorkload
-import org.opendc.simulator.compute.workload.SimTrace
+import org.opendc.faas.simulator.workload.SimFaaSCompWorkload
+import org.opendc.simulator.compute.workload.SimCompTrace
 import org.opendc.simulator.compute.workload.SimTraceFragment
-import org.opendc.simulator.compute.workload.SimWorkload
+import org.opendc.simulator.compute.workload.SimCompWorkload
 
 /**
- * A [SimFaaSWorkload] for a [FunctionTrace].
+ * A [SimFaaSCompWorkload] for a [FunctionTrace].
  */
-public class FunctionTraceWorkload(trace: FunctionTrace) :
-    SimFaaSWorkload,
-    SimWorkload by SimTrace.ofFragments(
+public class FunctionTraceCompWorkload(trace: FunctionTrace) :
+    SimFaaSCompWorkload,
+    SimCompWorkload by SimCompTrace.ofFragments(
         trace.samples.map {
             SimTraceFragment(it.timestamp, it.duration, it.cpuUsage, 1)
         },

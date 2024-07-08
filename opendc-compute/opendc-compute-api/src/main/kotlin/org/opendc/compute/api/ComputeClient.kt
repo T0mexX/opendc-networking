@@ -22,7 +22,7 @@
 
 package org.opendc.compute.api
 
-import org.opendc.simulator.compute.workload.SimWorkload
+import org.opendc.simulator.compute.workload.SimCompWorkload
 import java.util.UUID
 
 /**
@@ -116,7 +116,7 @@ public interface ComputeClient : AutoCloseable {
 
     public fun rescheduleServer(
         server: Server,
-        workload: SimWorkload,
+        workload: SimCompWorkload,
     )
 
     /**

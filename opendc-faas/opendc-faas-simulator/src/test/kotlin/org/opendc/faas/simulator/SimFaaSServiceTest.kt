@@ -35,12 +35,12 @@ import org.opendc.faas.service.autoscaler.FunctionTerminationPolicyFixed
 import org.opendc.faas.service.router.RandomRoutingPolicy
 import org.opendc.faas.simulator.delay.ColdStartModel
 import org.opendc.faas.simulator.delay.StochasticDelayInjector
-import org.opendc.faas.simulator.workload.SimFaaSWorkload
+import org.opendc.faas.simulator.workload.SimFaaSCompWorkload
 import org.opendc.simulator.compute.model.MachineModel
 import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
-import org.opendc.simulator.compute.workload.SimWorkload
+import org.opendc.simulator.compute.workload.SimCompWorkload
 import org.opendc.simulator.compute.workload.SimWorkloads
 import org.opendc.simulator.kotlin.runSimulation
 import java.time.Duration
@@ -69,7 +69,7 @@ internal class SimFaaSServiceTest {
             val random = Random(0)
             val workload =
                 spyk(
-                    object : SimFaaSWorkload, SimWorkload by SimWorkloads.runtime(1000, 1.0) {
+                    object : SimFaaSCompWorkload, SimCompWorkload by SimWorkloads.runtime(1000, 1.0) {
                         override suspend fun invoke() {
                             delay(random.nextInt(1000).toLong())
                         }

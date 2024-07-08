@@ -24,7 +24,7 @@ package org.opendc.compute.workload
 
 import mu.KotlinLogging
 import org.opendc.simulator.compute.kernel.interference.VmInterferenceModel
-import org.opendc.simulator.compute.workload.SimTrace
+import org.opendc.simulator.compute.workload.SimCompTrace
 import org.opendc.trace.Trace
 import org.opendc.trace.conv.INTERFERENCE_GROUP_MEMBERS
 import org.opendc.trace.conv.INTERFERENCE_GROUP_SCORE
@@ -238,7 +238,7 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
         /**
          * The internal builder for the trace.
          */
-        private val builder = SimTrace.builder()
+        private val builder = SimCompTrace.builder()
 
         /**
          * The deadline of the previous fragment.
@@ -274,6 +274,6 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
         /**
          * Build the trace.
          */
-        fun build(): SimTrace = builder.build()
+        fun build(): SimCompTrace = builder.build()
     }
 }

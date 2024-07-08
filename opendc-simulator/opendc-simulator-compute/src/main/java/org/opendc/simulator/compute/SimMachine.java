@@ -27,10 +27,10 @@ import java.util.Map;
 import java.util.function.Consumer;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
-import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.compute.workload.SimCompWorkload;
 
 /**
- * A generic machine that is able to execute {@link SimWorkload} objects.
+ * A generic machine that is able to execute {@link SimCompWorkload} objects.
  */
 public interface SimMachine {
     /**
@@ -44,7 +44,7 @@ public interface SimMachine {
     List<? extends SimPeripheral> getPeripherals();
 
     /**
-     * Start the specified {@link SimWorkload} on this machine.
+     * Start the specified {@link SimCompWorkload} on this machine.
      *
      * @param workload The workload to start on the machine.
      * @param meta The metadata to pass to the workload.
@@ -52,7 +52,7 @@ public interface SimMachine {
      * @return A {@link SimMachineContext} that represents the execution context for the workload.
      * @throws IllegalStateException if a workload is already active on the machine or if the machine is closed.
      */
-    SimMachineContext startWorkload(SimWorkload workload, Map<String, Object> meta, Consumer<Exception> completion);
+    SimMachineContext startWorkload(SimCompWorkload workload, Map<String, Object> meta, Consumer<Exception> completion);
 
     /**
      * Cancel the active workload on this machine (if any).

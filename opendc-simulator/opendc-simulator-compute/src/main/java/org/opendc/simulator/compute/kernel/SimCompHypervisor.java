@@ -46,7 +46,7 @@ import org.opendc.simulator.compute.kernel.interference.VmInterferenceMember;
 import org.opendc.simulator.compute.kernel.interference.VmInterferenceProfile;
 import org.opendc.simulator.compute.model.MachineModel;
 import org.opendc.simulator.compute.model.ProcessingUnit;
-import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.compute.workload.SimCompWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.FlowStage;
 import org.opendc.simulator.flow2.FlowStageLogic;
@@ -59,10 +59,10 @@ import org.opendc.simulator.flow2.mux.FlowMultiplexer;
 import org.opendc.simulator.flow2.mux.FlowMultiplexerFactory;
 
 /**
- * A SimHypervisor facilitates the execution of multiple concurrent {@link SimWorkload}s, while acting as a single
+ * A SimCompHypervisor facilitates the execution of multiple concurrent {@link SimCompWorkload}s, while acting as a single
  * workload to another {@link SimMachine}.
  */
-public final class SimHypervisor implements SimWorkload {
+public final class SimCompHypervisor implements SimCompWorkload {
     private final FlowMultiplexerFactory muxFactory;
     private final SplittableRandom random;
     private final ScalingGovernorFactory scalingGovernorFactory;
@@ -76,14 +76,14 @@ public final class SimHypervisor implements SimWorkload {
     public void setOffset(long now) {}
 
     /**
-     * Construct a {@link SimHypervisor} instance.
+     * Construct a {@link SimCompHypervisor} instance.
      *
      * @param muxFactory The factory for the {@link FlowMultiplexer} to multiplex the workloads.
      * @param random A randomness generator for the interference calculations.
      * @param scalingGovernorFactory The factory for the scaling governor to use for scaling the CPU frequency.
      * @param interferenceDomain The interference domain to which the hypervisor belongs.
      */
-    private SimHypervisor(
+    private SimCompHypervisor(
             FlowMultiplexerFactory muxFactory,
             SplittableRandom random,
             ScalingGovernorFactory scalingGovernorFactory,
@@ -95,40 +95,40 @@ public final class SimHypervisor implements SimWorkload {
     }
 
     /**
-     * Create a {@link SimHypervisor} instance.
+     * Create a {@link SimCompHypervisor} instance.
      *
      * @param muxFactory The factory for the {@link FlowMultiplexer} to multiplex the workloads.
      * @param random A randomness generator for the interference calculations.
      * @param scalingGovernorFactory The factory for the scaling governor to use for scaling the CPU frequency.
      * @param interferenceDomain The interference domain to which the hypervisor belongs.
      */
-    public static SimHypervisor create(
+    public static SimCompHypervisor create(
             FlowMultiplexerFactory muxFactory,
             SplittableRandom random,
             ScalingGovernorFactory scalingGovernorFactory,
             VmInterferenceDomain interferenceDomain) {
-        return new SimHypervisor(muxFactory, random, scalingGovernorFactory, interferenceDomain);
+        return new SimCompHypervisor(muxFactory, random, scalingGovernorFactory, interferenceDomain);
     }
 
     /**
-     * Create a {@link SimHypervisor} instance with a default interference domain.
+     * Create a {@link SimCompHypervisor} instance with a default interference domain.
      *
      * @param muxFactory The factory for the {@link FlowMultiplexer} to multiplex the workloads.
      * @param random A randomness generator for the interference calculations.
      * @param scalingGovernorFactory The factory for the scaling governor to use for scaling the CPU frequency.
      */
-    public static SimHypervisor create(
+    public static SimCompHypervisor create(
             FlowMultiplexerFactory muxFactory, SplittableRandom random, ScalingGovernorFactory scalingGovernorFactory) {
         return create(muxFactory, random, scalingGovernorFactory, new VmInterferenceDomain());
     }
 
     /**
-     * Create a {@link SimHypervisor} instance with a default interference domain and scaling governor.
+     * Create a {@link SimCompHypervisor} instance with a default interference domain and scaling governor.
      *
      * @param muxFactory The factory for the {@link FlowMultiplexer} to multiplex the workloads.
      * @param random A randomness generator for the interference calculations.
      */
-    public static SimHypervisor create(FlowMultiplexerFactory muxFactory, SplittableRandom random) {
+    public static SimCompHypervisor create(FlowMultiplexerFactory muxFactory, SplittableRandom random) {
         return create(muxFactory, random, null);
     }
 
@@ -147,7 +147,7 @@ public final class SimHypervisor implements SimWorkload {
     }
 
     /**
-     * Create a {@link SimVirtualMachine} instance on which users may run a [SimWorkload].
+     * Create a {@link SimVirtualMachine} instance on which users may run a [SimCompWorkload].
      *
      * @param model The machine to create.
      */
@@ -244,7 +244,7 @@ public final class SimHypervisor implements SimWorkload {
     }
 
     @Override
-    public SimWorkload snapshot() {
+    public SimCompWorkload snapshot() {
         throw new UnsupportedOperationException("Unable to snapshot hypervisor");
     }
 
@@ -481,12 +481,12 @@ public final class SimHypervisor implements SimWorkload {
 
         @Override
         protected Context createContext(
-                SimWorkload workload, Map<String, Object> meta, Consumer<Exception> completion) {
+            SimCompWorkload workload, Map<String, Object> meta, Consumer<Exception> completion) {
             if (isClosed) {
                 throw new IllegalStateException("Virtual machine does not exist anymore");
             }
 
-            final SimHypervisor.Context context = activeContext;
+            final SimCompHypervisor.Context context = activeContext;
             if (context == null) {
                 throw new IllegalStateException("Hypervisor is inactive");
             }
@@ -497,7 +497,7 @@ public final class SimHypervisor implements SimWorkload {
                     random,
                     interferenceDomain,
                     counters,
-                    SimHypervisor.this.counters,
+                    SimCompHypervisor.this.counters,
                     workload,
                     meta,
                     completion);
@@ -555,7 +555,7 @@ public final class SimHypervisor implements SimWorkload {
                 VmInterferenceDomain interferenceDomain,
                 VmCounters vmCounters,
                 HvCounters hvCounters,
-                SimWorkload workload,
+                SimCompWorkload workload,
                 Map<String, Object> meta,
                 Consumer<Exception> completion) {
             super(machine, workload, meta, completion);
@@ -793,7 +793,7 @@ public final class SimHypervisor implements SimWorkload {
 
         @Override
         public String toString() {
-            return "SimHypervisor.VCpu[model" + model + "]";
+            return "SimCompHypervisor.VCpu[model" + model + "]";
         }
     }
 
