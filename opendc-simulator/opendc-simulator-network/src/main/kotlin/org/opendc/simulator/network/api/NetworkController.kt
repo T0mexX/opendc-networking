@@ -42,6 +42,8 @@ public class NetworkController internal constructor(
         }
     }
 
+    private val virtualMapping = mutableMapOf<Long, NodeId>()
+
     internal val instantSrc: NetworkInstantSrc = NetworkInstantSrc(instantSource)
 
     public val currentInstant: Instant
@@ -60,45 +62,57 @@ public class NetworkController internal constructor(
         getNetInterfaceOf(network.internet.id)
             ?: throw IllegalStateException("network did not initialize the internet abstract node correctly")
 
-    private val claimedHostsById = mutableMapOf<NodeId, HostNode>()
-    private val claimedCoreNodesById = mutableMapOf<NodeId, CoreSwitch>()
+    private val claimedHostIds = mutableSetOf<NodeId>()
+    private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
     internal val flowsById = mutableMapOf<FlowId, NetFlow>()
 
 
     public fun claimNextHostNode(): NetNodeInterface? {
         val hostsById = network.getNodesById<HostNode>()
         return hostsById.keys
-            .filterNot { it in claimedHostsById.keys }
+            .filterNot { it in claimedHostIds }
             .firstOrNull()
             ?.let {
-                claimedHostsById[it] = hostsById[it]!!
+                claimedHostIds.add(it)
                 getNetInterfaceOf(it)
-            }
+            } ?: log.errAndNull("unable to claim host node, none available")
     }
 
     public fun claimNextCoreNode(): NetNodeInterface? {
         val coreSwitches = network.getNodesById<CoreSwitch>()
         return coreSwitches
             .keys
-            .filterNot { it in claimedHostsById.keys }
+            .filterNot { it in claimedHostIds }
             .firstOrNull()
             ?.let {
-                claimedCoreNodesById[it] = coreSwitches[it] !!
+                claimedCoreSwitchIds.add(it)
                 getNetInterfaceOf(it)
-            }
+            } ?: log.errAndNull("unable to claim core switch node, none available")
+    }
+
+    public fun virtualMap(from: NodeId, to: NodeId) {
+        if (from in virtualMapping)
+            log.warn("overriding mapping of virtual node id $from")
+
+        if (from in network.endPointNodes)
+            log.warn("shadowing physical node $from with virtual mapping, " +
+                "it will not be possible to use the physical id directly")
+
+        virtualMapping[from] = to
     }
 
     public fun claimNode(uuid: UUID): NetNodeInterface? =
         claimNode(uuid.node())
 
     public fun claimNode(nodeId: NodeId): NetNodeInterface? {
-        check (nodeId in claimedHostsById)
+        check (nodeId !in claimedHostIds)
         { "unable to claim node nodeId $nodeId, nodeId already claimed" }
 
-        network.getNodesById<HostNode>()[nodeId]?.let {
-            claimedHostsById[nodeId] = it
+        (network.getNodesById<HostNode>() + network.getNodesById<CoreSwitch>())[nodeId]
+            ?.let {
+            claimedHostIds.add(nodeId)
         } ?: throw IllegalArgumentException(
-            "unable to claim node nodeId $nodeId, nodeId not existent or not associated to a host node"
+            "unable to claim node nodeId $nodeId, nodeId not existent or not associated to a core switch or a host node"
         )
 
         return getNetInterfaceOf(nodeId)
@@ -109,11 +123,15 @@ public class NetworkController internal constructor(
         destinationId: NodeId = internetNetworkInterface.nodeId, // TODO: understand how multiple core switches work
         desiredDataRate: Kbps = .0,
         flowId: FlowId = IdDispenser.nextFlowId,
-        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        physicalTransmitterId: Boolean = false
     ): NetFlow? {
+        val mappedTransmitterId: NodeId =  if (physicalTransmitterId) transmitterId else mappedOrSelf(transmitterId)
+        val mappedDestId: NodeId = mappedOrSelf(destinationId)
+
         val netFlow = NetFlow(
-                transmitterId = transmitterId,
-                destinationId = destinationId,
+                transmitterId = mappedTransmitterId,
+                destinationId = mappedDestId,
                 id = flowId,
                 desiredDataRate = desiredDataRate,
             )
@@ -125,8 +143,8 @@ public class NetworkController internal constructor(
         return startFlow(netFlow)
     }
 
-    public fun startFlow(netFlow: NetFlow): NetFlow? {
-        if (netFlow.transmitterId !in claimedHostsById)
+    private fun startFlow(netFlow: NetFlow): NetFlow? {
+        if (netFlow.transmitterId !in claimedHostIds)
             return log.errAndNull("unable to startInstant network flow from node ${netFlow.transmitterId}, " +
                 "node does not exist or is not an end-point node")
 
@@ -138,8 +156,8 @@ public class NetworkController internal constructor(
             return log.errAndNull("unable to startInstant network flow with nodeId ${netFlow.id}, " +
                 "a flow with nodeId ${netFlow.id} already exists")
 
-        if (netFlow.transmitterId in claimedHostsById.keys
-            || netFlow.transmitterId in claimedCoreNodesById)
+        if (netFlow.transmitterId in claimedHostIds
+            || netFlow.transmitterId in claimedCoreSwitchIds)
             log.warn("starting flow through controller interface from node whose interface was claimed, " +
                 "best practice would be to use either only the controller or the node interface for each node")
 
@@ -153,17 +171,21 @@ public class NetworkController internal constructor(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId,
         desiredDataRate: Kbps = .0,
-        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        physicalTransmitterId: Boolean = false
     ): NetFlow? {
+        val mappedTransmitterId: NodeId =  if (physicalTransmitterId) transmitterId else mappedOrSelf(transmitterId)
+        val mappedDestId: NodeId = mappedOrSelf(destinationId)
+
         flowsById.values.find {
-            it.transmitterId == transmitterId && it.destinationId == destinationId
+            it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
         } ?. let {
             it.desiredDataRate = desiredDataRate
             if (dataRateOnChangeHandler != null) it.withDataRateOnChangeHandler(dataRateOnChangeHandler)
             return it
         } ?: return startFlow(
-            transmitterId = transmitterId,
-            destinationId = destinationId,
+            transmitterId = mappedTransmitterId,
+            destinationId = mappedDestId,
             desiredDataRate = desiredDataRate,
             dataRateOnChangeHandler = dataRateOnChangeHandler
         )
@@ -216,20 +238,38 @@ public class NetworkController internal constructor(
         netWorkload: SimNetWorkload,
         resetFlows: Boolean = true,
         resetTime: Boolean = true,
-        resetEnergy: Boolean = true
+        resetEnergy: Boolean = true,
+        resetClaimedNodes: Boolean = true,
+        resetVirtualMapping: Boolean = true,
+        withVirtualMapping: Boolean = true
     ) {
         if (instantSrc.isExternalSource)
             return log.error("unable to run a workload while controller has an external time source")
 
-        if (resetTime)
-            instantSrc.internal = netWorkload.startInstant.toEpochMilli()
-
         if (resetFlows) network.resetFlows()
 
-        // TODO: add reset energy
+        if (resetTime) instantSrc.internal = netWorkload.startInstant.toEpochMilli()
+
+        if (resetEnergy) energyRecorder.reset()
+
+        if (resetClaimedNodes) {
+            claimedHostIds.clear()
+            claimedCoreSwitchIds.clear()
+        }
+
+        if (resetVirtualMapping) virtualMapping.clear()
+
+        if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
+
 
         netWorkload.execAll(controller = this)
     }
+
+    private fun mappedOrSelf(id: NodeId): NodeId =
+        virtualMapping[id] ?: let {
+            log.warn("unable to map node id $id to a physical node. Trying to use id as physical")
+            id
+        }
 
 
 
@@ -240,20 +280,13 @@ public class NetworkController internal constructor(
             destinationId: NodeId?, // TODO: understand how multiple core switches work
             desiredDataRate: Kbps,
             dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
-        ): NetFlow? {
-            val netFlow = NetFlow(
-                    transmitterId = this.nodeId,
-                    destinationId = destinationId ?: internetNetworkInterface.nodeId,
-                    id = IdDispenser.nextFlowId,
-                    desiredDataRate = desiredDataRate
-                )
-
-            dataRateOnChangeHandler?.let {
-                netFlow.withDataRateOnChangeHandler(dataRateOnChangeHandler)
-            }
-
-            return startFlow(netFlow)
-        }
+        ): NetFlow? =
+            startFlow(
+                transmitterId = this.nodeId,
+                destinationId = destinationId ?: internetNetworkInterface.nodeId,
+                dataRateOnChangeHandler = dataRateOnChangeHandler,
+                physicalTransmitterId = true
+            )
 
         override fun stopFlow(id: FlowId) {
             flowsById[id]?.let { flow ->
@@ -279,7 +312,7 @@ public class NetworkController internal constructor(
             return internetNetworkInterface.startFlow(
                 destinationId = this.nodeId,
                 desiredDataRate = desiredDataRate,
-                dataRateOnChangeHandler = dataRateOnChangeHandler
+                dataRateOnChangeHandler = dataRateOnChangeHandler,
             ) !!
         }
     }

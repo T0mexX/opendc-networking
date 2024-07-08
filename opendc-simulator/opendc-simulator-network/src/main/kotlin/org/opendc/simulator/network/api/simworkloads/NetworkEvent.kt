@@ -12,6 +12,8 @@ import org.opendc.simulator.network.utils.ms
 internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent> {
     private companion object { private val log by logger() }
     lateinit var targetFlow: NetFlow
+
+    internal open fun involvedIds(): Set<NodeId> = setOf()
     protected abstract fun exec(controller: NetworkController)
 
     fun execIfNotPassed(controller: NetworkController) {
@@ -42,6 +44,8 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
                 desiredDataRate = desiredDataRate
             ) ?. let { targetFlow = it }
         }
+
+        override fun involvedIds(): Set<NodeId> = setOf(from, to)
     }
 
     class FlowChangeRate(
@@ -69,6 +73,8 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
                 flowId = flowId
             ) ?. let { targetFlow = it }
         }
+
+        override fun involvedIds(): Set<NodeId> = setOf(from, to)
     }
 
     class FlowStop(

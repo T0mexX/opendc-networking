@@ -38,6 +38,7 @@ val serializationVersion = "1.6.0"
 
 dependencies {
     api(projects.opendcSimulator.opendcSimulatorFlow)
+    api(projects.opendcTrace.opendcTraceApi)
     implementation(projects.opendcSimulator.opendcSimulatorCore)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
     implementation("io.github.microutils:kotlin-logging-jvm:$kLoggingVersion")
