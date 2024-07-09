@@ -1,10 +1,17 @@
-package org.opendc.trace
+package org.opendc.trace.table
 
+import org.opendc.trace.ColumnReader
+import org.opendc.trace.table.csv.CSVTableReader
 import java.io.File
 import java.nio.file.Path
 
 public interface TableReader {
+
     public fun nextLine(): Boolean
+
+    public fun readAll() {
+        executeUntilFalse { nextLine() }
+    }
 
     public fun <O, P: Any> addColumnReader(
         name: String,
@@ -30,22 +37,21 @@ public interface TableReader {
     }
 
 
-
-    private enum class Ext {
-        CSV;
-    }
-
     public companion object {
-        public fun genericReaderFor(file: File): TableReader =
+        public fun genericReaderFor(file: File): TableReader? =
             when (file.extension) {
                 "csv" -> CSVTableReader(file)
-                else -> throw IllegalArgumentException("unsupported file extension")
+                else -> null // TODO: add error log
             }
 
-        public fun genericReaderFor(path: Path): TableReader =
+        public fun genericReaderFor(path: Path): TableReader? =
             genericReaderFor(path.toFile())
 
-        public fun genericReaderFor(path: String): TableReader =
+        public fun genericReaderFor(path: String): TableReader? =
             genericReaderFor(File(path))
     }
+}
+
+private fun executeUntilFalse(f: () -> Boolean) {
+    while (f.invoke()) { /* meow */ }
 }
