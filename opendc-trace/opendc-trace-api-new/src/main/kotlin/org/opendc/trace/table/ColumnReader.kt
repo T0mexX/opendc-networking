@@ -1,6 +1,8 @@
 package org.opendc.trace.table
 
 import com.fasterxml.jackson.core.JsonParser
+import org.opendc.trace.util.errAndNull
+import org.opendc.trace.util.logger
 import java.text.ParseException
 import java.time.Instant
 import java.time.LocalDateTime
@@ -11,24 +13,37 @@ import java.util.UUID
 import kotlin.time.Duration
 
 @Suppress("UNCHECKED_CAST")
-public class ColumnReader<O, P: Any> internal constructor(
+public open class ColumnReader<O, P> internal constructor(
     private val columnType: ColumnType<O>,
-    private val process: (O) -> P = automaticConversion(),
+    private val defaultValue: P? = null,
+    private val process: (O) -> P = automaticProcessing(),
     private val postProcess: ((P) -> Unit) = {},
 ) {
     internal companion object {
-        fun <O, P> automaticConversion(): (O) -> P =
-            { (it as? P) ?: throw RuntimeException("unable to process column value, " +
-            "processing function not defined and automatic processing failed") }
+        private val log by logger()
+        private object AutoProcessingFail: Exception()
+
+        fun <O, P> automaticProcessing(): (O) -> P = { (it as P) }
     }
 
-    public lateinit var currLineValue: P
+    public var currLineValue: P? = null
         private set
 
+    internal fun setFromAbstractColValue(value: Any) {
+        currLineValue = value as P
+    }
 
     internal fun setFromJsonParser(parser: JsonParser) {
-        currLineValue = process.invoke(columnType.fromJsonParser(parser))
-        postProcess.invoke(currLineValue)
+        try {
+            currLineValue = process.invoke(columnType.fromJsonParser(parser))
+        } catch (e: AutoProcessingFail) {
+            log.warn("automatic processing of column value failed, falling back to default $defaultValue")
+            currLineValue = defaultValue
+        } catch (_: Exception) {
+            currLineValue = defaultValue
+        } finally {
+            postProcess.invoke(currLineValue!!)
+        }
     }
 
     public abstract class ColumnType<T> {
@@ -37,7 +52,8 @@ public class ColumnReader<O, P: Any> internal constructor(
 
 
     public object IntType: ColumnType<Int>() {
-        override fun fromJsonParser(parser: JsonParser): Int = parser.intValue
+        override fun fromJsonParser(parser: JsonParser): Int =
+            parser.intValue
     }
 
     public object DoubleType: ColumnType<Double>() {
@@ -52,6 +68,7 @@ public class ColumnReader<O, P: Any> internal constructor(
                 val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
 
                 LocalDateTime.parse(parser.text, formatter).toInstant(ZoneOffset.UTC)
+
             } catch (e: DateTimeParseException) {
                 Instant.ofEpochSecond(parser.longValue)
             }
