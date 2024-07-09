@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.MappingIterator
 import com.fasterxml.jackson.dataformat.csv.CsvMapper
 import com.fasterxml.jackson.dataformat.csv.CsvParser
 import org.opendc.trace.ColumnReader
-import org.opendc.trace.TableReader
+import org.opendc.trace.table.TableReader
 import java.io.File
 
 internal class CSVTableReader(file: File): TableReader {
