@@ -4,18 +4,25 @@ import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.MappingIterator
 import com.fasterxml.jackson.dataformat.csv.CsvMapper
 import com.fasterxml.jackson.dataformat.csv.CsvParser
-import org.opendc.trace.ColumnReader
 import org.opendc.trace.table.TableReader
 import java.io.File
 
-internal class CSVTableReader(file: File): TableReader {
+
+// TODO: handle different separators
+
+
+internal class CSVTableReader(
+    file: File,
+    override val tableName: String = file.nameWithoutExtension,
+    artificialColumns: Map<String, Any>
+): TableReader(artificialCols = artificialColumns) {
 
     /**
      * Using CSVParser instead of mapping iterator to make use of different number types built in parsing funcitons
      */
     private val parser: CsvParser
 
-    private val colReaders = mutableMapOf<String, MutableList<ColumnReader<*, *>>>()
+    override val nonArtificialColNames: Set<String>
 
     init {
         val csvMapper = CsvMapper()
@@ -27,10 +34,10 @@ internal class CSVTableReader(file: File): TableReader {
             .readValues(file)
 
         parser = mappingIter.parser as CsvParser
-        parser.schema.columnNames
+        nonArtificialColNames = parser.schema.columnNames.toSet()
     }
 
-    override fun nextLine(): Boolean {
+    override fun parseNextLine(): Boolean {
         if (!parser.toNextLine()) return false
 
         while ((parser.nextValue()?: return true) != JsonToken.END_OBJECT) {
@@ -42,26 +49,6 @@ internal class CSVTableReader(file: File): TableReader {
 
         return true
     }
-
-    override fun <O, P: Any> addColumnReader(
-        name: String,
-        columnType: ColumnReader.ColumnType<O>,
-        process: (O) -> P,
-        postProcess: (P) -> Unit,
-    ): ColumnReader<O, P>? {
-        return if (name in parser.schema.columnNames) {
-            val newReader = ColumnReader(
-                columnType = columnType,
-                process = process,
-                postProcess = postProcess
-            )
-
-            colReaders.getOrPut(name) { mutableListOf() }.add(newReader)
-
-            newReader
-        } else null
-    }
-
 }
 
 
