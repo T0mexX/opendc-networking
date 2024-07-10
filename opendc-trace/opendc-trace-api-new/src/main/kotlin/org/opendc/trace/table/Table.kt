@@ -1,5 +1,6 @@
 package org.opendc.trace.table
 
+import org.opendc.trace.table.column.ColumnReader
 import org.opendc.trace.util.errAndNull
 import org.opendc.trace.util.logger
 import java.io.File
