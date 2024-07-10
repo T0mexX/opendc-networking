@@ -22,19 +22,19 @@ public class BitBrains private constructor(vmsTables: List<Table>) : Trace {
 
     public companion object {
 
-        public object NetTx: Column<Double>() {
+        public val NET_TX: Column<Double> = object: Column<Double>() {
             override val type: ColumnType<Double> = ColumnReader.DoubleType
             override val name: String = "Network transmitted throughput [KB/s]"
         }
-        public object NetRx: Column<Double>() {
+        public val NET_RX: Column<Double> = object: Column<Double>() {
             override val type: ColumnType<Double> = ColumnReader.DoubleType
             override val name: String = "Network received throughput [KB/s]"
         }
-        public object VmId: Column<Int>() {
+        public val VM_ID: Column<Int> = object: Column<Int>() {
             override val type: ColumnType<Int> = ColumnReader.IntType
             override val name: String = "id"
         }
-        public object TimeStamp: Column<Long>() {
+        public val TIMESTAMP: Column<Long> = object: Column<Long>() {
             override val type: ColumnType<Long> = ColumnReader.LongType
             override val name: String = "Timestamp [ms]"
         }
