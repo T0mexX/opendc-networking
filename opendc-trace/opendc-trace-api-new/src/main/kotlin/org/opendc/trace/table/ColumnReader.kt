@@ -1,7 +1,6 @@
 package org.opendc.trace.table
 
 import com.fasterxml.jackson.core.JsonParser
-import org.opendc.trace.util.errAndNull
 import org.opendc.trace.util.logger
 import java.text.ParseException
 import java.time.Instant
@@ -14,6 +13,7 @@ import kotlin.time.Duration
 
 @Suppress("UNCHECKED_CAST")
 public open class ColumnReader<O, P> internal constructor(
+    public val name: String,
     private val columnType: ColumnType<O>,
     private val defaultValue: P? = null,
     private val process: (O) -> P = automaticProcessing(),
@@ -26,23 +26,38 @@ public open class ColumnReader<O, P> internal constructor(
         fun <O, P> automaticProcessing(): (O) -> P = { (it as P) }
     }
 
-    public var currLineValue: P? = null
-        private set
+    public open var currRowValue: P? = null
+        protected set
 
-    internal fun setFromAbstractColValue(value: Any) {
-        currLineValue = value as P
+    internal fun setArtificially(value: Any) {
+        currRowValue = value as P
+        invokePostProcess()
+    }
+
+//    internal fun setToDflt() {
+//        currRowValue = defaultValue
+//        invokePostProcess()
+//    }
+
+    protected fun invokePostProcess() {
+        postProcess.invoke(currRowValue
+            ?: let {
+                log.warn("parsing of table value failed, falling back to default")
+                defaultValue
+            } ?: throw RuntimeException("column parsing failed and no default value provided (null is considered as no value)")
+        )
     }
 
     internal fun setFromJsonParser(parser: JsonParser) {
         try {
-            currLineValue = process.invoke(columnType.fromJsonParser(parser))
+            currRowValue = process.invoke(columnType.fromJsonParser(parser))
         } catch (e: AutoProcessingFail) {
             log.warn("automatic processing of column value failed, falling back to default $defaultValue")
-            currLineValue = defaultValue
+            currRowValue = defaultValue
         } catch (_: Exception) {
-            currLineValue = defaultValue
+            currRowValue = defaultValue
         } finally {
-            postProcess.invoke(currLineValue!!)
+            postProcess.invoke(currRowValue !!)
         }
     }
 
