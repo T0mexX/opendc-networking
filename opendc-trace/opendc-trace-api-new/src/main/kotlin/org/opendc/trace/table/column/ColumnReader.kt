@@ -1,4 +1,4 @@
-package org.opendc.trace.table
+package org.opendc.trace.table.column
 
 import com.fasterxml.jackson.core.JsonParser
 import org.opendc.trace.util.logger
@@ -33,11 +33,6 @@ public open class ColumnReader<O, P> internal constructor(
         currRowValue = value as P
         invokePostProcess()
     }
-
-//    internal fun setToDflt() {
-//        currRowValue = defaultValue
-//        invokePostProcess()
-//    }
 
     protected fun invokePostProcess() {
         postProcess.invoke(currRowValue

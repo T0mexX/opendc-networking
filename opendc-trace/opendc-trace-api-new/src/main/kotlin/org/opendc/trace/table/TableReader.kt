@@ -1,5 +1,7 @@
 package org.opendc.trace.table
 
+import org.opendc.trace.table.column.Column
+import org.opendc.trace.table.column.ColumnReader
 import org.opendc.trace.table.csv.CSVTableReader
 import org.opendc.trace.util.errAndFalse
 import org.opendc.trace.util.logger
@@ -48,9 +50,9 @@ public abstract class TableReader(
     public open fun <O, P> addColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<O>,
+        postProcess: (P) -> Unit = {},
         defaultValue: P? = null,
         process: (O) -> P = ColumnReader.automaticProcessing(),
-        postProcess: (P) -> Unit = {},
         forceAdd: Boolean = false
     ): ColumnReader<O, P>? {
 
@@ -72,14 +74,50 @@ public abstract class TableReader(
     public fun <O, P: Any> withColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<O>,
+        postProcess: (P) -> Unit,
         defaultValue: P? = null,
         process: (O) -> P = ColumnReader.automaticProcessing(),
-        postProcess: (P) -> Unit = {},
         forceAdd: Boolean = false
     ): TableReader? {
         addColumnReader(
             name = name,
             columnType = columnType,
+            defaultValue = defaultValue,
+            process = process,
+            postProcess = postProcess,
+            forceAdd = forceAdd
+        ) ?: return null
+
+        return this
+    }
+
+    public fun <O, P> addBitBrainsColReader(
+        column: Column<O>,
+        postProcess: (P) -> Unit,
+        defaultValue: P? = null,
+        process: (O) -> P = ColumnReader.automaticProcessing(),
+        forceAdd: Boolean = false
+    ): ColumnReader<O, P>? {
+        return this.addColumnReader(
+            name = column.name,
+            columnType = column.type,
+            defaultValue = defaultValue,
+            process = process,
+            postProcess = postProcess,
+            forceAdd = forceAdd
+        )
+    }
+
+    public fun <O, P> TableReader.withBitBrainsColReader(
+        column: Column<O>,
+        defaultValue: P? = null,
+        process: (O) -> P = ColumnReader.automaticProcessing(),
+        postProcess: (P) -> Unit = {},
+        forceAdd: Boolean = false
+    ): TableReader? {
+        this.addColumnReader(
+            name = column.name,
+            columnType = column.type,
             defaultValue = defaultValue,
             process = process,
             postProcess = postProcess,
