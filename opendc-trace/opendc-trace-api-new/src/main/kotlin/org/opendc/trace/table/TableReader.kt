@@ -47,12 +47,21 @@ public abstract class TableReader(
         colReaders[colReader.name]?.remove(colReader)
     }
 
-    public open fun <O, P> addColumnReader(
+    public open fun <T: Any> addColumnReader(
+        name: String,
+        columnType: ColumnReader.ColumnType<T>,
+        postProcess: (T) -> Unit = {},
+        defaultValue: T? = null,
+        forceAdd: Boolean = false
+    ): ColumnReader<T, T>? =
+        addColumnReader(name = name, columnType = columnType, process = { it }, postProcess = postProcess, defaultValue = defaultValue, forceAdd = forceAdd)
+
+    public open fun <O, P: Any> addColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<O>,
+        process: (O) -> P,
         postProcess: (P) -> Unit = {},
         defaultValue: P? = null,
-        process: (O) -> P = ColumnReader.automaticProcessing(),
         forceAdd: Boolean = false
     ): ColumnReader<O, P>? {
 
@@ -71,19 +80,28 @@ public abstract class TableReader(
         } else null
     }
 
+    public fun <T: Any> withColumnReader(
+        name: String,
+        columnType: ColumnReader.ColumnType<T>,
+        postProcess: (T) -> Unit,
+        defaultValue: T? = null,
+        forceAdd: Boolean = false
+    ): TableReader? =
+        withColumnReader(name = name, columnType = columnType, process = { it }, postProcess = postProcess, defaultValue = defaultValue, forceAdd = forceAdd)
+
     public fun <O, P: Any> withColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<O>,
+        process: (O) -> P,
         postProcess: (P) -> Unit,
         defaultValue: P? = null,
-        process: (O) -> P = ColumnReader.automaticProcessing(),
         forceAdd: Boolean = false
     ): TableReader? {
         addColumnReader(
             name = name,
             columnType = columnType,
-            defaultValue = defaultValue,
             process = process,
+            defaultValue = defaultValue,
             postProcess = postProcess,
             forceAdd = forceAdd
         ) ?: return null
@@ -91,11 +109,26 @@ public abstract class TableReader(
         return this
     }
 
-    public fun <O, P> addBitBrainsColReader(
+    public fun <T: Any> addColumnReader(
+        column: Column<T>,
+        postProcess: (T) -> Unit = {},
+        defaultValue: T? = null,
+        forceAdd: Boolean = false
+    ): ColumnReader<T, T>? {
+        return this.addColumnReader(
+            name = column.name,
+            columnType = column.type,
+            defaultValue = defaultValue,
+            postProcess =postProcess,
+            forceAdd = forceAdd
+        )
+    }
+
+    public fun <O, P: Any> addColumnReader(
         column: Column<O>,
-        postProcess: (P) -> Unit,
+        process: (O) -> P,
+        postProcess: (P) -> Unit = {},
         defaultValue: P? = null,
-        process: (O) -> P = ColumnReader.automaticProcessing(),
         forceAdd: Boolean = false
     ): ColumnReader<O, P>? {
         return this.addColumnReader(
@@ -108,11 +141,28 @@ public abstract class TableReader(
         )
     }
 
-    public fun <O, P> TableReader.withBitBrainsColReader(
+    public fun <T: Any> withColumnReader(
+        column: Column<T>,
+        postProcess: (T) -> Unit,
+        defaultValue: T? = null,
+        forceAdd: Boolean = false
+    ): TableReader? {
+        this.addColumnReader(
+            name = column.name,
+            columnType = column.type,
+            defaultValue = defaultValue,
+            postProcess = postProcess,
+            forceAdd = forceAdd
+        ) ?: return null
+
+        return this
+    }
+
+    public fun <O, P: Any> withColumnReader(
         column: Column<O>,
+        process: (O) -> P,
+        postProcess: (P) -> Unit,
         defaultValue: P? = null,
-        process: (O) -> P = ColumnReader.automaticProcessing(),
-        postProcess: (P) -> Unit = {},
         forceAdd: Boolean = false
     ): TableReader? {
         this.addColumnReader(
@@ -134,7 +184,7 @@ public abstract class TableReader(
                     ?. also { log.warn("forcing column reader for column '$colName' which is not present in table '$tableName', " +
                         "it will always return the default value '$dfltValue'. It is expected behaviour in " +
                         "concatenated tables where the columns are not 1:1. Post processing functions will be called on the default value for each row.")
-                    } ?: return log.errAndFalse("unable to force column reader addition for column name $colName, no default value provided.")
+                    } ?: return log.errAndFalse("unable to force column reader addition in table '$tableName' for column name '$colName', no default value provided.")
 
             } else return log.errAndFalse("unable to add column reader for column $colName, " +
                 "column does not exists in table '$tableName' and 'forceAdd' was not set")

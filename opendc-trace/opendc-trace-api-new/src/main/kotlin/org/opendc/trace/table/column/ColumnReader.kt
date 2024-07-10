@@ -12,47 +12,54 @@ import java.util.UUID
 import kotlin.time.Duration
 
 @Suppress("UNCHECKED_CAST")
-public open class ColumnReader<O, P> internal constructor(
+public open class ColumnReader<O, P: Any> internal constructor(
     public val name: String,
     private val columnType: ColumnType<O>,
     private val defaultValue: P? = null,
-    private val process: (O) -> P = automaticProcessing(),
+    private val process: (O) -> P,
     private val postProcess: ((P) -> Unit) = {},
 ) {
-    internal companion object {
-        private val log by logger()
-        private object AutoProcessingFail: Exception()
 
-        fun <O, P> automaticProcessing(): (O) -> P = { (it as P) }
+
+    public companion object {
+        private val log by logger()
+
+        // constructor for non-process column (a column whose read value type is the one returned)
+        public operator fun <T: Any> invoke(
+            name: String,
+            columnType: ColumnType<T>,
+            defaultValue: T? = null,
+            postProcess: (T) -> Unit
+        ): ColumnReader<T, T> =
+            ColumnReader(
+                name = name,
+                columnType = columnType,
+                defaultValue = defaultValue,
+                process = { it },
+                postProcess = postProcess
+            )
     }
 
-    public open var currRowValue: P? = null
+    public open lateinit var currRowValue: P
         protected set
 
     internal fun setArtificially(value: Any) {
         currRowValue = value as P
-        invokePostProcess()
-    }
-
-    protected fun invokePostProcess() {
-        postProcess.invoke(currRowValue
-            ?: let {
-                log.warn("parsing of table value failed, falling back to default")
-                defaultValue
-            } ?: throw RuntimeException("column parsing failed and no default value provided (null is considered as no value)")
-        )
+        postProcess.invoke(currRowValue)
     }
 
     internal fun setFromJsonParser(parser: JsonParser) {
         try {
             currRowValue = process.invoke(columnType.fromJsonParser(parser))
-        } catch (e: AutoProcessingFail) {
-            log.warn("automatic processing of column value failed, falling back to default $defaultValue")
-            currRowValue = defaultValue
-        } catch (_: Exception) {
-            currRowValue = defaultValue
+        } catch (e: Exception) {
+            try {
+                defaultValue!!
+            } catch (_: Exception) {
+                log.error("unable to parse table value '${parser.valueAsString}, and no default value provided (null is not valid)")
+                throw e
+            }
         } finally {
-            postProcess.invoke(currRowValue !!)
+            postProcess.invoke(currRowValue)
         }
     }
 
