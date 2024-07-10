@@ -1,7 +1,11 @@
 package org.opendc.trace.preset
 
 import org.opendc.trace.Trace
+import org.opendc.trace.table.column.ColumnReader
+import org.opendc.trace.table.column.ColumnReader.ColumnType
 import org.opendc.trace.table.Table
+import org.opendc.trace.table.TableReader
+import org.opendc.trace.table.column.Column
 import org.opendc.trace.util.logger
 import java.io.File
 
@@ -17,6 +21,24 @@ public class BitBrains private constructor(vmsTables: List<Table>) : Trace {
 
 
     public companion object {
+
+        public object NetTx: Column<Double>() {
+            override val type: ColumnType<Double> = ColumnReader.DoubleType
+            override val name: String = "Network transmitted throughput [KB/s]"
+        }
+        public object NetRx: Column<Double>() {
+            override val type: ColumnType<Double> = ColumnReader.DoubleType
+            override val name: String = "Network received throughput [KB/s]"
+        }
+        public object VmId: Column<Int>() {
+            override val type: ColumnType<Int> = ColumnReader.IntType
+            override val name: String = "id"
+        }
+        public object TimeStamp: Column<Long>() {
+            override val type: ColumnType<Long> = ColumnReader.LongType
+            override val name: String = "Timestamp [ms]"
+        }
+
         private val log by logger()
 
 
