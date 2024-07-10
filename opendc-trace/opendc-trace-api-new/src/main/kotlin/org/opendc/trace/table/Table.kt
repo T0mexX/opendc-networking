@@ -149,12 +149,12 @@ public abstract class Table {
                          * @see[TableReader.addColumnReader]
                          * @return  instance of [ColumnReader] that acts as if the table was 1.
                          */
-                        override fun <O, P> addColumnReader(
+                        override fun <O, P: Any> addColumnReader(
                             name: String,
                             columnType: ColumnReader.ColumnType<O>,
-                            defaultValue: P?,
                             process: (O) -> P,
                             postProcess: (P) -> Unit,
+                            defaultValue: P?,
                             forceAdd: Boolean
                         ): ColumnReader<O, P>? {
                             return if (name in colNames) {
@@ -164,7 +164,7 @@ public abstract class Table {
                                     // and acts as a single column reader for the concatenated table.
                                     // If the columns names are not 1:1 (the tables have different columns),
                                     // when the column is not found the reader fall backs to the default value
-                                    val newColReader = object : ColumnReader<O, P>(name = name, columnType = columnType) {
+                                    val newColReader = object : ColumnReader<O, P>(name = name, process = process, columnType = columnType) {
 
                                         private val colReaders: List<ColumnReader<O, P>>
 
@@ -174,10 +174,10 @@ public abstract class Table {
                                             val colReadersByTr: Map<TableReader, ColumnReader<O, P>?> =
                                                 readers.associateWith {
                                                     it.addColumnReader(
-                                                        name,
-                                                        columnType,
-                                                        defaultValue,
-                                                        process,
+                                                        name = name,
+                                                        columnType = columnType,
+                                                        defaultValue = defaultValue,
+                                                        process = process,
                                                         postProcess = postProcess,
                                                         forceAdd = forceAdd
                                                     )
@@ -199,7 +199,7 @@ public abstract class Table {
                                             check(colReaders.size == colReadersByTr.size) // should never fail
                                         }
 
-                                        override var currRowValue: P?
+                                        override var currRowValue: P
                                             get() = colReaders.getOrNull(readerIdx)
                                                 ?.currRowValue
                                                 ?: throw RuntimeException("number of column readers for column $name  (${colReaders.size})" +
