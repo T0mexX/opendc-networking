@@ -5,6 +5,7 @@ import org.opendc.trace.table.column.ColumnReader
 import org.opendc.trace.table.column.ColumnReader.ColumnType
 import org.opendc.trace.table.Table
 import org.opendc.trace.table.TableReader
+import org.opendc.trace.table.VirtualTable
 import org.opendc.trace.table.column.Column
 import org.opendc.trace.util.logger
 import java.io.File
@@ -14,13 +15,40 @@ public class BitBrains private constructor(vmsTables: List<Table>) : Trace {
     public val allVmsTable: Table =
         Table.concatWithName(tables = vmsTables, name = "all_vms")
 
-    override val tablesByName: Map<String, Table> =
-        (vmsTables + allVmsTable).associateBy { it.name }
+    public val metaTable: Table
 
-    // TODO: add "meta"
+    override val tablesByName: Map<String, Table>
+
+    init {
+        metaTable = VirtualTable(
+            name = "meta",
+            sequence {
+                vmsTables.map { vmTable -> vmTable.getReader() }
+                    .forEach { rd ->
+                        val tableName: String = rd.tableName
+                        val timestampRd = rd.addColumnReader(BitBrains.TIMESTAMP)!!
+
+                        rd.nextLine()
+                        val startTime: Long = timestampRd.currRowValue
+                        rd.readAll()
+                        val endTime: Long = timestampRd.currRowValue
+
+
+                        yield(mapOf(
+                            "id" to tableName,
+                            "start_time" to startTime.toString(),
+                            "end_time" to endTime.toString()
+                        ))
+                    }
+            }
+        )
+
+        tablesByName = (vmsTables + allVmsTable + metaTable).associateBy { it.name }
+    }
 
 
     public companion object {
+
 
         public val NET_TX: Column<Double> = object: Column<Double>() {
             override val type: ColumnType<Double> = ColumnReader.DoubleType
@@ -37,6 +65,14 @@ public class BitBrains private constructor(vmsTables: List<Table>) : Trace {
         public val TIMESTAMP: Column<Long> = object: Column<Long>() {
             override val type: ColumnType<Long> = ColumnReader.LongType
             override val name: String = "Timestamp [ms]"
+        }
+        public val START_TIME: Column<Long> = object: Column<Long>() {
+            override val type: ColumnType<Long> = ColumnReader.LongType
+            override val name: String = "start_time"
+        }
+        public val END_TIME: Column<Long> = object: Column<Long>() {
+            override val type: ColumnType<Long> = ColumnReader.LongType
+            override val name: String = "end_time"
         }
 
         private val log by logger()
