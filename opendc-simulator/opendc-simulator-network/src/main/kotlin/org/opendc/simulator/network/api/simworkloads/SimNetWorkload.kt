@@ -5,7 +5,6 @@ import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
-import org.opendc.trace.simtrace.SimWorkload
 import java.io.File
 import java.time.Instant
 import java.util.LinkedList
@@ -16,7 +15,7 @@ public class SimNetWorkload internal constructor(
     coreIds: Collection<NodeId> = listOf(),
     hostIds: Collection<NodeId> = listOf(),
     // TODO: add end-point node category
-): SimWorkload {
+){
     private companion object { private val log by logger() }
 
     private val coreIds: Set<NodeId> = coreIds.toSet()
@@ -94,8 +93,11 @@ public class SimNetWorkload internal constructor(
         }
     }
 
-    public fun execOn(networkFile: File, withVirtualMapping: Boolean = true) {
-        NetworkController.fromFile(networkFile)
-            .execWorkload(this, withVirtualMapping = withVirtualMapping)
+    public fun execOn(networkFile: File, withVirtualMapping: Boolean = true): NetworkController {
+        val controller = NetworkController.fromFile(networkFile)
+
+        controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
+
+        return controller
     }
 }

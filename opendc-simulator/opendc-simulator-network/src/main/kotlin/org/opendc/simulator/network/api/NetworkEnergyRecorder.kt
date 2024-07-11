@@ -32,6 +32,7 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
         return """
             === ENERGY REPORT ===
             Current Energy Consumption: ${currentConsumption}W
+            Total EnergyConsumption: ${totalConsumption}
             =====================
         """.trimIndent()
     }

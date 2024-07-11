@@ -44,6 +44,7 @@ internal class CustomNetwork(
     init {
         this.nodes[internet.id] = internet
         endPointNodes[internet.id] = internet
+        println("internet id: ${internet.id}")
     }
 
     /**

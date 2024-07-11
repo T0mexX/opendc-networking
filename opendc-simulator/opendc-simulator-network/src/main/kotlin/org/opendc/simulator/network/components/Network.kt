@@ -43,8 +43,8 @@ internal interface Network {
      * @param[flow] the flow to be established.
      */
     fun startFlow(flow: NetFlow): Result {
-        if (flow.desiredDataRate <= 0)
-            return log.errAndGet("Unable to start flow, data rate should be positive.")
+        if (flow.desiredDataRate < 0)
+            return log.errAndGet("Unable to start flow, data rate should be >= 0.")
 
         val sender: EndPointNode = endPointNodes[flow.transmitterId]
             ?: return log.errAndGet("Unable to start flow $flow, sender does not exist or it is not able to start a flow")
