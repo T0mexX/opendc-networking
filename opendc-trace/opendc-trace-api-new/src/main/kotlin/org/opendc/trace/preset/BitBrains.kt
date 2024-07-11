@@ -7,6 +7,7 @@ import org.opendc.trace.table.Table
 import org.opendc.trace.table.TableReader
 import org.opendc.trace.table.VirtualTable
 import org.opendc.trace.table.column.Column
+import org.opendc.trace.table.concatWithName
 import org.opendc.trace.util.logger
 import java.io.File
 
