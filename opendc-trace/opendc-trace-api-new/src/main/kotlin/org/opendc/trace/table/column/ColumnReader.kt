@@ -1,10 +1,12 @@
 package org.opendc.trace.table.column
 
 import com.fasterxml.jackson.core.JsonParser
-import com.fasterxml.jackson.core.base.ParserMinimalBase
 import kotlinx.serialization.json.Json
+import org.opendc.trace.Trace
+import org.opendc.trace.table.Table
+import org.opendc.trace.table.TableReader
+import org.opendc.trace.table.VirtualTable
 import org.opendc.trace.util.logger
-import java.text.ParseException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -13,7 +15,63 @@ import java.time.format.DateTimeParseException
 import java.util.UUID
 import kotlin.time.Duration
 
-@Suppress("UNCHECKED_CAST")
+/**
+ * Class used to read values from a specific column of a [Table].
+ * It is set up by user or preset [Trace]s on specific columns that
+ * are needed to be read (sometime not all columns are needed).
+ *
+ * This class is needed to provide type safety to the user,
+ * who will retrieve values of type [P], and at the same time allow
+ * the [TableReader] to be generic (not tied to a specific trace)
+ * and simply store as many unknown typed column readers as the user wants.
+ * The user has direct access to the column readers.
+ *
+ * &nbsp;
+ * ###### Examples:
+ *
+ *
+ * ```kotlin
+ * val tr: TableReader
+ * val dataRateList: MutableList<Double /* Kbps */ > = emptyList()
+ *
+ * tr.withColumnReader(
+ *      name = "data_rate",
+ *      DoubleType, // KBps
+ *      defaultValue = .0,
+ *      process = { it * 8 /* KBps to Kbps */ },
+ *      postProcess = { dataRateList.add(it) }
+ * )
+ *
+ * tr.readAll()
+ * println(dataRateList) // all column values added to the list in Kbps
+ * ```
+ *
+ *
+ * Simple use for preset traces
+ * ```kotlin
+ * val bitBrainsTrace: BitBrains
+ * val tr: TableReader = bitBrainsTrace.getReader()
+ * val idReader = tr.addColumnReader(BitBrains.VM_ID)
+ * ...
+ * tr.nextRow()
+ * val id: Int = idReader.currVal
+ * ```
+ *
+ *
+ *
+ * @param[O]                the row type decoded from the column entry.
+ * @param[P]                the column entry after it has been processed by [process] (if O != P else O).
+ * @property[name]          name of the column.
+ * @property[columnType]    the column (raw [O]) type restricted to implementations of [ColumnReader.ColumnType].
+ *                          Provides type specific parsing.
+ * @property[defaultValue]  the value of the column if parsing fails (nullable so that the parameter
+ *                          is optional and no other constructors are to be defined to provide null safety
+ *                          at compile time, but null is not a valid default value and
+ *                          a [RuntimeException] will be thrown in case the default value is needed)
+ * @property[process]       lambda that processes the raw decoded type [O] into its
+ *                          processed counterpart [P], then stored in [currRowValue].
+ * @property[postProcess]   lambda called after the column entry has been processed, with the processed value as param.
+ */
 public open class ColumnReader<O, P: Any> internal constructor(
     public val name: String,
     private val columnType: ColumnType<O>,
@@ -22,13 +80,22 @@ public open class ColumnReader<O, P: Any> internal constructor(
     private val postProcess: ((P) -> Unit) = {},
 ) {
 
-
     public companion object {
         private val log by logger()
 
+        /**
+         * Used to decode values of type [O] from [String]s.
+         */
         private val jsonParser = Json
 
-        // constructor for non-process column (a column whose read value type is the one returned)
+        /**
+         * Secondary constructor used when [O] == [P].
+         * The double constructor allows to force a [process] parameter when [O] != [P].
+         * It also allows the compiler to automatically infer O and P when no process function is provided,
+         * hence no need for `ColumnReader<Long,Long>(...)` but just `ColumnReader(...)`.
+         *
+         * See primary constructor for parameters docs.
+         */
         internal operator fun <T : Any> invoke(
             name: String,
             columnType: ColumnType<T>,
@@ -44,14 +111,33 @@ public open class ColumnReader<O, P: Any> internal constructor(
             )
     }
 
+    /**
+     * The associated to this column in the current row.
+     * [TableReader] provides stream-fashioned parsing (row by row).
+     */
     public open lateinit var currRowValue: P
         protected set
 
+    /**
+     * Set by [TableReader] whenever the column reader is associated with a column
+     * that is not present in the current table.
+     *
+     * Use cases:
+     * - the current table is a concatenated table.
+     * - the current column is an artificially added column.
+     *
+     * @see[Table.concatWithName]
+     * @see[Table.withArtificialColumn]
+     */
     internal fun setArtificially(value: Any) {
+        @Suppress("UNCHECKED_CAST")
         currRowValue = value as P
         postProcess.invoke(currRowValue)
     }
 
+    /**
+     * Called by [TableReader] if to parse the current column value through a JsonParser.
+     */
     internal fun setFromJsonParser(parser: JsonParser) {
         try {
             currRowValue = process.invoke(columnType.fromJsonParser(parser))
@@ -67,10 +153,23 @@ public open class ColumnReader<O, P: Any> internal constructor(
         }
     }
 
+    /**
+     * Called by [TableReader] if value is to be parsed from a string.
+     *
+     * Use cases:
+     * - The current table is a virtual table, which has its values loaded into memory as strings.
+     *
+     * @see[VirtualTable]
+     */
     internal fun setFromString(strValue: String) {
         currRowValue = process.invoke(columnType.fromStr(strValue))
     }
 
+    /**
+     * Provides a way to limit the raw type of the column readers at compile time.
+     * Provides type specific parsing logic.
+     * @param[T]    the row type associated with this column type (e.g. [ColumnReader.IntType] -> [Int])
+     */
     public abstract class ColumnType<T> {
         internal abstract fun fromJsonParser(parser: JsonParser): T
         internal abstract fun fromStr(strValue: String): T
