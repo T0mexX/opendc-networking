@@ -11,6 +11,7 @@ internal class NetworkInstantSrc(
     var internal: ms = ms.MIN_VALUE
 ): InstantSource {
     val isExternalSource: Boolean = external != null
+    val isInternalSource: Boolean = isExternalSource.not()
     override fun instant(): Instant =
         external?.instant()
             ?:  Instant.ofEpochMilli(internal)

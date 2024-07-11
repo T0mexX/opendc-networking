@@ -18,6 +18,7 @@ import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.slf4j.Logger
 import java.io.File
 import java.time.Duration
@@ -53,6 +54,7 @@ public class NetworkController internal constructor(
 
     init {
         instantSource?.let { lastUpdate = it.instant() }
+        StaticECMP.eToEFlows = network.netFlowById
     }
 
     public val energyRecorder: NetworkEnergyRecorder =
@@ -144,7 +146,7 @@ public class NetworkController internal constructor(
     }
 
     private fun startFlow(netFlow: NetFlow): NetFlow? {
-        if (netFlow.transmitterId !in claimedHostIds)
+        if (netFlow.transmitterId !in network.endPointNodes)
             return log.errAndNull("unable to startInstant network flow from node ${netFlow.transmitterId}, " +
                 "node does not exist or is not an end-point node")
 
@@ -156,10 +158,10 @@ public class NetworkController internal constructor(
             return log.errAndNull("unable to startInstant network flow with nodeId ${netFlow.id}, " +
                 "a flow with nodeId ${netFlow.id} already exists")
 
-        if (netFlow.transmitterId in claimedHostIds
-            || netFlow.transmitterId in claimedCoreSwitchIds)
-            log.warn("starting flow through controller interface from node whose interface was claimed, " +
-                "best practice would be to use either only the controller or the node interface for each node")
+//        if (netFlow.transmitterId in claimedHostIds
+//            || netFlow.transmitterId in claimedCoreSwitchIds)
+//            log.warn("starting flow through controller interface from node whose interface was claimed, " +
+//                "best practice would be to use either only the controller or the node interface for each node")
 
         flowsById[netFlow.id] = netFlow
         network.startFlow(netFlow)
@@ -224,9 +226,9 @@ public class NetworkController internal constructor(
     }
 
     public fun advanceBy(ms: ms, suppressWarn: Boolean = false) {
-        if (!instantSrc.isExternalSource)
+        if (instantSrc.isInternalSource)
             instantSrc.advanceTime(ms)
-        else (!suppressWarn)
+        else  if (!suppressWarn)
             log.warn("advancing time directly while instant source is set, this can cause ambiguity. " +
                 "You can synchronize the network according to the instant source with 'sync()'")
 
@@ -266,10 +268,7 @@ public class NetworkController internal constructor(
     }
 
     private fun mappedOrSelf(id: NodeId): NodeId =
-        virtualMapping[id] ?: let {
-            log.warn("unable to map node id $id to a physical node. Trying to use id as physical")
-            id
-        }
+        virtualMapping[id] ?: let { id }
 
 
 
