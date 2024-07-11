@@ -29,7 +29,10 @@ public abstract class Table {
      * @return      A reader for the table, which enables stream-fashion reading, as well as automated.
      * @see[TableReader]
      */
-    public abstract  fun getReader(): TableReader
+    public fun getReader(): TableReader =
+        getReader(this.artificialCols)
+
+    protected abstract fun getReader(artificialColumns: Map<String, Any>): TableReader
 
 
     /**
@@ -128,8 +131,8 @@ public abstract class Table {
                 /**
                  * Acts as [TableReader] for a concatenated table.
                  */
-                override fun getReader(): TableReader =
-                    object : TableReader(artificialCols = artificialCols) {
+                override fun getReader(artificialColumns: Map<String, Any>): TableReader =
+                    object : TableReader(artificialCols = artificialColumns) {
 
                         override val tableName: String = name
 
@@ -157,71 +160,74 @@ public abstract class Table {
                             defaultValue: P?,
                             forceAdd: Boolean
                         ): ColumnReader<O, P>? {
-                            return if (name in colNames) {
+                            fun getConcatColumnReader(): ColumnReader<O, P> {
+                                val newColReader = object : ColumnReader<O, P>(name = name, process = process, columnType = columnType) {
 
-                                try {
-                                    // anonymous ColumnReader that assign a column reader to each of the sub tables
-                                    // and acts as a single column reader for the concatenated table.
-                                    // If the columns names are not 1:1 (the tables have different columns),
-                                    // when the column is not found the reader fall backs to the default value
-                                    val newColReader = object : ColumnReader<O, P>(name = name, process = process, columnType = columnType) {
+                                    private val colReaders: List<ColumnReader<O, P>>
 
-                                        private val colReaders: List<ColumnReader<O, P>>
-
-                                        // adds a column reader for each sub-table. If any addition fails,
-                                        // all column reader added until then are removed and an exception is thrown.
-                                        init {
-                                            val colReadersByTr: Map<TableReader, ColumnReader<O, P>?> =
-                                                readers.associateWith {
-                                                    it.addColumnReader(
-                                                        name = name,
-                                                        columnType = columnType,
-                                                        defaultValue = defaultValue,
-                                                        process = process,
-                                                        postProcess = postProcess,
-                                                        forceAdd = forceAdd
-                                                    )
-                                                }
-
-
-                                            // if any column reader addition (to the sub-tables) failed
-                                            if (colReadersByTr.values.any { it == null }) {
-
-                                                // remove all successfully added column readers
-                                                colReadersByTr.forEach { (tr, cr) ->
-                                                    if (cr != null) tr.rmColumnReader(cr)
-                                                }
-
-                                                throw RuntimeException("unable to instantiate concatenated table reader")
+                                    // adds a column reader for each sub-table. If any addition fails,
+                                    // all column reader added until then are removed and an exception is thrown.
+                                    init {
+                                        val colReadersByTr: Map<TableReader, ColumnReader<O, P>?> =
+                                            readers.associateWith {
+                                                it.addColumnReader(
+                                                    name = name,
+                                                    columnType = columnType,
+                                                    defaultValue = defaultValue,
+                                                    process = process,
+                                                    postProcess = postProcess,
+                                                    forceAdd = forceAdd
+                                                )
+                                                    ?: log.errAndNull("unable to add column reader for column '$name' to sub-table '${it.tableName}' in concatenated table '$tableName'")
                                             }
 
-                                            colReaders = colReadersByTr.values.filterIsInstance<ColumnReader<O, P>>()
-                                            check(colReaders.size == colReadersByTr.size) // should never fail
+
+                                        // if any column reader addition (to the sub-tables) failed
+                                        if (colReadersByTr.values.any { it == null }) {
+
+                                            // remove all successfully added column readers
+                                            colReadersByTr.forEach { (tr, cr) ->
+                                                if (cr != null) tr.rmColumnReader(cr)
+                                            }
+
+                                            throw RuntimeException("unable to instantiate concatenated table reader")
                                         }
 
-                                        override var currRowValue: P
-                                            get() = colReaders.getOrNull(readerIdx)
-                                                ?.currRowValue
-                                                ?: throw RuntimeException("number of column readers for column $name  (${colReaders.size})" +
-                                                    "in concatenated table does not match the number of tables ${readers.size}")
-                                            set(_) { /* no setter */ }
+                                        colReaders = colReadersByTr.values.filterIsInstance<ColumnReader<O, P>>()
+                                        check(colReaders.size == colReadersByTr.size) // should never fail
                                     }
 
-                                    colReaders.getOrPut(name) { mutableListOf() }
-                                        .add(newColReader)
-
-                                    return newColReader
-
-                                    // unable to instantiate column reader
-                                } catch (_: Exception) {
-
-                                    return log.errAndNull("unable to add column reader. This is a concatenated table, " +
-                                        "if sub-table columns are not 1:1 (same exact columns), then you may try " +
-                                        "to set 'forceAdd' to true. The resulting table reader will return the " +
-                                        "default value whenever the current sub-table does not have the column."
-                                    )
+                                    override var currRowValue: P
+                                        get() = colReaders.getOrNull(readerIdx)
+                                            ?.currRowValue
+                                            ?: throw RuntimeException("number of column readers for column $name  (${colReaders.size})" +
+                                                "in concatenated table does not match the number of tables ${readers.size}")
+                                        set(_) { /* no setter */ }
                                 }
-                            } else null
+
+                                colReaders.getOrPut(name) { mutableListOf() }
+                                    .add(newColReader)
+
+                                return newColReader
+                            }
+
+                            return try {
+                                if (name in colNames)
+                                    getConcatColumnReader()
+                                else if (forceAdd) {
+                                    defaultValue ?: return log.errAndNull("unable to force add column reader for column " +
+                                        "with name '$name' to concat table '$tableName', default value not provided")
+                                    withArtColumn(colName = name, dfltValue = defaultValue)
+                                    getConcatColumnReader()
+                                } else null
+                            } catch (e: Exception) {
+                                log.error(e.message)
+                                return log.errAndNull("unable to add column reader. This is a concatenated table, " +
+                                    "if sub-table columns are not 1:1 (same exact columns), then you may try " +
+                                    "to set 'forceAdd' to true. The resulting table reader will return the " +
+                                    "default value whenever the current sub-table does not have the column."
+                                )
+                            }
                         }
 
                         /**

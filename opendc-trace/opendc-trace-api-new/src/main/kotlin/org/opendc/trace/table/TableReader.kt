@@ -4,6 +4,7 @@ import org.opendc.trace.table.column.Column
 import org.opendc.trace.table.column.ColumnReader
 import org.opendc.trace.table.csv.CSVTableReader
 import org.opendc.trace.util.errAndFalse
+import org.opendc.trace.util.errAndNull
 import org.opendc.trace.util.logger
 import java.io.File
 import java.nio.file.Path
@@ -191,6 +192,12 @@ public abstract class TableReader(
         }
 
         return true
+    }
+
+    //should only be called while force adding a column reader
+    protected fun withArtColumn(colName: String, dfltValue: Any): TableReader? {
+        return artificialCols.putIfAbsent(colName, dfltValue)
+            ?. let { this }
     }
 
 
