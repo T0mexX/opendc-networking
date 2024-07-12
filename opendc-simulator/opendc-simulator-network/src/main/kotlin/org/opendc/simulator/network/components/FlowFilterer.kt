@@ -5,7 +5,10 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.components.internalstructs.Port
+import org.opendc.simulator.network.utils.forEachParallel
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.math.min
+import kotlin.system.measureNanoTime
 
 /**
  * Filter incoming flows ([Filter.unfiltered]) so that each flow
@@ -52,21 +55,26 @@ internal abstract class FlowFilterer {
      * the resulting filtered flow is then added to [nextFilter].
      */
     open fun updateFilters(newFlowId: FlowId? = null ) {
-        val lastUpdatedFlows: MutableList<Flow> = mutableListOf()
+        val lastUpdatedFlows = mutableListOf<Flow>()
+
         val totIncomingDataRate: Kbps = filters.values.sumOf { it.unfiltered.dataRate }
 
-        filters.values.filter { it.unfiltered.dataRate == .0 }
-            .forEach {
-                lastUpdatedFlows.add(it.filtered)
-                resetAndRmFlow(it.id, updateFilters = false)
-            }
+        val a = measureNanoTime {
+            filters.values.filter { it.unfiltered.dataRate == .0 }
+                .forEach {
+                    lastUpdatedFlows.add(it.filtered)
+                    resetAndRmFlow(it.id, updateFilters = false)
+                }
+        }
 
-        filters.values.forEach { filter ->
-            val dedicatedDataRate: Kbps = dedicatedDataRateOf(filter.unfiltered, totIncomingDataRate)
+        val b = measureNanoTime {
+            filters.values.forEach { filter ->
+                val dedicatedDataRate: Kbps = dedicatedDataRateOf(filter.unfiltered, totIncomingDataRate)
 
-            if (dedicatedDataRate != filter.filtered.dataRate) {
-                filter.filtered.dataRate = dedicatedDataRate
-                lastUpdatedFlows.add(filter.filtered)
+                if (dedicatedDataRate != filter.filtered.dataRate) {
+                    filter.filtered.dataRate = dedicatedDataRate
+                    lastUpdatedFlows.add(filter.filtered)
+                }
             }
         }
 
@@ -74,6 +82,7 @@ internal abstract class FlowFilterer {
 
         val newFilteredFlow: Flow? = filters[newFlowId]?.filtered
         newFilteredFlow?. let { nextFilter?.addOrReplaceFlow(newFilteredFlow) }
+
         nextFilter?.updateFilters()
     }
 

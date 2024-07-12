@@ -8,6 +8,7 @@ import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
+import kotlin.time.TimeSource
 
 
 /**
@@ -27,7 +28,6 @@ internal object StaticECMP: ForwardingPolicy {
         val portToNode: Map<NodeId, Port> = forwarder.portToNode
         val totDataRateToForward: Kbps = forwarder.totDataRateOf(flowId)
         val finalDestId: NodeId = eToEFlows[flowId]?.destinationId ?: throw IllegalStateException("unable to forward flow, flow id $flowId not recognized")
-
 
         val portsToForwardTo: List<Port> =
             routTable.getPossiblePathsTo(finalDestId)

@@ -3,6 +3,9 @@ package org.opendc.simulator.network.api
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import me.tongfei.progressbar.ProgressBar
+import me.tongfei.progressbar.ProgressBarBuilder
+import me.tongfei.progressbar.ProgressBarStyle
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
@@ -25,7 +28,8 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
-
+import kotlin.system.measureNanoTime
+import kotlin.time.TimeSource
 
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -55,6 +59,12 @@ public class NetworkController internal constructor(
     init {
         instantSource?.let { lastUpdate = it.instant() }
         StaticECMP.eToEFlows = network.netFlowById
+
+        log.info(buildString {
+            appendLine("\nNetwork Info:")
+            appendLine("num of core switches: ${network.getNodesById<CoreSwitch>().size}")
+            appendLine("num of host nodes: ${network.getNodesById<HostNode>().size}")
+        })
     }
 
     public val energyRecorder: NetworkEnergyRecorder =
@@ -139,7 +149,7 @@ public class NetworkController internal constructor(
             )
 
         dataRateOnChangeHandler?.let {
-            netFlow.withDataRateOnChangeHandler(dataRateOnChangeHandler)
+            netFlow.withThroughputOnChangeHandler(dataRateOnChangeHandler)
         }
 
         return startFlow(netFlow)
@@ -179,18 +189,24 @@ public class NetworkController internal constructor(
         val mappedTransmitterId: NodeId =  if (physicalTransmitterId) transmitterId else mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
 
+//        val bo = TimeSource.Monotonic.markNow()
         flowsById.values.find {
             it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
         } ?. let {
+//            println("found flow: ${bo.elapsedNow().inWholeNanoseconds}")
             it.desiredDataRate = desiredDataRate
-            if (dataRateOnChangeHandler != null) it.withDataRateOnChangeHandler(dataRateOnChangeHandler)
+            if (dataRateOnChangeHandler != null) it.withThroughputOnChangeHandler(dataRateOnChangeHandler)
             return it
-        } ?: return startFlow(
-            transmitterId = mappedTransmitterId,
-            destinationId = mappedDestId,
-            desiredDataRate = desiredDataRate,
-            dataRateOnChangeHandler = dataRateOnChangeHandler
-        )
+        } ?: let {
+//            println("not found flow: ${bo.elapsedNow().inWholeNanoseconds}")
+//            println("mappedTransId: $mappedTransmitterId, mappedDestId: $mappedDestId")
+            return startFlow(
+                transmitterId = transmitterId,
+                destinationId = destinationId,
+                desiredDataRate = desiredDataRate,
+                dataRateOnChangeHandler = dataRateOnChangeHandler
+            )
+        }
     }
 
     public fun stopFlow(flowId: FlowId): NetFlow? {
@@ -243,7 +259,8 @@ public class NetworkController internal constructor(
         resetEnergy: Boolean = true,
         resetClaimedNodes: Boolean = true,
         resetVirtualMapping: Boolean = true,
-        withVirtualMapping: Boolean = true
+        withVirtualMapping: Boolean = true,
+        withProgressBar: Boolean = true
     ) {
         if (instantSrc.isExternalSource)
             return log.error("unable to run a workload while controller has an external time source")
@@ -264,7 +281,17 @@ public class NetworkController internal constructor(
         if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
 
 
-        netWorkload.execAll(controller = this)
+        if (withProgressBar) {
+            val pb: ProgressBar = ProgressBarBuilder()
+                .setInitialMax(netWorkload.size.toLong())
+                .setStyle(ProgressBarStyle.ASCII)
+                .setTaskName("Simulating...").build()
+
+            while (netWorkload.hasNext()) {
+                netWorkload.execNext(controller = this)
+                pb.step()
+            }
+        }
     }
 
     private fun mappedOrSelf(id: NodeId): NodeId =

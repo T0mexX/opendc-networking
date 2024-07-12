@@ -4,7 +4,9 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.Flow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.logger
+import kotlin.system.measureNanoTime
 
 /**
  * Node you can start a [Flow] from or direct a [Flow] to.
@@ -23,7 +25,6 @@ internal interface EndPointNode: Node {
      */
     val incomingEtoEFlows: MutableMap<FlowId, NetFlow>
 
-
     /**
      * Starts a [NetFlow] from ***this*** node.
      * @param[etoEFlow]  the [NetFlow] to be started.
@@ -34,7 +35,24 @@ internal interface EndPointNode: Node {
             return
         }
 
+        // sets up the handler of any data rate changes, propagating updates to other nodes
+        // changes of this flow data rate can be performed through a NetworkController,
+        // the NetNodeInterface of this node, or through the instance of the NetFlow itself.
+        etoEFlow.withDesiredDataRateOnChangeHandler { _, old, new ->
+//            println( "datarate change: ${ measureNanoTime {
+            if (old == new) return@withDesiredDataRateOnChangeHandler
+
+            if (new < 0) log.warn("unable to change generated flow with id '${etoEFlow.id}' " +
+                "data-rate to $new, data-rate should be positive. Falling back to 0")
+
+            forwardingPolicy.forwardFlow(forwarder = this, flowId = etoEFlow.id)
+//            } }" )
+        }
+
+
         outgoingEtoEFlows[etoEFlow.id] = etoEFlow
+
+        // forwards this flow according to the active forwarding policy
         forwardingPolicy.forwardFlow(forwarder = this, etoEFlow.id)
     }
 

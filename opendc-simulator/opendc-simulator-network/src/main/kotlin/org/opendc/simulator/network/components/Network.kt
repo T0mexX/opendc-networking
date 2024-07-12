@@ -79,7 +79,7 @@ internal interface Network {
     }
 
     fun resetFlows() {
-        netFlowById.keys.forEach { stopFlow(it) }
+        netFlowById.keys.toSet().forEach { stopFlow(it) }
     }
 
     /**
@@ -98,6 +98,6 @@ internal interface Network {
     }
 }
 
-internal inline fun <reified T> Network.getNodesById(): Map<NodeId, T> {
-    return nodes.values.filterIsInstance<T>().associateBy { (it as Node).id }
+internal inline fun <reified T: Node> Network.getNodesById(): Map<NodeId, T> {
+    return nodes.values.filterIsInstance<T>().associateBy { it.id }
 }

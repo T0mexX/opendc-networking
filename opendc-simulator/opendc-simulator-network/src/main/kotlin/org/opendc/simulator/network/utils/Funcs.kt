@@ -1,5 +1,10 @@
 package org.opendc.simulator.network.utils
 
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
 import kotlin.properties.Delegates
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -27,3 +32,8 @@ internal fun <T : Any> Delegates.writeOnce(): ReadWriteProperty<Any?, T> = objec
  */
 internal fun Double.largerThanBy(other: Double, deltaPerc: Double): Boolean =
     this / other - 1 < deltaPerc
+
+
+public fun <A>Collection<A>.forEachParallel(f: suspend (A) -> Unit): Unit = runBlocking {
+    map { async { f(it) } }.forEach { it.await() }
+}

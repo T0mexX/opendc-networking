@@ -64,6 +64,7 @@ internal class FatTreeNetwork(
 
     init {
         require(k.isEven() && k > 2) { "Fat tree can only be built with even-port-number (>2) switches" }
+        println("k = $k")
         pods = buildList { repeat(k) { add(FatTreePod(aggrSpecs, torSpecs)) } }
 
         val coreSwitchesChunked = buildList {
@@ -87,7 +88,7 @@ internal class FatTreeNetwork(
         internet = Internet().connectedTo(coreSwitches)
 
         nodes = buildMap {
-            plus((leafs + torSwitches + aggregationSwitches + coreSwitches).associateBy { it.id })
+            putAll((leafs + torSwitches + aggregationSwitches + coreSwitches).associateBy { it.id })
             check(internet.id !in this)
             { "unable to create network: one node has id $INTERNET_ID, which is reserved for internet abstraction" }
             put(internet.id, internet)
