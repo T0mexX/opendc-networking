@@ -22,23 +22,36 @@ public class NetFlow(
     public val transmitterId: NodeId,
     public val destinationId: NodeId,
     public val id: FlowId,
-    public var desiredDataRate: Kbps = .0,
+    desiredDataRate: Kbps = .0,
 ) {
 
     private val throughputOnChangeHandlers = mutableListOf<OnChangeHandler<NetFlow, Kbps>>()
+    private val desiredDataRateOnChangeHandlers = mutableListOf<OnChangeHandler<NetFlow, Kbps>>()
 
     private var totDataTransmitted: Kb = .0
 
+    public var desiredDataRate: Kbps by Delegates.observable(desiredDataRate) { _, old, new ->
+        if (old == new) return@observable
+        desiredDataRateOnChangeHandlers.forEach { it.handleChange(obj = this, oldValue = old, newValue = new) }
+    }
+
     /**
-     * The end-to-end data rate of the flow.
+     * The end-to-end throughput of the flow.
      */
-    public var throughput: Kbps by Delegates.observable(.0) { _, oldValue, newValue ->
-        throughputOnChangeHandlers.forEach { it.handleChange(this, oldValue, newValue) }
+    public var throughput: Kbps by Delegates.observable(.0) { _, old, new ->
+        if (old == new) return@observable
+        throughputOnChangeHandlers.forEach { it.handleChange(obj = this, oldValue = old, newValue = new) }
     }
     internal set
 
-    public fun withDataRateOnChangeHandler(f: (NetFlow, Kbps, Kbps) -> Unit): NetFlow {
+    public fun withThroughputOnChangeHandler(f: (NetFlow, Kbps, Kbps) -> Unit): NetFlow {
         throughputOnChangeHandlers.add(f)
+
+        return this
+    }
+
+    internal fun withDesiredDataRateOnChangeHandler(f: OnChangeHandler<NetFlow, Kbps>): NetFlow {
+        desiredDataRateOnChangeHandlers.add(f)
 
         return this
     }

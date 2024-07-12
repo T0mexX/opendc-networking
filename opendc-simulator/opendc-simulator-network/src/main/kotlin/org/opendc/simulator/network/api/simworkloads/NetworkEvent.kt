@@ -8,6 +8,7 @@ import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
+import kotlin.system.measureNanoTime
 
 internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent> {
     private companion object { private val log by logger() }
@@ -17,12 +18,21 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
     protected abstract fun exec(controller: NetworkController)
 
     fun execIfNotPassed(controller: NetworkController) {
-        val msSinceLastUpdate: ms = deadline - controller.instantSrc.millis()
-        if (msSinceLastUpdate < 0)
-            return log.error("unable to execute network event, deadline is passed")
+//        println("execIfNotPassed: ${ measureNanoTime {
 
-        controller.advanceBy(msSinceLastUpdate)
-        this.exec(controller)
+            val msSinceLastUpdate: ms = deadline - controller.instantSrc.millis()
+            if (msSinceLastUpdate < 0)
+                return log.error("unable to execute network event, deadline is passed")
+
+//            println("    numOfFlows: ${controller.flowsById.size}")
+//            println("    controller.advanceBy: ${ measureNanoTime {
+                controller.advanceBy(msSinceLastUpdate)
+//            } }")
+//            println("    exec: ${ measureNanoTime {
+                this.exec(controller)
+//            } }")
+//        } } ")
+
     }
 
     override fun compareTo(other: NetworkEvent): Int =
@@ -38,11 +48,14 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         private val desiredDataRate: Kbps
     ): NetworkEvent(deadline) {
         override fun exec(controller: NetworkController) {
-            controller.startOrUpdateFlow(
-                transmitterId = from,
-                destinationId = to,
-                desiredDataRate = desiredDataRate
-            ) ?. let { targetFlow = it }
+
+//            println("startOrUpdateFlow: ${ measureNanoTime {
+                controller.startOrUpdateFlow(
+                    transmitterId = from,
+                    destinationId = to,
+                    desiredDataRate = desiredDataRate
+                ) ?. let { targetFlow = it }
+//            } }")
         }
 
         override fun involvedIds(): Set<NodeId> = setOf(from, to)

@@ -1,14 +1,20 @@
 package org.opendc.simulator.network.api.simworkloads
 
 import org.opendc.simulator.network.api.NetworkController
+import org.opendc.simulator.network.api.printlnWithTimeElapsed
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
 import java.io.File
+import java.time.Duration
 import java.time.Instant
 import java.util.LinkedList
 import java.util.Queue
+import kotlin.system.exitProcess
+import kotlin.system.measureNanoTime
+import kotlin.time.TimeSource
+import kotlin.time.measureTime
 
 public class SimNetWorkload internal constructor(
     netEvents: List<NetworkEvent>,
@@ -21,15 +27,20 @@ public class SimNetWorkload internal constructor(
     private val coreIds: Set<NodeId> = coreIds.toSet()
     private val hostIds: Set<NodeId> = hostIds.toSet()
 
+
+
+    private val events: Queue<NetworkEvent> = LinkedList(netEvents.sorted())
+
+    public val size: Int = events.size
+
+    public val startInstant: Instant = events.peek()?.deadline?.let { Instant.ofEpochMilli(it) }
+        ?: Instant.ofEpochMilli(ms.MIN_VALUE)
+
+
     init {
         check(hostIds.none { it in coreIds } && INTERNET_ID !in coreIds && INTERNET_ID !in hostIds)
         { "unable to create workload, conflicting ids" }
     }
-
-    private val events: Queue<NetworkEvent> = LinkedList(netEvents.sorted())
-
-    public val startInstant: Instant = events.peek()?.deadline?.let { Instant.ofEpochMilli(it) }
-        ?: Instant.ofEpochMilli(ms.MIN_VALUE)
 
     /**
      * If this method successfully completes, the controller is then able to execute ***this*** workload,
@@ -83,13 +94,24 @@ public class SimNetWorkload internal constructor(
             ?: log.error("unable to execute network event, no more events remaining in the workload")
     }
 
+    internal fun hasNext(): Boolean =
+        events.isNotEmpty()
+
     internal fun execUntil(controller: NetworkController, until: Instant) {
         execUntil(controller, until.toEpochMilli())
     }
 
     internal fun execUntil(controller: NetworkController, until: ms) {
+        var event: NetworkEvent?
+
         while ((events.peek()?.deadline ?: ms.MAX_VALUE) < until) {
-            events.poll()?.execIfNotPassed(controller)
+//            println ("poll: ${ measureNanoTime {
+                event = events.poll()
+//            }}")
+
+//            println ("exec: ${ measureNanoTime {
+                event?.execIfNotPassed(controller)
+//            }}")
         }
     }
 

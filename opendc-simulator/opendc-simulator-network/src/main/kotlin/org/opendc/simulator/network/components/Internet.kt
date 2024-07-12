@@ -37,14 +37,21 @@ internal class Internet(
     }
 
     override fun connect(other: Node): Result {
-        ports.add(Port(speed = portSpeed, node = this))
+        addPort()
         return super.connect(other)
     }
+
+    private fun addPort() { ports.add(Port(speed = portSpeed, node = this)) }
 
     override val outgoingEtoEFlows = mutableMapOf<FlowId, NetFlow>()
     override val incomingEtoEFlows = mutableMapOf<FlowId, NetFlow>()
     override val portSpeed: Kbps = Kbps.MAX_VALUE
     override val ports = mutableListOf<Port>()
+        get() {
+            if (portToNode.size == field.size)
+                field.add(Port(speed = portSpeed, node = this))
+            return field
+        }
     override val routingTable = RoutingTable(this.id)
 
     override val portToNode = mutableMapOf<NodeId, Port>()

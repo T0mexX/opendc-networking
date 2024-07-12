@@ -1,3 +1,7 @@
+
+
+description = "Workload trace library for OpenDC"
+
 plugins {
     `kotlin-library-conventions`
 }
