@@ -11,19 +11,19 @@ internal interface FlowView {
 
     /**
      * Returns the total incoming data rate corresponding
-     * to [flowId] (generated flows are not included).
+     * to [fId] (generated flows are not included).
      */
-    fun totIncomingDataRateOf(flowId: FlowId): Kbps
+    fun totIncomingDataRateOf(fId: FlowId): Kbps
 
     /**
-     * Returns the total outgoing data rate corresponding to [flowId] (not the throughput).
+     * Returns the total outgoing data rate corresponding to [fId] (not the throughput).
      */
-    fun totOutgoingDataRateOf(flowId: FlowId): Kbps
+    fun totOutgoingDataRateOf(fId: FlowId): Kbps
 
-    /**
-     * Returns the outgoing throughput of the flow corresponding to [flowId].
-     */
-    fun throughputOutOf(flowId: FlowId): Kbps
+//    /**
+//     * Returns the outgoing throughput of the flow corresponding to [flowId].
+//     */
+//    fun throughputOutOf(flowId: FlowId): Kbps
 
     /**
      * Returns the [FlowId]s of all flows transiting
@@ -40,15 +40,15 @@ internal interface FlowView {
         sb.appendLine(
             "id".padEnd(15) +
                 "in (Kbps)".padEnd(15) +
-                "out (Kbps)".padEnd(15) +
-                "throughput out (Kbps)"
+                "out (Kbps)".padEnd(15)
+//                "throughput out (Kbps)"
         )
         allTransitingFlowsIds().forEach { flowId ->
             sb.appendLine(
                 flowId.toString().padEnd(15) +
                     String.format("%.6f", totIncomingDataRateOf(flowId)).padEnd(15) +
-                    String.format("%.6f", totOutgoingDataRateOf(flowId)).padEnd(15) +
-                    String.format("%.6f", throughputOutOf(flowId)).padEnd(15)
+                    String.format("%.6f", totOutgoingDataRateOf(flowId)).padEnd(15)
+//                    String.format("%.6f", throughputOutOf(flowId)).padEnd(15)
             )
         }
         return sb.toString()

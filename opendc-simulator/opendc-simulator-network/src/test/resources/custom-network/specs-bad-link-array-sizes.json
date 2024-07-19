@@ -8,25 +8,25 @@
             "portSpeed": 1000
         },
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 1,
             "numOfPorts": 1,
             "portSpeed": 1000
         },
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 2,
             "numOfPorts": 1,
             "portSpeed": 1000
         },
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 3,
             "numOfPorts": 1,
             "portSpeed": 1000
         },
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 4,
             "numOfPorts": 1,
             "portSpeed": 1000

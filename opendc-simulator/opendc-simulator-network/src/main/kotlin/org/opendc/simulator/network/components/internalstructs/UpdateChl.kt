@@ -1,14 +1,19 @@
 package org.opendc.simulator.network.components.internalstructs
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.opendc.simulator.network.api.NetworkStabilizer.Invalidator
-import org.opendc.simulator.network.components.link.RateUpdate
+import org.opendc.simulator.network.components.StabilityValidator.Invalidator
+import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.RWLock
 import org.opendc.simulator.network.utils.logger
+
+
+internal typealias RateUpdate = Map<FlowId, Kbps>
 
 internal class UpdateChl private constructor(
     private val chl: Channel<RateUpdate>,
@@ -17,38 +22,44 @@ internal class UpdateChl private constructor(
     internal constructor()
         : this(chl = Channel<RateUpdate>(Channel.UNLIMITED))
 
+    private val chlReceiveLock = RWLock()
+
     private var invalidator: Invalidator? = null
 
     var pending: Int = 1
     private val pendingLock = Mutex()
 
-    internal fun withInvalidator(inv: Invalidator): UpdateChl = runBlocking {
+
+    internal suspend fun withInvalidator(inv: Invalidator): UpdateChl {
         invalidator = inv
         pendingLock.withLock { if (pending > 0) invalidator?.invalidate()}
-        this@UpdateChl
+        return this
     }
 
-    override fun tryReceive(): ChannelResult<RateUpdate> {
-        val chlResult = chl.tryReceive()
-        chlResult.getOrNull()?.let {
-            runBlocking { pendingLock.withLock { pending-- } }
+    @OptIn(InternalCoroutinesApi::class)
+    override fun tryReceive(): ChannelResult<RateUpdate> =
+        chlReceiveLock.tryWithRLock {
+            val chlResult = chl.tryReceive()
+            chlResult.getOrNull()?.let {
+                runBlocking { pendingLock.withLock { pending-- } }
+            }
+
+            chlResult
+        } ?: ChannelResult.failure()
+
+
+    override suspend fun receive(): RateUpdate =
+        chlReceiveLock.withRLock {
+            pendingLock.withLock {
+                pending--
+                if (pending == 0) invalidator?.validate()
+            }
+
+            chl.receive()
         }
-
-        return chlResult
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    override suspend fun receive(): RateUpdate {
-        pendingLock.withLock {
-            pending--
-            if (pending == 0) invalidator?.validate()
-        }
-
-        val tmp = chl.receive()
-        return tmp
-    }
 
     override suspend fun send(element: RateUpdate) {
+        if (element.isEmpty()) return
         pendingLock.withLock {
             pending++
             if (pending == 1) invalidator?.invalidate()
@@ -56,6 +67,9 @@ internal class UpdateChl private constructor(
 
         chl.send(element)
     }
+
+    suspend fun <T> whileReceivingLocked(block: suspend () -> T): T =
+        chlReceiveLock.withRLock { block() }
 
     companion object {
         val log by logger()

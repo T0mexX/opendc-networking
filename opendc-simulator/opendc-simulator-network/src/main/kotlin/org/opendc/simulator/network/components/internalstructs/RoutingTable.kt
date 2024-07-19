@@ -1,8 +1,11 @@
 package org.opendc.simulator.network.components.internalstructs
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.NodeId
-import org.opendc.simulator.network.components.Link
+import org.opendc.simulator.network.components.internalstructs.port.Port
+import org.opendc.simulator.network.utils.RWLock
 
 /**
  * Represents the routing table for the [Node] associated with the [ownerId] param.
@@ -10,16 +13,22 @@ import org.opendc.simulator.network.components.Link
  */
 internal class RoutingTable(private val ownerId: NodeId) {
 
-    /**
-     * Maps the destination id to the cost (numOfHops) to that destination.
-     * It is used to share routing information to other [Node]s
-     */
-    val vector: Map<NodeId, Int>
-        get() {
-            return table.map {
-                it.key to (minNumOfHopsTo(it.key) ?: 0)
-            }.filterNot { it.second == 0 }.toMap()
-        }
+    private val rwLock = RWLock(2)
+
+//    /**
+//     * Maps the destination id to the cost (numOfHops) to that destination.
+//     * It is used to share routing information to other [Node]s
+//     */
+//    val vector: Map<NodeId, Int>
+//        get() {
+//            rwLock.withRLock {
+//                return table.map {
+//                    it.key to (minNumOfHopsTo(it.key) ?: 0)
+//                }.filterNot { it.second == 0 }.toMap()
+//            }
+//        }
+
+
 
     /**
      * This bool is updated each time a vector is merged in the routing table.
@@ -35,6 +44,12 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * Routing table mapping [Node] id to its [PossiblePath], containing cost and nextHop.
      */
     private val table: HashMap<NodeId, MutableMap<NodeId, PossiblePath>> = HashMap()
+
+    suspend fun getVect(): Map<NodeId, Int> = rwLock.withRLock {
+        table.mapNotNull { (nextNodeId, _) ->
+            nextNodeId to (minNumOfHopsTo(nextNodeId) ?: return@mapNotNull null)
+        }.toMap()
+    }
 
     /**
     * Adds [pathToAdd] to the routing table. If a path with
@@ -76,16 +91,17 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * Returns possible minimal cost paths to a certain destination id.
      * @param[destId]   destination id whose possible minimal paths are to be returned.
      */
-    fun getPossiblePathsTo(destId: NodeId): Collection<PossiblePath> =
+    suspend fun getPossiblePathsTo(destId: NodeId): Collection<PossiblePath> = rwLock.withRLock {
         table.getOrDefault(destId, mapOf()).values
+    }
 
     /**
      * Merges routing vector of adjacent [Node].
      * @param[routingVector]    routing vector of adjacent [Node], mapping destination id to its cost (number of hops).
      */
-    fun mergeRoutingVector(routingVector: Map<NodeId, Int>, vectOwner: Node) {
+    suspend fun mergeRoutingVector(routingVector: Map<NodeId, Int>, vectOwner: Node) = rwLock.withWLock {
         isTableChanged = false
-        val routVectBefore = this.vector
+        val routVectBefore = this.getVect()
         addOrReplacePath(PossiblePath(vectOwner.id, numOfHops = 1, nextHop = vectOwner))
 
         val destToRemove: Set<NodeId> = table.keys.toSet() - routingVector.keys.toSet() - vectOwner.id
@@ -102,7 +118,7 @@ internal class RoutingTable(private val ownerId: NodeId) {
                 )
             }
 
-        val routVectAfter = this.vector
+        val routVectAfter = this.getVect()
         isVectChanged = routVectAfter != routVectBefore
 
         table
@@ -111,7 +127,7 @@ internal class RoutingTable(private val ownerId: NodeId) {
     /**
      * Removes all possible paths whose next hop is [node].
      */
-    fun removeNextHop(node: Node) {
+    suspend fun removeNextHop(node: Node) = rwLock.withWLock {
         table.forEach { (_, possPaths) ->
             possPaths.remove(node.id)
         }
@@ -150,5 +166,12 @@ internal class RoutingTable(private val ownerId: NodeId) {
         val nextHop: Node,
     ) : Comparable<PossiblePath> {
         override fun compareTo(other: PossiblePath): Int = this.numOfHops compareTo other.numOfHops
+
+        fun Node.associatedPort(): Port? =
+            portToNode[this@PossiblePath.nextHop.id]
     }
 }
+/**
+ * Type alias representing the routing vector of a [Node]. For improved readability.
+ */
+internal typealias RoutingVect = Map<NodeId, Int>

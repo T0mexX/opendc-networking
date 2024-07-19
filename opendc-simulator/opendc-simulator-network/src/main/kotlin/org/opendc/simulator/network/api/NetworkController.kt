@@ -1,17 +1,23 @@
 package org.opendc.simulator.network.api
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
+import org.opendc.simulator.network.api.simworkloads.NetworkEvent
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
-import org.opendc.simulator.network.components.getNodesById
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
@@ -21,6 +27,9 @@ import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.components.INTERNET_ID
+import org.opendc.simulator.network.components.Network.Companion.getNodesById
+import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.slf4j.Logger
 import java.io.File
@@ -28,7 +37,9 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
+import kotlin.random.Random
 import kotlin.system.measureNanoTime
+import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.TimeSource
 
 
@@ -45,6 +56,8 @@ public class NetworkController internal constructor(
             val netSpec = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
             return NetworkController(netSpec.buildFromSpecs(), instantSource)
         }
+
+        internal var nano: Long = 0
     }
 
     private val virtualMapping = mutableMapOf<Long, NodeId>()
@@ -71,7 +84,7 @@ public class NetworkController internal constructor(
         NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
 
     public val internetNetworkInterface: NetNodeInterface =
-        getNetInterfaceOf(network.internet.id)
+        getNetInterfaceOf(INTERNET_ID)
             ?: throw IllegalStateException("network did not initialize the internet abstract node correctly")
 
     private val claimedHostIds = mutableSetOf<NodeId>()
@@ -130,7 +143,7 @@ public class NetworkController internal constructor(
         return getNetInterfaceOf(nodeId)
     }
 
-    public fun startFlow(
+    public suspend fun startFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId, // TODO: understand how multiple core switches work
         desiredDataRate: Kbps = .0,
@@ -155,7 +168,7 @@ public class NetworkController internal constructor(
         return startFlow(netFlow)
     }
 
-    private fun startFlow(netFlow: NetFlow): NetFlow? {
+    private suspend fun startFlow(netFlow: NetFlow): NetFlow? {
         if (netFlow.transmitterId !in network.endPointNodes)
             return log.errAndNull("unable to startInstant network flow from node ${netFlow.transmitterId}, " +
                 "node does not exist or is not an end-point node")
@@ -179,7 +192,8 @@ public class NetworkController internal constructor(
         return netFlow
     }
 
-    public fun startOrUpdateFlow(
+
+    public suspend fun startOrUpdateFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId,
         desiredDataRate: Kbps = .0,
@@ -189,27 +203,29 @@ public class NetworkController internal constructor(
         val mappedTransmitterId: NodeId =  if (physicalTransmitterId) transmitterId else mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
 
-//        val bo = TimeSource.Monotonic.markNow()
+        val tm = TimeSource.Monotonic.markNow()
         flowsById.values.find {
             it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
         } ?. let {
-//            println("found flow: ${bo.elapsedNow().inWholeNanoseconds}")
-            it.desiredDataRate = desiredDataRate
+            nano += tm.elapsedNow().inWholeNanoseconds
+            it.setDesiredDataRate(desiredDataRate)
+
             if (dataRateOnChangeHandler != null) it.withThroughputOnChangeHandler(dataRateOnChangeHandler)
             return it
         } ?: let {
-//            println("not found flow: ${bo.elapsedNow().inWholeNanoseconds}")
-//            println("mappedTransId: $mappedTransmitterId, mappedDestId: $mappedDestId")
-            return startFlow(
+            nano += tm.elapsedNow().inWholeNanoseconds
+            val f = startFlow(
                 transmitterId = transmitterId,
                 destinationId = destinationId,
                 desiredDataRate = desiredDataRate,
                 dataRateOnChangeHandler = dataRateOnChangeHandler
             )
+
+            return f
         }
     }
 
-    public fun stopFlow(flowId: FlowId): NetFlow? {
+    public suspend fun stopFlow(flowId: FlowId): NetFlow? {
         return network.netFlowById[flowId]
             ?. let {
                 when (network.stopFlow(flowId)) {
@@ -281,16 +297,35 @@ public class NetworkController internal constructor(
         if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
 
 
-        if (withProgressBar) {
-            val pb: ProgressBar = ProgressBarBuilder()
-                .setInitialMax(netWorkload.size.toLong())
-                .setStyle(ProgressBarStyle.ASCII)
-                .setTaskName("Simulating...").build()
+        runBlocking {
+            val netRunnerJob: Job = network.launch()
 
-            while (netWorkload.hasNext()) {
-                netWorkload.execNext(controller = this)
-                pb.step()
+            if (withProgressBar) {
+                val pb: ProgressBar = ProgressBarBuilder()
+                    .setInitialMax(netWorkload.size.toLong())
+                    .setStyle(ProgressBarStyle.ASCII)
+                    .setTaskName("Simulating...").build()
+
+                delay(1000)
+
+                while (netWorkload.hasNext()) {
+                    val deadline = netWorkload.peek().deadline
+                    var steps: Long = 0
+
+                    while (netWorkload.hasNext() && netWorkload.peek().deadline <= deadline) {
+                        steps++
+                        netWorkload.execNext(controller = this@NetworkController)
+                    }
+
+                    network.awaitStability()
+                    pb.stepBy(steps)
+//                    println(currentInstant.toEpochMilli())
+//                    println(n.getFmtFlows())
+                }
+                pb.refresh()
             }
+
+            netRunnerJob.cancelAndJoin()
         }
     }
 
@@ -302,7 +337,7 @@ public class NetworkController internal constructor(
 
     private inner class NetNodeInterfaceImpl(override val nodeId: NodeId): NetNodeInterface {
 
-        override fun startFlow(
+        override suspend fun startFlow(
             destinationId: NodeId?, // TODO: understand how multiple core switches work
             desiredDataRate: Kbps,
             dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
@@ -331,7 +366,7 @@ public class NetworkController internal constructor(
             } ?: return  log.errAndNull("unable to retrieve flow $id,flow does not exists")
         }
 
-        override fun fromInternet(
+        override suspend fun fromInternet(
             desiredDataRate: Kbps,
             dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
         ): NetFlow {

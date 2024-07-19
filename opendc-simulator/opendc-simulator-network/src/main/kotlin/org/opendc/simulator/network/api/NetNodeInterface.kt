@@ -7,7 +7,7 @@ import org.opendc.simulator.network.utils.Kbps
 
 public interface NetNodeInterface {
     public val nodeId: NodeId
-    public fun startFlow(
+    public suspend fun startFlow(
         destinationId: NodeId? = null,
         desiredDataRate: Kbps = .0,
         dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
@@ -17,7 +17,7 @@ public interface NetNodeInterface {
 
     public fun getMyFlow(id: FlowId): NetFlow?
 
-    public fun fromInternet(
+    public suspend fun fromInternet(
         desiredDataRate: Kbps = .0,
         dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
     ): NetFlow

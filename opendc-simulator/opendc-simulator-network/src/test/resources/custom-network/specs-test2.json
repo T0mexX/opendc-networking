@@ -4,7 +4,7 @@
     "type": "custom-network-topology-specs",
     "nodesSpecs": [
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 1,
             "numOfPorts": 2,
             "portSpeed": 10000
@@ -40,19 +40,19 @@
             "portSpeed": 1000
         },
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 7,
             "numOfPorts": 3,
             "portSpeed": 10000
         },
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 8,
             "numOfPorts": 1,
             "portSpeed": 10000
         },
         {
-            "type": "cluster-specs",
+            "type": "host-node-specs",
             "id": 9,
             "numOfPorts": 1,
             "portSpeed": 10000

@@ -1,5 +1,6 @@
 package org.opendc.simulator.network.components
 
+import kotlinx.coroutines.Job
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
@@ -13,11 +14,13 @@ internal class CoreSwitch(
     portSpeed: Kbps,
     numOfPorts: Int
 ): Switch(id, portSpeed, numOfPorts), EndPointNode {
-    override val incomingEtoEFlows: MutableMap<FlowId, NetFlow> = HashMap()
-    override val outgoingEtoEFlows: MutableMap<FlowId, NetFlow> = HashMap()
 
-    override fun notifyFlowChange(flowId: FlowId) {
-        super<EndPointNode>.notifyFlowChange(flowId)
+    override suspend fun consumeUpdt() {
+        super<EndPointNode>.consumeUpdt()
         enMonitor.update()
+    }
+
+    override suspend fun run(invalidator: StabilityValidator.Invalidator?) {
+        return super<EndPointNode>.run(invalidator)
     }
 }
