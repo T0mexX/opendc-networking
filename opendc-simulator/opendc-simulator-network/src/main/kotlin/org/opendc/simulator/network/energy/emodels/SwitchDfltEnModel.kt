@@ -1,7 +1,7 @@
 package org.opendc.simulator.network.energy.emodels
 
 import org.opendc.simulator.network.components.Switch
-import org.opendc.simulator.network.components.internalstructs.Port
+import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.energy.EnModel
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Mbps
@@ -28,7 +28,7 @@ internal object SwitchDfltEnModel: EnModel<Switch> {
     // TODO: linecards? no info on their power usage or number in this publication
 
     override fun computeCurrConsumpt(e: Switch): Watts {
-        val idlePortPwr: Watts = getPortIdlePwr(e.portSpeed)
+        val idlePortPwr: Watts = getPortIdlePwr(e.portSpeed) // TODO: change in current speed
         val numOfActivePorts: Int = e.getActivePorts().size
 
         val totalStaticPwr: Watts = CHASSIS_PWR + idlePortPwr * numOfActivePorts
@@ -62,11 +62,11 @@ internal object SwitchDfltEnModel: EnModel<Switch> {
      *  @see[Port.isActive]
      */
     private fun Switch.getActivePorts(): Collection<Port> =
-        this.portToNode.values.filter { it.isActive() }
+        this.portToNode.values.filter { it.isActive  }
 
     /**
      * @return  average port utilization considering both active and not active ports.
      */
     private fun Switch.avrgPortUtilization(): Double =
-        this.ports.sumOf { it.utilization } / ports.size
+        this.ports.sumOf { it.util } / ports.size
 }

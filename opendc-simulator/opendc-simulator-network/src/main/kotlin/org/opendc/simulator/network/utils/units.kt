@@ -19,3 +19,9 @@ internal typealias ms = Long
 internal fun Double.toLowerDataUnit(): Double = this * 1024
 internal fun Double.toHigherDataUnit(): Double = this / 1024
 
+internal fun Double.roundTo0ifErr(err: Double = 0.00001): Double =
+    if (this < .0 && -this < err) .0
+    else this
+
+
+

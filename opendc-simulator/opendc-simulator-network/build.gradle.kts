@@ -27,6 +27,7 @@ plugins {
     `testing-conventions`
     `jacoco-conventions`
     kotlin("plugin.serialization") version "1.9.22"
+//    id("org.jetbrains.kotlinx.atomicfu") version "0.25.0"
 }
 
 val kLoggingVersion = "3.0.5"
@@ -40,6 +41,7 @@ dependencies {
     api(projects.opendcSimulator.opendcSimulatorFlow)
     implementation(projects.opendcTrace.opendcTraceApiNew)
     implementation(libs.progressbar)
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation(projects.opendcSimulator.opendcSimulatorCore)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")

@@ -1,5 +1,6 @@
 package org.opendc.simulator.network.components
 
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.utils.IdDispenser
@@ -7,6 +8,7 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.NonSerializable
 import kotlin.math.pow
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
+import java.io.File
 import kotlin.math.min
 
 /**
@@ -19,7 +21,7 @@ internal class FatTreeNetwork(
     coreSpecs: SwitchSpecs,
     aggrSpecs: SwitchSpecs,
     torSpecs: SwitchSpecs
-): Network {
+): Network() {
 
     override val nodes: Map<NodeId, Node>
     override val endPointNodes: Map<NodeId, EndPointNode>
@@ -64,6 +66,11 @@ internal class FatTreeNetwork(
 
     init {
         require(k.isEven() && k > 2) { "Fat tree can only be built with even-port-number (>2) switches" }
+
+        // to connect to abstract node "internet"
+        @Suppress("NAME_SHADOWING")
+        val coreSpecs = coreSpecs.copy(numOfPorts = coreSpecs.numOfPorts + 1)
+
         println("k = $k")
         pods = buildList { repeat(k) { add(FatTreePod(aggrSpecs, torSpecs)) } }
 
@@ -73,7 +80,7 @@ internal class FatTreeNetwork(
 
         pods.forEach { pod ->
             pod.aggrSwitches.forEachIndexed { switchIdx, switch ->
-                coreSwitchesChunked[switchIdx].forEach { it.connect(switch) }
+                coreSwitchesChunked[switchIdx].forEach { runBlocking { it.connect(switch) } }
             }
         }
 
@@ -131,17 +138,26 @@ internal class FatTreeNetwork(
                 }
 
             hostNodes.forEachIndexed { index, server ->
-                server.connect( torSwitches[index / (k / 2)] )
+                runBlocking { server.connect( torSwitches[index / (k / 2)] ) }
             }
 
             aggrSwitches = torSwitches
                 .map { _ ->
                     val newSwitch = aggrSpecs.buildFromSpecs()
-                    torSwitches.forEach { newSwitch.connect(it) }
+                    torSwitches.forEach { runBlocking { newSwitch.connect(it) } }
                     newSwitch
                 }.toList()
         }
     }
+
+    companion object {
+        internal fun fromFile(file: File) =
+            Specs.fromFile<FatTreeNetwork>(file).buildFromSpecs()
+
+        operator fun invoke(allSwitchSpecs: SwitchSpecs): FatTreeNetwork =
+            FatTreeNetwork(coreSpecs = allSwitchSpecs, aggrSpecs = allSwitchSpecs, torSpecs = allSwitchSpecs)
+    }
+
 
 
 

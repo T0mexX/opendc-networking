@@ -15,9 +15,9 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
     lateinit var targetFlow: NetFlow
 
     internal open fun involvedIds(): Set<NodeId> = setOf()
-    protected abstract fun exec(controller: NetworkController)
+    protected abstract suspend fun exec(controller: NetworkController)
 
-    fun execIfNotPassed(controller: NetworkController) {
+    suspend fun execIfNotPassed(controller: NetworkController) {
 //        println("execIfNotPassed: ${ measureNanoTime {
 
             val msSinceLastUpdate: ms = deadline - controller.instantSrc.millis()
@@ -47,7 +47,7 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         private val to: NodeId,
         private val desiredDataRate: Kbps
     ): NetworkEvent(deadline) {
-        override fun exec(controller: NetworkController) {
+        override suspend fun exec(controller: NetworkController) {
 
 //            println("startOrUpdateFlow: ${ measureNanoTime {
                 controller.startOrUpdateFlow(
@@ -65,7 +65,7 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         deadline: ms,
         private val flowIdGetter: () -> FlowId
     ): NetworkEvent(deadline) {
-        override fun exec(controller: NetworkController) {
+        override suspend fun exec(controller: NetworkController) {
             controller.flowsById[flowIdGetter.invoke()]
                 ?. let { targetFlow = it }
         }
@@ -78,7 +78,7 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         private val desiredDataRate: Kbps,
         private val flowId: FlowId = IdDispenser.nextFlowId
     ): NetworkEvent(deadline) {
-        override fun exec(controller: NetworkController) {
+        override suspend fun exec(controller: NetworkController) {
             controller.startFlow(
                 transmitterId = from,
                 destinationId = to,
@@ -94,7 +94,7 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         deadline: ms,
         private val flowIdGetter: () -> FlowId = { IdDispenser.nextFlowId }
     ): NetworkEvent(deadline) {
-        override fun exec(controller: NetworkController) {
+        override suspend fun exec(controller: NetworkController) {
             controller.stopFlow(
                 flowId = flowIdGetter.invoke()
             ) ?. let { targetFlow = it }

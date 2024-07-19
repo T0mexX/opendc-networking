@@ -1,20 +1,19 @@
 package org.opendc.simulator.network.api.simworkloads
 
 import org.opendc.simulator.network.api.NetworkController
-import org.opendc.simulator.network.api.printlnWithTimeElapsed
 import org.opendc.simulator.network.components.INTERNET_ID
+import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
+import org.opendc.trace.preset.BitBrains
+import org.opendc.trace.table.Table
+import org.opendc.trace.table.TableReader
+import org.opendc.trace.table.concatWithName
 import java.io.File
-import java.time.Duration
 import java.time.Instant
 import java.util.LinkedList
 import java.util.Queue
-import kotlin.system.exitProcess
-import kotlin.system.measureNanoTime
-import kotlin.time.TimeSource
-import kotlin.time.measureTime
 
 public class SimNetWorkload internal constructor(
     netEvents: List<NetworkEvent>,
@@ -22,7 +21,6 @@ public class SimNetWorkload internal constructor(
     hostIds: Collection<NodeId> = listOf(),
     // TODO: add end-point node category
 ){
-    private companion object { private val log by logger() }
 
     private val coreIds: Set<NodeId> = coreIds.toSet()
     private val hostIds: Set<NodeId> = hostIds.toSet()
@@ -40,6 +38,8 @@ public class SimNetWorkload internal constructor(
     init {
         check(hostIds.none { it in coreIds } && INTERNET_ID !in coreIds && INTERNET_ID !in hostIds)
         { "unable to create workload, conflicting ids" }
+
+        println("grouped: ${events.groupBy { it.deadline }.size}")
     }
 
     /**
@@ -73,7 +73,7 @@ public class SimNetWorkload internal constructor(
         }
 
         val allWorkLoadIds: Set<NodeId> = buildSet {
-            events.forEach { plus(it.involvedIds()) }
+            events.forEach { addAll(it.involvedIds()) }
         }
 
         val allMappedIds: Set<NodeId> =
@@ -85,11 +85,11 @@ public class SimNetWorkload internal constructor(
                 "some ids were not categorizable as specific node types")
     }
 
-    internal fun execAll(controller: NetworkController) {
+    internal suspend fun execAll(controller: NetworkController) {
         execUntil(controller, ms.MAX_VALUE)
     }
 
-    internal fun execNext(controller: NetworkController) {
+    internal suspend fun execNext(controller: NetworkController) {
         events.poll()?.execIfNotPassed(controller)
             ?: log.error("unable to execute network event, no more events remaining in the workload")
     }
@@ -97,11 +97,11 @@ public class SimNetWorkload internal constructor(
     internal fun hasNext(): Boolean =
         events.isNotEmpty()
 
-    internal fun execUntil(controller: NetworkController, until: Instant) {
+    internal suspend fun execUntil(controller: NetworkController, until: Instant) {
         execUntil(controller, until.toEpochMilli())
     }
 
-    internal fun execUntil(controller: NetworkController, until: ms) {
+    internal suspend fun execUntil(controller: NetworkController, until: ms) {
         var event: NetworkEvent?
 
         while ((events.peek()?.deadline ?: ms.MAX_VALUE) < until) {
@@ -115,11 +115,68 @@ public class SimNetWorkload internal constructor(
         }
     }
 
-    public fun execOn(networkFile: File, withVirtualMapping: Boolean = true): NetworkController {
+    internal fun peek(): NetworkEvent = events.peek()
+
+    public fun execOn(networkFile: File, withVirtualMapping: Boolean = true) {
         val controller = NetworkController.fromFile(networkFile)
 
         controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
 
-        return controller
+        println(controller.energyRecorder.getFmtReport())
     }
+
+    internal fun execOn(network: Network, withVirtualMapping: Boolean = true) {
+        val controller = NetworkController(network)
+
+        controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
+
+        println(controller.energyRecorder.getFmtReport())
+    }
+
+    public companion object {
+        private val log by logger()
+
+        public fun fromBitBrains(trace: BitBrains, vmsRange: IntRange? = null): SimNetWorkload {
+            val tblReader: TableReader = vmsRange?.let {
+                val vmTables = buildList {
+                    vmsRange.forEach { add(trace.tablesByName[it.toString()]) }
+                }.filterNotNull()
+
+                Table.concatWithName(vmTables, "table for vms in range $vmsRange").getReader()
+            } ?: trace.allVmsTable.getReader()
+
+            val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() } )!!
+            val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { it * 8 /* KBps to Kbps*/ } )!!
+            val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { it * 8 /* KBps to Kbps*/} )!!
+            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP)!!
+
+            val vmIds = mutableSetOf<Long>()
+            val netEvents = mutableListOf<NetworkEvent>()
+            while (tblReader.nextLine()) {
+                vmIds.add(idRd.currRowValue)
+
+                netEvents.add(
+                    NetworkEvent.FlowUpdate(
+                        from = idRd.currRowValue,
+                        to = INTERNET_ID,
+                        desiredDataRate = netTxRd.currRowValue,
+                        deadline = deadlineRd.currRowValue
+                    )
+                )
+
+                netEvents.add(
+                    NetworkEvent.FlowUpdate(
+                        from = INTERNET_ID,
+                        to = idRd.currRowValue,
+                        desiredDataRate = netRxRd.currRowValue,
+                        deadline = deadlineRd.currRowValue
+                    )
+                )
+            }
+
+            return SimNetWorkload(netEvents, hostIds = vmIds)
+        }
+    }
+
+
 }

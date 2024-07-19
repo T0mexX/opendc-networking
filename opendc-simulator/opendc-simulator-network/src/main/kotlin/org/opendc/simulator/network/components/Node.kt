@@ -1,14 +1,16 @@
 package org.opendc.simulator.network.components
 
-import org.opendc.simulator.network.components.internalstructs.Port
+import kotlinx.coroutines.yield
+import org.opendc.simulator.network.components.internalstructs.FlowHandler
+import org.opendc.simulator.network.components.internalstructs.RateUpdate
+import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
-import org.opendc.simulator.network.flow.Flow
+import org.opendc.simulator.network.components.internalstructs.UpdateChl
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
+import org.opendc.simulator.network.policies.fairness.FairnessPolicy
+import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Result.*
-import org.opendc.simulator.network.utils.Result
-import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -17,15 +19,9 @@ import org.opendc.simulator.network.utils.logger
 internal typealias NodeId = Long
 
 /**
- * Type alias representing the routing vector of a [Node]. For improved readability.
- */
-internal typealias RoutingVect = Map<NodeId, Int>
-
-/**
  * Interface representing a node in a [Network].
  */
 internal interface Node: FlowView {
-    companion object { private val log by logger() }
     // TODO: allow connection between nodes without immediate vector routing forwarding,
     //  to optimize network building
 
@@ -52,7 +48,11 @@ internal interface Node: FlowView {
     /**
      * Policy that determines how [Flow]s are forwarded.
      */
-    val forwardingPolicy: ForwardingPolicy
+    val portSelectionPolicy: PortSelectionPolicy
+
+    val fairnessPolicy: FairnessPolicy
+
+    val flowHandler: FlowHandler
 
     /**
      * Contains network information about the routs
@@ -69,183 +69,63 @@ internal interface Node: FlowView {
      * Property returning the number of [Node]s connected to ***this***.
      */
     private val numOfConnectedNodes: Int
-        get() { return ports.count { it.isConnected() } }
+        get() { return ports.count { it.isConnected } }
 
-    /**
-     * Returns an available port if exists, else null.
-     */
-    private fun getFreePort(): Port? =
-        ports.firstOrNull { !it.isConnected() }
+    val updtChl: UpdateChl
 
-    /**
-     * Connects ***this*** to [other] [Node] through a [Link],
-     * updating the respective [RoutingTable]s (if ports are available on both ends).
-     * @param[other]    the [Node] to connect to.
-     * @return          [Result.SUCCESS] on success, [Result.FAILURE] otherwise.
-     */
-    fun connect(other: Node): Result {
-        if (other.id in portToNode.keys)
-            return log.errAndGet("unable to connect $this to $other, nodes already connected")
+//    val flowRates: MutableMap<FlowId, Kbps>
 
-        val freePort: Port = getFreePort()
-            ?: return log.errAndGet("unable to connect, maxi num of connected nodes reached ($numOfPorts).")
+    suspend fun run(invalidator: StabilityValidator.Invalidator? = null) {
+        invalidator?.let { updtChl.withInvalidator(invalidator) }
 
-        val otherPort: Port = other.accept(this, freePort)
-            ?: return log.errAndGet("unable to connect, node $other refused connection")
-
-        portToNode[other.id] = freePort
-        Link(freePort, otherPort)
-
-        val otherVect: RoutingVect = other.exchangeRoutVect(routingTable.vector, vectOwner = this)
-        routingTable.mergeRoutingVector(otherVect, vectOwner = other)
-        shareRoutingVect(except = listOf(other))
-
-        updateAllFlows()
-        return SUCCESS
+        while (true) {
+            yield()
+            consumeUpdt()
+        }
     }
 
-    /**
-     * Accepts a connection request from `other` [Node],
-     * second part of method [connect].
-     * @see connect
-     * @param[other]    node that is requesting to connect.
-     */
-    private fun accept(other: Node, otherPort: Port): Port? {
-        val freePort: Port = getFreePort()
-            ?: let {
-                log.error("Unable to accept connection, maximum number of connected nodes reached ($numOfPorts).")
-                return null
-            }
+    suspend fun consumeUpdt() {
+        var updt: RateUpdate = updtChl.receive()
 
-        Link(freePort, otherPort)
+        while (true)
+            updtChl.tryReceive().getOrNull()
+                ?.let { updt = updt.merge(it) }
+                ?: break
 
-        portToNode[other.id] = freePort
+        with(flowHandler) { updtFlows(updt) }
 
-        return freePort
+        notifyAdjNodes()
+    }
+
+    suspend fun notifyAdjNodes() {
+        portToNode.values.forEach { it.notifyReceiver() }
     }
 
     /**
      * Updates forwarding of all flows transiting through ***this*** node.
      */
-    fun updateAllFlows() {
-        allTransitingFlowsIds().forEach {
-            forwardingPolicy.forwardFlow(forwarder = this, flowId = it)
-        }
+    suspend fun updateAllFlows() {
+        updtChl.send(allTransitingFlowsIds().associateWith { .0 }) // TODO: change
     }
 
-    /**
-     * Disconnects ***this*** from [other].
-     * @return      [Result.SUCCESS] on success, [Result.FAILURE] otherwise.
-     */
-    fun disconnect(other: Node, notifyOther: Boolean = true): Result {
-        val portToOther: Port = portToNode[other.id]
-            ?: return log.errAndGet("unable to disconnect $this from $other, nodes are not connected")
 
+    override fun totIncomingDataRateOf(fId: FlowId): Kbps =
+        flowHandler.outgoingFlows[fId]?.demand ?: .0
 
-        if (notifyOther)
-            other.disconnect(this, notifyOther = false). let {
-                if (it is ERROR) return log.errAndGet(it.msg)
-            }
-
-        portToOther.disconnect().let {
-            if (it is ERROR) return log.errAndGet(it.msg)
-        }
-
-        routingTable.removeNextHop(other)
-        portToNode.remove(other.id)
-
-        shareRoutingVect(exchange = true)
-
-        updateAllFlows()
-
-        return SUCCESS
-    }
-
-    /**
-     * Disconnects all ports of ***this*** node.
-     */
-    fun disconnectAll() {
-        portToNode.toMap().forEach { (_, port) ->
-             port.remoteConnectedPort?. let { disconnect(it.node) }
-        }
-    }
-
-    /**
-     * Merges [routVect] in the [routingTable], updating flows
-     * and sharing its updated routing vector if needed.
-     * @return      its own routing vector.
-     */
-    private fun exchangeRoutVect(routVect: RoutingVect, vectOwner: Node): RoutingVect {
-        routingTable.mergeRoutingVector(routVect, vectOwner)
-
-        if (!routingTable.isTableChanged) return routingTable.vector
-        updateAllFlows()
-
-        if (!routingTable.isVectChanged) return routingTable.vector
-        shareRoutingVect(except = listOf(vectOwner))
-
-        return routingTable.vector
-    }
-
-    /**
-     * Shares ***this*** routing vector with all adjacent nodes, except those in [except].
-     * @param[except]       the list of nodes to which not share the vector with.
-     * @param[exchange]     determines if ***this*** should receive and merge other's vectors as well.
-     * If so, the process continues until one iteration of the function is completed without that ***this*** routing vector changes.
-     */
-    private tailrec fun shareRoutingVect(except: Collection<Node> = listOf(), exchange: Boolean = false) {
-        portToNode.forEach { (_, port) ->
-            val adjNode: Node = port.remoteConnectedPort?.node ?: return@forEach
-            if (adjNode !in except) {
-                if (exchange) {
-                    val otherVect: RoutingVect = adjNode.exchangeRoutVect(routingTable.vector, vectOwner = this)
-                    routingTable.mergeRoutingVector(otherVect, vectOwner = adjNode)
-                    if (!routingTable.isTableChanged) return@forEach
-                    updateAllFlows()
-                    if (!routingTable.isVectChanged) return@forEach
-                    shareRoutingVect(except = listOf(adjNode), exchange = true)
-                    return
-                } else
-                    adjNode.exchangeRoutVect(routingTable.vector, vectOwner = this)
-            }
-        }
-    }
-
-    /**
-     * Returns the total data rate (received from other
-     * nodes or generated by ***this***) corresponding to [flowId].
-     * It also represents the data rate that needs to be forwarded.
-     * @param[flowId]       id of the flow whose total data rate is to be returned.
-     */
-    fun totDataRateOf(flowId: FlowId): Kbps =
-        ports.sumOf { it.incomingFlows[flowId]?.dataRate ?: .0 }
-
-    /**
-     * Called by a [Port] whenever an incoming flow
-     * has changed its data rate or a new flow is received.
-     * It updates forwarding based on [forwardingPolicy].
-     * @param[flowId]   the incoming flow that has changed.
-     */
-    fun notifyFlowChange(flowId: FlowId) {
-        forwardingPolicy.forwardFlow(forwarder = this, flowId)
-    }
-
-    /**
-     * Return a [String] representation of the [routingTable].
-     */
-    fun routingTableToString(): String = routingTable.toString()
-
-    override fun totIncomingDataRateOf(flowId: FlowId): Kbps =
-        ports.sumOf { it.incomingFlows[flowId]?.dataRate ?: .0 }
-
-    override fun totOutgoingDataRateOf(flowId: FlowId): Kbps =
-        ports.sumOf { it.outgoingFlows[flowId]?.dataRate ?: .0 }
-
-    override fun throughputOutOf(flowId: FlowId): Kbps =
-        ports.sumOf { it.throughputOutOf(flowId) }
+    override fun totOutgoingDataRateOf(fId: FlowId): Kbps =
+        flowHandler.outgoingFlows[fId]?.totRateOut ?: .0
 
     override fun allTransitingFlowsIds(): Collection<FlowId> =
-        portToNode.flatMap { (_, port) ->
-            port.incomingFlows.keys + port.outgoingFlows.keys
-        }.toSet()
+        with(flowHandler) {
+            outgoingFlows.keys + receivingFlows.keys
+        }
+
+
+    companion object {
+        private val log by logger()
+
+        fun RateUpdate.merge(other: RateUpdate): RateUpdate =
+            (this.keys + other.keys).associateWith { ((this[it] ?: .0) + (other[it] ?: .0)) }
+    }
 }
+

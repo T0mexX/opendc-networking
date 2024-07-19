@@ -1,58 +1,55 @@
 package org.opendc.simulator.network.components
 
-import org.opendc.simulator.network.components.internalstructs.Port
+import kotlinx.coroutines.runBlocking
+import org.opendc.simulator.network.components.internalstructs.FlowHandler
+import org.opendc.simulator.network.components.internalstructs.port.Port
+import org.opendc.simulator.network.components.internalstructs.port.PortImpl
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
-import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.policies.forwarding.ForwardingPolicy
+import org.opendc.simulator.network.components.internalstructs.UpdateChl
+import org.opendc.simulator.network.policies.fairness.FairnessPolicy
+import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
+import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.Result
-import org.opendc.simulator.network.utils.Result.ERROR
 
 internal class Internet(
-    override val forwardingPolicy: ForwardingPolicy = StaticECMP
+    override val portSelectionPolicy: PortSelectionPolicy = StaticECMP
 ): EndPointNode {
+
+    override val fairnessPolicy: FairnessPolicy = FirstComeFirstServed
+    override val flowHandler = FlowHandler()
+    override val updtChl = UpdateChl()
 
     override val id: NodeId = INTERNET_ID
 
-    companion object {
 
-        // not needed anymore
-//        fun excludingIds(ids: Collection<NodeId>): Internet {
-//            var internetId = NodeId.MIN_VALUE
-//            while (internetId in ids) internetId++
-//
-//            return Internet(id = internetId)
-//        }
-    }
 
-    fun connectedTo(coreSwitches: Collection<CoreSwitch>): Internet {
-        coreSwitches.forEach {
-            check (it.connect(this) !is ERROR)
-            { "unable to connect core switches to internet, be aware that core switches need an extra port" }
-        }
+    private fun addPort() { ports.add(PortImpl(maxSpeed = portSpeed, owner = this)) }
 
-        return this
-    }
-
-    override fun connect(other: Node): Result {
-        addPort()
-        return super.connect(other)
-    }
-
-    private fun addPort() { ports.add(Port(speed = portSpeed, node = this)) }
-
-    override val outgoingEtoEFlows = mutableMapOf<FlowId, NetFlow>()
-    override val incomingEtoEFlows = mutableMapOf<FlowId, NetFlow>()
     override val portSpeed: Kbps = Kbps.MAX_VALUE
     override val ports = mutableListOf<Port>()
         get() {
             if (portToNode.size == field.size)
-                field.add(Port(speed = portSpeed, node = this))
+                field.add(PortImpl(maxSpeed = portSpeed, owner = this))
             return field
         }
     override val routingTable = RoutingTable(this.id)
 
     override val portToNode = mutableMapOf<NodeId, Port>()
+
+
+    fun connectedTo(coreSwitches: Collection<CoreSwitch>): Internet {
+        coreSwitches.forEach {
+            runBlocking { it.connect(this@Internet) }
+        }
+
+        return this
+    }
+
+    suspend fun connect(other: Node) {
+        addPort()
+
+        // calls extension function
+        connect(other, duplex = true)
+    }
 }
