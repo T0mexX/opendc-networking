@@ -85,10 +85,6 @@ public class SimNetWorkload internal constructor(
                 "some ids were not categorizable as specific node types")
     }
 
-    internal suspend fun execAll(controller: NetworkController) {
-        execUntil(controller, ms.MAX_VALUE)
-    }
-
     internal suspend fun execNext(controller: NetworkController) {
         events.poll()?.execIfNotPassed(controller)
             ?: log.error("unable to execute network event, no more events remaining in the workload")
@@ -97,21 +93,12 @@ public class SimNetWorkload internal constructor(
     internal fun hasNext(): Boolean =
         events.isNotEmpty()
 
-    internal suspend fun execUntil(controller: NetworkController, until: Instant) {
-        execUntil(controller, until.toEpochMilli())
-    }
-
     internal suspend fun execUntil(controller: NetworkController, until: ms) {
         var event: NetworkEvent?
 
         while ((events.peek()?.deadline ?: ms.MAX_VALUE) < until) {
-//            println ("poll: ${ measureNanoTime {
-                event = events.poll()
-//            }}")
-
-//            println ("exec: ${ measureNanoTime {
-                event?.execIfNotPassed(controller)
-//            }}")
+            event = events.poll()
+            event?.execIfNotPassed(controller)
         }
     }
 
@@ -131,6 +118,10 @@ public class SimNetWorkload internal constructor(
         controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
 
         println(controller.energyRecorder.getFmtReport())
+    }
+
+    internal fun optimize(): SimNetWorkload {
+        TODO()
     }
 
     public companion object {

@@ -5,7 +5,6 @@ package org.opendc.simulator.network.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -17,6 +16,7 @@ import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
+import org.opendc.simulator.network.utils.withWarn
 
 
 /**
@@ -44,7 +44,7 @@ internal abstract class Network {
     /**
      * Maps flow ids to their corresponding [NetFlow].
      */
-    abstract val netFlowById: MutableMap<FlowId, NetFlow>
+    abstract val flowsById: MutableMap<FlowId, NetFlow>
 
     protected abstract val internet: Internet
 
@@ -69,7 +69,7 @@ internal abstract class Network {
         val receiver: EndPointNode = endPointNodes[flow.destinationId]
             ?: return log.errAndGet("Unable to start flow $flow, receiver does not exist or it is not able to start a flow")
 
-        netFlowById[flow.id] = flow
+        flowsById[flow.id] = flow
         receiver.addReceivingEtoEFlow(flow)
 
         sender.startFlow(flow)
@@ -81,23 +81,21 @@ internal abstract class Network {
      * Stops a [NetFlow] if the flow is running through the network.
      * @param[flowId]   id of the flow to be stopped.
      */
-    suspend fun stopFlow(flowId: FlowId): Result {
-        netFlowById[flowId]?.let { eToEFlow ->
+    suspend fun stopFlow(flowId: FlowId): NetFlow? =
+        flowsById[flowId]?.let { eToEFlow ->
             endPointNodes[eToEFlow.transmitterId]
                 ?.stopFlow(eToEFlow.id)
-                ?.also {
+                ?.let {
                     endPointNodes[eToEFlow.destinationId]
                         ?.rmReceivingEtoEFlow(eToEFlow.id)
-                }?.also {
-                    netFlowById.remove(flowId)
+                    flowsById.remove(flowId)
+                    eToEFlow
                 }
-        } ?: return log.errAndGet("unable to stop flow with id $flowId")
+        } ?: log.withWarn(null, "unable to stop flow with id $flowId")
 
-        return SUCCESS
-    }
 
     fun resetFlows() = runBlocking {
-        netFlowById.keys.toSet().forEach { stopFlow(it) }
+        flowsById.keys.toSet().forEach { stopFlow(it) }
     }
 
     /**
@@ -112,7 +110,7 @@ internal abstract class Network {
     }
 
     fun advanceBy(ms: ms) {
-        netFlowById.values.forEach { it.advanceBy(ms) }
+        flowsById.values.forEach { it.advanceBy(ms) }
     }
 
     suspend fun awaitStability() {

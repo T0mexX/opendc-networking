@@ -18,21 +18,12 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
     protected abstract suspend fun exec(controller: NetworkController)
 
     suspend fun execIfNotPassed(controller: NetworkController) {
-//        println("execIfNotPassed: ${ measureNanoTime {
+        val msSinceLastUpdate: ms = deadline - controller.instantSrc.millis()
+        if (msSinceLastUpdate < 0)
+            return log.error("unable to execute network event, deadline is passed")
 
-            val msSinceLastUpdate: ms = deadline - controller.instantSrc.millis()
-            if (msSinceLastUpdate < 0)
-                return log.error("unable to execute network event, deadline is passed")
-
-//            println("    numOfFlows: ${controller.flowsById.size}")
-//            println("    controller.advanceBy: ${ measureNanoTime {
-                controller.advanceBy(msSinceLastUpdate)
-//            } }")
-//            println("    exec: ${ measureNanoTime {
-                this.exec(controller)
-//            } }")
-//        } } ")
-
+        controller.advanceBy(msSinceLastUpdate)
+        this.exec(controller)
     }
 
     override fun compareTo(other: NetworkEvent): Int =
@@ -48,14 +39,11 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         private val desiredDataRate: Kbps
     ): NetworkEvent(deadline) {
         override suspend fun exec(controller: NetworkController) {
-
-//            println("startOrUpdateFlow: ${ measureNanoTime {
-                controller.startOrUpdateFlow(
-                    transmitterId = from,
-                    destinationId = to,
-                    desiredDataRate = desiredDataRate
-                ) ?. let { targetFlow = it }
-//            } }")
+            controller.startOrUpdateFlow(
+                transmitterId = from,
+                destinationId = to,
+                desiredDataRate = desiredDataRate
+            ) ?. let { targetFlow = it }
         }
 
         override fun involvedIds(): Set<NodeId> = setOf(from, to)
@@ -63,11 +51,13 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
 
     class FlowChangeRate(
         deadline: ms,
-        private val flowIdGetter: () -> FlowId
+        private val newRate: Kbps,
+        private val flowGetter: () -> NetFlow
     ): NetworkEvent(deadline) {
         override suspend fun exec(controller: NetworkController) {
-            controller.flowsById[flowIdGetter.invoke()]
-                ?. let { targetFlow = it }
+            val flow = flowGetter()
+            flow.setDesiredDataRate(newRate)
+            targetFlow = flow
         }
     }
 
@@ -92,7 +82,7 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
 
     class FlowStop(
         deadline: ms,
-        private val flowIdGetter: () -> FlowId = { IdDispenser.nextFlowId }
+        private val flowIdGetter: () -> FlowId
     ): NetworkEvent(deadline) {
         override suspend fun exec(controller: NetworkController) {
             controller.stopFlow(

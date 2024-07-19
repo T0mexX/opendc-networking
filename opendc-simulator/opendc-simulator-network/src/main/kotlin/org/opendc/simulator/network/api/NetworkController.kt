@@ -1,9 +1,7 @@
 package org.opendc.simulator.network.api
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -12,7 +10,6 @@ import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
-import org.opendc.simulator.network.api.simworkloads.NetworkEvent
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
@@ -23,13 +20,11 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
-import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.slf4j.Logger
 import java.io.File
@@ -37,9 +32,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
-import kotlin.random.Random
-import kotlin.system.measureNanoTime
-import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.TimeSource
 
 
@@ -69,9 +61,12 @@ public class NetworkController internal constructor(
 
     private var lastUpdate: Instant = Instant.ofEpochMilli(ms.MIN_VALUE)
 
+    internal val flowsById: Map<FlowId, NetFlow>
+
     init {
         instantSource?.let { lastUpdate = it.instant() }
-        StaticECMP.eToEFlows = network.netFlowById
+        StaticECMP.eToEFlows = network.flowsById
+        flowsById = network.flowsById
 
         log.info(buildString {
             appendLine("\nNetwork Info:")
@@ -89,7 +84,6 @@ public class NetworkController internal constructor(
 
     private val claimedHostIds = mutableSetOf<NodeId>()
     private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
-    internal val flowsById = mutableMapOf<FlowId, NetFlow>()
 
 
     public fun claimNextHostNode(): NetNodeInterface? {
@@ -115,7 +109,7 @@ public class NetworkController internal constructor(
             } ?: log.errAndNull("unable to claim core switch node, none available")
     }
 
-    public fun virtualMap(from: NodeId, to: NodeId) {
+    internal fun virtualMap(from: NodeId, to: NodeId) {
         if (from in virtualMapping)
             log.warn("overriding mapping of virtual node id $from")
 
@@ -149,9 +143,8 @@ public class NetworkController internal constructor(
         desiredDataRate: Kbps = .0,
         flowId: FlowId = IdDispenser.nextFlowId,
         dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
-        physicalTransmitterId: Boolean = false
     ): NetFlow? {
-        val mappedTransmitterId: NodeId =  if (physicalTransmitterId) transmitterId else mappedOrSelf(transmitterId)
+        val mappedTransmitterId: NodeId =   mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
 
         val netFlow = NetFlow(
@@ -177,7 +170,7 @@ public class NetworkController internal constructor(
             return log.errAndNull("unable to startInstant network flow directed to node ${netFlow.destinationId}, " +
                 "node does not exist or it is not an end-point-node")
 
-        if (netFlow.id in flowsById)
+        if (netFlow.id in network.flowsById)
             return log.errAndNull("unable to startInstant network flow with nodeId ${netFlow.id}, " +
                 "a flow with nodeId ${netFlow.id} already exists")
 
@@ -186,7 +179,7 @@ public class NetworkController internal constructor(
 //            log.warn("starting flow through controller interface from node whose interface was claimed, " +
 //                "best practice would be to use either only the controller or the node interface for each node")
 
-        flowsById[netFlow.id] = netFlow
+//        network.flowsById[netFlow.id] = netFlow
         network.startFlow(netFlow)
 
         return netFlow
@@ -204,7 +197,7 @@ public class NetworkController internal constructor(
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
 
         val tm = TimeSource.Monotonic.markNow()
-        flowsById.values.find {
+        network.flowsById.values.find {
             it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
         } ?. let {
             nano += tm.elapsedNow().inWholeNanoseconds
@@ -225,26 +218,17 @@ public class NetworkController internal constructor(
         }
     }
 
-    public suspend fun stopFlow(flowId: FlowId): NetFlow? {
-        return network.netFlowById[flowId]
-            ?. let {
-                when (network.stopFlow(flowId)) {
-                    Result.SUCCESS -> it
-                    else -> null
-                }
-            }
-    }
+    public suspend fun stopFlow(flowId: FlowId): NetFlow? =
+        network.stopFlow(flowId)
 
     public fun getNetInterfaceOf(uuid: UUID): NetNodeInterface? =
         getNetInterfaceOf(uuid.node())
 
-    public fun getNetInterfaceOf(nodeId: NodeId): NetNodeInterface? {
-        if (nodeId !in network.endPointNodes)
-            return log.errAndNull("unable to retrieve network interface, " +
+    public fun getNetInterfaceOf(nodeId: NodeId): NetNodeInterface? =
+        network.endPointNodes[nodeId]?.let {
+            NetNodeInterfaceImpl(it, this)
+        } ?: log.errAndNull("unable to retrieve network interface, " +
                 "node does not exist or does not provide an interface")
-
-        return NetNodeInterfaceImpl(nodeId)
-    }
 
     public fun sync() {
         if (instantSrc.isExternalSource) {
@@ -335,48 +319,7 @@ public class NetworkController internal constructor(
 
 
 
-    private inner class NetNodeInterfaceImpl(override val nodeId: NodeId): NetNodeInterface {
 
-        override suspend fun startFlow(
-            destinationId: NodeId?, // TODO: understand how multiple core switches work
-            desiredDataRate: Kbps,
-            dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
-        ): NetFlow? =
-            startFlow(
-                transmitterId = this.nodeId,
-                destinationId = destinationId ?: internetNetworkInterface.nodeId,
-                dataRateOnChangeHandler = dataRateOnChangeHandler,
-                physicalTransmitterId = true
-            )
-
-        override fun stopFlow(id: FlowId) {
-            flowsById[id]?.let { flow ->
-                if (flow.transmitterId != this.nodeId)
-                    return log.error("unable to stop flow $id, node ${this.nodeId} has no control over it")
-
-                stopFlow(id)
-            } ?: return log.error("unable to stop flow $id, flow does not exists")
-        }
-
-        override fun getMyFlow(id: FlowId): NetFlow? {
-            flowsById[id]?.let { flow ->
-                if (flow.transmitterId != this.nodeId)
-                    return log.errAndNull("unable to retrieve flow $id, node ${this.nodeId} has no control over it")
-                return flow
-            } ?: return  log.errAndNull("unable to retrieve flow $id,flow does not exists")
-        }
-
-        override suspend fun fromInternet(
-            desiredDataRate: Kbps,
-            dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)?
-        ): NetFlow {
-            return internetNetworkInterface.startFlow(
-                destinationId = this.nodeId,
-                desiredDataRate = desiredDataRate,
-                dataRateOnChangeHandler = dataRateOnChangeHandler,
-            ) !!
-        }
-    }
 }
 
 

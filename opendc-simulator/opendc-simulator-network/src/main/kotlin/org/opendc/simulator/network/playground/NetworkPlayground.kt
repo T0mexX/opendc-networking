@@ -90,7 +90,7 @@ private class NetworkPlayground: CliktCommand() {
             network = CustomNetwork()
         }
 
-        StaticECMP.eToEFlows = network.netFlowById
+        StaticECMP.eToEFlows = network.flowsById
 
         energyRecorder = NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
         env = PlaygroundEnv(network = network, energyRecorder = energyRecorder)
@@ -214,10 +214,9 @@ private enum class Cmd {
                 val groups: List<String> = result.groupValues
                 val flowId: FlowId = groups[1].toIntOrNull() ?: return@cmdJob cancelAfter { log.unableToParseId(groups[1]) }
 
-                when (val it = env.network.stopFlow(flowId)) {
-                    is Result.ERROR -> log.error("unable to stop flow. Reason: ${it.msg}")
-                    is Result.SUCCESS -> log.info("flow successfully stopped")
-                }
+                env.network.stopFlow(flowId)
+                    ?.let { log.error("unable to stop flow.") }
+                    ?: log.info("flow successfully stopped")
             }
     },
     NEW_LINK {
@@ -274,7 +273,7 @@ private enum class Cmd {
                         "desired data rate".padEnd(20) +
                         "actual data rate".padEnd(20)
                 )
-                env.network.netFlowById.values.forEach { flow ->
+                env.network.flowsById.values.forEach { flow ->
                     println(
                         flow.id.toString().padEnd(5) +
                             flow.transmitterId.toString().padEnd(10) +
