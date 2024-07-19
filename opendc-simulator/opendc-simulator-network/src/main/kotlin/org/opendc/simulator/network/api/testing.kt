@@ -48,7 +48,7 @@ private suspend fun bo() {
 
     val net = CustomNetwork(listOf(h1, h2))
 
-    StaticECMP.eToEFlows = net.netFlowById
+    StaticECMP.eToEFlows = net.flowsById
 
     val stbl = StabilityValidator()
 

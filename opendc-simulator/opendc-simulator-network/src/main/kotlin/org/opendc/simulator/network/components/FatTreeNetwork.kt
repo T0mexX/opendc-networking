@@ -25,7 +25,7 @@ internal class FatTreeNetwork(
 
     override val nodes: Map<NodeId, Node>
     override val endPointNodes: Map<NodeId, EndPointNode>
-    override val netFlowById: MutableMap<Int, NetFlow> = HashMap()
+    override val flowsById: MutableMap<Int, NetFlow> = HashMap()
 
 
     /**
