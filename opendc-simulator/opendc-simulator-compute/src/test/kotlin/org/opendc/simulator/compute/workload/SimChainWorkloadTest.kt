@@ -42,7 +42,7 @@ import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.kotlin.runSimulation
 
 /**
- * Test suite for the [SimChainCompWorkload] class.
+ * Test suite for the [SimChainWorkload] class.
  */
 class SimChainWorkloadTest {
     private lateinit var machineModel: MachineModel
@@ -95,7 +95,7 @@ class SimChainWorkloadTest {
                     machineModel,
                 )
 
-            val workloadA = mockk<SimCompWorkload>()
+            val workloadA = mockk<SimWorkload>()
             every { workloadA.onStart(any()) } throws IllegalStateException("Staged")
             every { workloadA.onStop(any()) } returns Unit
 
@@ -122,7 +122,7 @@ class SimChainWorkloadTest {
                     machineModel,
                 )
 
-            val workloadA = mockk<SimCompWorkload>()
+            val workloadA = mockk<SimWorkload>()
             every { workloadA.onStart(any()) } throws IllegalStateException("Staged")
             every { workloadA.onStop(any()) } returns Unit
 
@@ -150,9 +150,7 @@ class SimChainWorkloadTest {
                     machineModel,
                 )
 
-            val workloadA = spyk<SimCompWorkload>(
-                SimRuntimeCompWorkload(1000, 1.0)
-            )
+            val workloadA = spyk<SimWorkload>(SimRuntimeWorkload(1000, 1.0))
             every { workloadA.onStop(any()) } throws IllegalStateException("Staged")
 
             val workload =
@@ -178,9 +176,7 @@ class SimChainWorkloadTest {
                     machineModel,
                 )
 
-            val workloadA = spyk<SimCompWorkload>(
-                SimRuntimeCompWorkload(1000, 1.0)
-            )
+            val workloadA = spyk<SimWorkload>(SimRuntimeWorkload(1000, 1.0))
             every { workloadA.onStop(any()) } throws IllegalStateException("Staged")
 
             val workload =
@@ -207,13 +203,13 @@ class SimChainWorkloadTest {
                     machineModel,
                 )
 
-            val workloadA = mockk<SimCompWorkload>()
+            val workloadA = mockk<SimWorkload>()
             every { workloadA.onStart(any()) } throws IllegalStateException()
             every { workloadA.onStop(any()) } throws IllegalStateException()
 
             val workload =
                 SimWorkloads.chain(
-                    SimRuntimeCompWorkload(1000, 1.0),
+                    SimRuntimeWorkload(1000, 1.0),
                     workloadA,
                 )
 
@@ -235,13 +231,13 @@ class SimChainWorkloadTest {
                     machineModel,
                 )
 
-            val workloadA = mockk<SimCompWorkload>()
+            val workloadA = mockk<SimWorkload>()
             every { workloadA.onStart(any()) } answers { (it.invocation.args[0] as SimMachineContext).shutdown(IllegalStateException()) }
             every { workloadA.onStop(any()) } throws IllegalStateException()
 
             val workload =
                 SimWorkloads.chain(
-                    SimRuntimeCompWorkload(1000, 1.0),
+                    SimRuntimeWorkload(1000, 1.0),
                     workloadA,
                 )
 
@@ -263,15 +259,15 @@ class SimChainWorkloadTest {
                     machineModel,
                 )
 
-            val workloadA = mockk<SimCompWorkload>(relaxUnitFun = true)
+            val workloadA = mockk<SimWorkload>(relaxUnitFun = true)
             every { workloadA.onStart(any()) } answers { (it.invocation.args[0] as SimMachineContext).shutdown(IllegalStateException()) }
 
-            val workloadB = mockk<SimCompWorkload>(relaxUnitFun = true)
+            val workloadB = mockk<SimWorkload>(relaxUnitFun = true)
             every { workloadB.onStart(any()) } throws IllegalStateException()
 
             val workload =
                 SimWorkloads.chain(
-                    SimRuntimeCompWorkload(1000, 1.0),
+                    SimRuntimeWorkload(1000, 1.0),
                     workloadA,
                     workloadB,
                 )

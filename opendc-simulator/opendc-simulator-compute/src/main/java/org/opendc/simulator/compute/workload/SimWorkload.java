@@ -23,16 +23,15 @@
 package org.opendc.simulator.compute.workload;
 
 import org.opendc.simulator.compute.SimMachineContext;
-import org.opendc.trace.simtrace.SimWorkload;
 
 /**
  * A model that characterizes the runtime behavior of some particular workload.
  *
  * <p>
  * Workloads are stateful objects that may be paused and resumed at a later moment. As such, be careful when using the
- * same {@link SimCompWorkload} from multiple contexts.
+ * same {@link SimWorkload} from multiple contexts.
  */
-public interface SimCompWorkload extends SimWorkload {
+public interface SimWorkload {
     /**
      * This method is invoked when the workload is started.
      *
@@ -50,7 +49,7 @@ public interface SimCompWorkload extends SimWorkload {
     /**
      * Create a snapshot of this workload.
      */
-    SimCompWorkload snapshot();
+    SimWorkload snapshot();
 
     void setOffset(long now);
 }

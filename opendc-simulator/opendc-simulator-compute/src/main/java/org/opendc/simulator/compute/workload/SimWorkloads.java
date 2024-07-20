@@ -25,57 +25,57 @@ package org.opendc.simulator.compute.workload;
 import java.time.Duration;
 
 /**
- * Helper methods for constructing {@link SimCompWorkload}s.
+ * Helper methods for constructing {@link SimWorkload}s.
  */
 public class SimWorkloads {
     private SimWorkloads() {}
 
     /**
-     * Create a {@link SimCompWorkload} that executes a specified number of floating point operations (FLOPs) at the given
+     * Create a {@link SimWorkload} that executes a specified number of floating point operations (FLOPs) at the given
      * utilization.
      *
      * @param flops The number of floating point operations to perform for this task in MFLOPs.
      * @param utilization The CPU utilization of the workload.
      */
-    public static SimCompWorkload flops(long flops, double utilization) {
-        return new SimFlopsCompWorkload(flops, utilization);
+    public static SimWorkload flops(long flops, double utilization) {
+        return new SimFlopsWorkload(flops, utilization);
     }
 
     /**
-     * Create a {@link SimCompWorkload} that consumes the CPU resources for a specified duration at the given utilization.
+     * Create a {@link SimWorkload} that consumes the CPU resources for a specified duration at the given utilization.
      *
      * @param duration The duration of the workload in milliseconds.
      * @param utilization The CPU utilization of the workload.
      */
-    public static SimCompWorkload runtime(long duration, double utilization) {
+    public static SimWorkload runtime(long duration, double utilization) {
         return runtime(duration, utilization, 0, 0);
     }
 
     /**
-     * Create a {@link SimCompWorkload} that consumes the CPU resources for a specified duration at the given utilization.
+     * Create a {@link SimWorkload} that consumes the CPU resources for a specified duration at the given utilization.
      *
      * @param duration The duration of the workload in milliseconds.
      * @param utilization The CPU utilization of the workload.
      */
-    public static SimCompWorkload runtime(long duration, double utilization, long checkpoint_time, long checkpoint_wait) {
-        return new SimRuntimeCompWorkload(duration, utilization, checkpoint_time, checkpoint_wait);
+    public static SimWorkload runtime(long duration, double utilization, long checkpoint_time, long checkpoint_wait) {
+        return new SimRuntimeWorkload(duration, utilization, checkpoint_time, checkpoint_wait);
     }
 
     /**
-     * Create a {@link SimCompWorkload} that consumes the CPU resources for a specified duration at the given utilization.
+     * Create a {@link SimWorkload} that consumes the CPU resources for a specified duration at the given utilization.
      *
      * @param duration The duration of the workload.
      * @param utilization The CPU utilization of the workload.
      */
-    public static SimCompWorkload runtime(
+    public static SimWorkload runtime(
             Duration duration, double utilization, long checkpoint_time, long checkpoint_wait) {
         return runtime(duration.toMillis(), utilization, checkpoint_time, checkpoint_wait);
     }
 
     /**
-     * Chain the specified <code>workloads</code> into a single {@link SimCompWorkload}.
+     * Chain the specified <code>workloads</code> into a single {@link SimWorkload}.
      */
-    public static SimCompWorkload chain(SimCompWorkload... workloads) {
-        return new SimChainCompWorkload(workloads);
+    public static SimWorkload chain(SimWorkload... workloads) {
+        return new SimChainWorkload(workloads);
     }
 }

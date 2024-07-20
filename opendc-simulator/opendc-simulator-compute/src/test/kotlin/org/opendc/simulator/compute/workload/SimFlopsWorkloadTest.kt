@@ -26,34 +26,34 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 /**
- * Test suite for [SimFlopsCompWorkload] class.
+ * Test suite for [SimFlopsWorkload] class.
  */
 class SimFlopsWorkloadTest {
     @Test
     fun testFlopsNonNegative() {
         assertThrows<IllegalArgumentException>("FLOPs must be non-negative") {
-            SimFlopsCompWorkload(-1, 1.0)
+            SimFlopsWorkload(-1, 1.0)
         }
     }
 
     @Test
     fun testUtilizationNonZero() {
         assertThrows<IllegalArgumentException>("Utilization cannot be zero") {
-            SimFlopsCompWorkload(1, 0.0)
+            SimFlopsWorkload(1, 0.0)
         }
     }
 
     @Test
     fun testUtilizationPositive() {
         assertThrows<IllegalArgumentException>("Utilization cannot be negative") {
-            SimFlopsCompWorkload(1, -1.0)
+            SimFlopsWorkload(1, -1.0)
         }
     }
 
     @Test
     fun testUtilizationNotLargerThanOne() {
         assertThrows<IllegalArgumentException>("Utilization cannot be larger than one") {
-            SimFlopsCompWorkload(1, 2.0)
+            SimFlopsWorkload(1, 2.0)
         }
     }
 }
