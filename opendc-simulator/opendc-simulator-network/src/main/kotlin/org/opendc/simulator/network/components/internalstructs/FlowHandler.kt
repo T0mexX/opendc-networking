@@ -5,6 +5,7 @@ import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
+import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.utils.Kbps
@@ -43,12 +44,13 @@ internal class FlowHandler {
         get() = _outgoingFlows.values.toList().sortedBy { it.totRateOut }
 
     /**
-     * Adds [newFlow] in the [generatedFlows] table. Additionally, it queues the [RateUpdate]
+     * Adds [newFlow] in the [generatedFlows] table. Additionally, it queues the [RateUpdt]
      * associated to the new flow automatically. The caller does **NOT** need to queue
      * an update itself and sets upd an observer on [newFlow] for changes in bandwidth demand.
      */
     suspend fun Node.generateFlow(newFlow: NetFlow) {
-        val updt: RateUpdate = _generatedFlows.putIfAbsent(newFlow.id, newFlow)
+        val updt = RateUpdt(
+            _generatedFlows.putIfAbsent(newFlow.id, newFlow)
             // If flow with same id already present
             ?. let { currFlow ->
                 log.error("adding generated flow whose id is already present. Replacing...")
@@ -56,6 +58,7 @@ internal class FlowHandler {
                 mapOf(newFlow.id to (newFlow.desiredDataRate - currFlow.desiredDataRate))
             // Else
             } ?: mapOf(newFlow.id to newFlow.desiredDataRate)
+        )
 
         // Sets up the handler of any data rate changes, propagating updates to other nodes
         // changes of this flow data rate can be performed through a NetworkController,
@@ -66,11 +69,11 @@ internal class FlowHandler {
             if (new < 0) log.warn("unable to change generated flow with id '${newFlow.id}' " +
                 "data-rate to $new, data-rate should be positive. Falling back to 0")
 
-            updtChl.send(mapOf(newFlow.id to (new - old)))
+            updtChl.send(  RateUpdt(newFlow.id, (new - old))  )
         }
 
         // Update to be processed by the node runner coroutine.
-        this.updtChl.send(updt)
+        updtChl.send(updt)
     }
 
     suspend fun Node.stopGeneratedFlow(fId: FlowId) {
@@ -82,11 +85,11 @@ internal class FlowHandler {
             }
 
         // Update to be processed by the node runner coroutine
-        this.updtChl.send(mapOf(fId to -removedFlow.desiredDataRate))
+        updtChl.send(  RateUpdt(fId, -removedFlow.desiredDataRate)  )
     }
 
     /**
-     * Consumes a [RateUpdate], adjusting each [OutFlow] demand.
+     * Consumes a [RateUpdt], adjusting each [OutFlow] demand.
      * If new flows are received, a new [OutFlow] entry is added.
      * If the receiver [Node] is the destination of a flow then its
      * end-to-end throughput is adjusted.
@@ -95,7 +98,7 @@ internal class FlowHandler {
      * outgoing ports for new flows. The node [FairnessPolicy] is applied
      * afterwords to determine the outgoing data rate for each flow.
      */
-    suspend fun Node.updtFlows(updt: RateUpdate) {
+    suspend fun Node.updtFlows(updt: RateUpdt) {
         updt.forEach { (fId, deltaRate) ->
             if (deltaRate == .0) return@forEach
 

@@ -1,7 +1,8 @@
 package org.opendc.simulator.network.components.internalstructs.port
 
-import org.opendc.simulator.network.components.internalstructs.RateUpdate
+import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.components.link.SimplexLink
+import org.opendc.simulator.network.flow.RateUpdt.Companion.toRateUpdt
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import kotlin.math.min
@@ -41,7 +42,7 @@ private suspend fun Port.connect(
 internal suspend fun Port.disconnect() {
     if (this.isConnected.not()) return log.warn("unable to disconnect port $this, port not connected")
 
-    val update: RateUpdate? = receiveLink?.incomingRateById?.mapValues { (_, rate) -> -rate }
+    val update: RateUpdt? = receiveLink?.incomingRateById?.mapValues { (_, rate) -> -rate }?.toRateUpdt()
 
     sendLink = null
     receiveLink = null
