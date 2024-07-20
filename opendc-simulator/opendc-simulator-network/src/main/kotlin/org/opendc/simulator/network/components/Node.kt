@@ -2,7 +2,7 @@ package org.opendc.simulator.network.components
 
 import kotlinx.coroutines.yield
 import org.opendc.simulator.network.components.internalstructs.FlowHandler
-import org.opendc.simulator.network.components.internalstructs.RateUpdate
+import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
@@ -85,7 +85,7 @@ internal interface Node: FlowView {
     }
 
     suspend fun consumeUpdt() {
-        var updt: RateUpdate = updtChl.receive()
+        var updt: RateUpdt = updtChl.receive()
 
         while (true)
             updtChl.tryReceive().getOrNull()
@@ -105,7 +105,7 @@ internal interface Node: FlowView {
      * Updates forwarding of all flows transiting through ***this*** node.
      */
     suspend fun updateAllFlows() {
-        updtChl.send(allTransitingFlowsIds().associateWith { .0 }) // TODO: change
+        updtChl.send(RateUpdt(allTransitingFlowsIds().associateWith { .0 })) // TODO: change
     }
 
 
@@ -124,8 +124,7 @@ internal interface Node: FlowView {
     companion object {
         private val log by logger()
 
-        fun RateUpdate.merge(other: RateUpdate): RateUpdate =
-            (this.keys + other.keys).associateWith { ((this[it] ?: .0) + (other[it] ?: .0)) }
+
     }
 }
 

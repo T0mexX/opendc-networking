@@ -2,6 +2,7 @@ package org.opendc.simulator.network.components.link
 
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.flow.RateUpdt.Companion.toRateUpdt
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.roundTo0ifErr
 import kotlin.math.min
@@ -85,7 +86,7 @@ internal class SimplexLink(
         // channel has unlimited size => should never suspend
         if (currLinkUpdate.isEmpty()) return
 
-        receiverP.nodeUpdtChl.send(currLinkUpdate.toMap())
+        receiverP.nodeUpdtChl.send(currLinkUpdate.toRateUpdt())
         currLinkUpdate.clear()
     }
 

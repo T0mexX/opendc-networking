@@ -7,20 +7,17 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.opendc.simulator.network.components.StabilityValidator.Invalidator
-import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.utils.RWLock
 import org.opendc.simulator.network.utils.logger
 
 
-internal typealias RateUpdate = Map<FlowId, Kbps>
-
 internal class UpdateChl private constructor(
-    private val chl: Channel<RateUpdate>,
-): Channel<RateUpdate> by chl {
+    private val chl: Channel<RateUpdt>,
+): Channel<RateUpdt> by chl {
 
     internal constructor()
-        : this(chl = Channel<RateUpdate>(Channel.UNLIMITED))
+        : this(chl = Channel<RateUpdt>(Channel.UNLIMITED))
 
     private val chlReceiveLock = RWLock()
 
@@ -37,7 +34,7 @@ internal class UpdateChl private constructor(
     }
 
     @OptIn(InternalCoroutinesApi::class)
-    override fun tryReceive(): ChannelResult<RateUpdate> =
+    override fun tryReceive(): ChannelResult<RateUpdt> =
         chlReceiveLock.tryWithRLock {
             val chlResult = chl.tryReceive()
             chlResult.getOrNull()?.let {
@@ -48,7 +45,7 @@ internal class UpdateChl private constructor(
         } ?: ChannelResult.failure()
 
 
-    override suspend fun receive(): RateUpdate =
+    override suspend fun receive(): RateUpdt =
         chlReceiveLock.withRLock {
             pendingLock.withLock {
                 pending--
@@ -58,7 +55,7 @@ internal class UpdateChl private constructor(
             chl.receive()
         }
 
-    override suspend fun send(element: RateUpdate) {
+    override suspend fun send(element: RateUpdt) {
         if (element.isEmpty()) return
         pendingLock.withLock {
             pending++
