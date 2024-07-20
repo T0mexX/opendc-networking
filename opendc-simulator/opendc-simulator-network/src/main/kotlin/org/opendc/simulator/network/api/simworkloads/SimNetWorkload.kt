@@ -4,12 +4,16 @@ import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
+import org.opendc.simulator.network.utils.withWarn
 import org.opendc.trace.preset.BitBrains
 import org.opendc.trace.table.Table
 import org.opendc.trace.table.TableReader
 import org.opendc.trace.table.concatWithName
+import org.opendc.simulator.network.api.simworkloads.NetworkEvent.*
+import org.opendc.simulator.network.utils.withErr
 import java.io.File
 import java.time.Instant
 import java.util.LinkedList
@@ -38,6 +42,12 @@ public class SimNetWorkload internal constructor(
     init {
         check(hostIds.none { it in coreIds } && INTERNET_ID !in coreIds && INTERNET_ID !in hostIds)
         { "unable to create workload, conflicting ids" }
+
+        if (events.any { it !is NetworkEvent.FlowUpdate } && events.any { it is NetworkEvent.FlowUpdate }) {
+            log.warn("A network workload should be built with either only FlowUpdates (which assume ony 1 flow between 2 nodes) " +
+                "or with FlowStart, Stop, RateUpdate. A FlowUpdate will update the first flow with the same transmitter and receiver " +
+                "that it finds, if there is more than 1 between nodes, undesired behaviour is to be expected.")
+        }
 
         println("grouped: ${events.groupBy { it.deadline }.size}")
     }
@@ -121,7 +131,22 @@ public class SimNetWorkload internal constructor(
     }
 
     internal fun optimize(): SimNetWorkload {
-        TODO()
+        val flowGetters = mutableMapOf<Pair<NodeId, NodeId>, () -> NetFlow>()
+
+        val newEvents = events.map { e ->
+            if (e is FlowUpdate) {
+                val fromTo = Pair(e.from, e.to)
+                if (fromTo !in flowGetters) {
+                    val start = e.toFlowStart()
+                    flowGetters[fromTo] = { start.targetFlow }
+                    start
+                } else e.toFlowChangeRate(
+                    flowGetters[fromTo] ?: return log.withErr(this, "unable to optimize, unexpected error occurred")
+                )
+            } else return log.withErr(this, "unable to optimize, only workloads composed of FlowUpdate exclusively are optimizable")
+        }
+
+        return SimNetWorkload(newEvents, hostIds = hostIds)
     }
 
     public companion object {
