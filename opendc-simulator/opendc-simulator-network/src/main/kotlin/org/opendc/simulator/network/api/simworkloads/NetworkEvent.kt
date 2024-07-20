@@ -1,5 +1,8 @@
 package org.opendc.simulator.network.api.simworkloads
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.flow.FlowId
@@ -8,11 +11,19 @@ import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
+import kotlin.system.exitProcess
 import kotlin.system.measureNanoTime
 
-internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent> {
-    private companion object { private val log by logger() }
+internal abstract class NetworkEvent: Comparable<NetworkEvent> {
+    private companion object {
+        private val log by logger()
+        val bo = mutableListOf<ms>()
+    }
+
+    abstract val deadline: ms
     lateinit var targetFlow: NetFlow
+
+
 
     internal open fun involvedIds(): Set<NodeId> = setOf()
     protected abstract suspend fun exec(controller: NetworkController)
@@ -23,6 +34,7 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
             return log.error("unable to execute network event, deadline is passed")
 
         controller.advanceBy(msSinceLastUpdate)
+
         this.exec(controller)
     }
 
@@ -32,12 +44,12 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
     /**
      * Only one flow is allowed between 2 nodes.
      */
-    class FlowUpdate(
-        deadline: ms,
-        private val from: NodeId,
-        private val to: NodeId,
-        private val desiredDataRate: Kbps
-    ): NetworkEvent(deadline) {
+    data class FlowUpdate(
+        override val deadline: ms,
+        val from: NodeId,
+        val to: NodeId,
+        val desiredDataRate: Kbps
+    ): NetworkEvent() {
         override suspend fun exec(controller: NetworkController) {
             controller.startOrUpdateFlow(
                 transmitterId = from,
@@ -47,13 +59,19 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         }
 
         override fun involvedIds(): Set<NodeId> = setOf(from, to)
+
+        fun toFlowStart(): FlowStart =
+            FlowStart(deadline = deadline, from = from, to = to, desiredDataRate = desiredDataRate)
+
+        fun toFlowChangeRate(flowGetter: () -> NetFlow): FlowChangeRate =
+            FlowChangeRate(deadline = deadline, newRate = desiredDataRate, flowGetter = flowGetter)
     }
 
-    class FlowChangeRate(
-        deadline: ms,
-        private val newRate: Kbps,
-        private val flowGetter: () -> NetFlow
-    ): NetworkEvent(deadline) {
+    data class FlowChangeRate(
+        override val deadline: ms,
+        val newRate: Kbps,
+        private val flowGetter: suspend () -> NetFlow
+    ): NetworkEvent() {
         override suspend fun exec(controller: NetworkController) {
             val flow = flowGetter()
             flow.setDesiredDataRate(newRate)
@@ -61,13 +79,13 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         }
     }
 
-    class FlowStart(
-        deadline: ms,
-        private val from: NodeId,
-        private val to: NodeId,
-        private val desiredDataRate: Kbps,
-        private val flowId: FlowId = IdDispenser.nextFlowId
-    ): NetworkEvent(deadline) {
+    data class FlowStart(
+        override val deadline: ms,
+        val from: NodeId,
+        val to: NodeId,
+        val desiredDataRate: Kbps,
+        val flowId: FlowId = IdDispenser.nextFlowId
+    ): NetworkEvent() {
         override suspend fun exec(controller: NetworkController) {
             controller.startFlow(
                 transmitterId = from,
@@ -80,10 +98,10 @@ internal abstract class NetworkEvent(val deadline: ms): Comparable<NetworkEvent>
         override fun involvedIds(): Set<NodeId> = setOf(from, to)
     }
 
-    class FlowStop(
-        deadline: ms,
-        private val flowIdGetter: () -> FlowId
-    ): NetworkEvent(deadline) {
+    data class FlowStop(
+        override val deadline: ms,
+        private val flowIdGetter: suspend () -> FlowId
+    ): NetworkEvent() {
         override suspend fun exec(controller: NetworkController) {
             controller.stopFlow(
                 flowId = flowIdGetter.invoke()
