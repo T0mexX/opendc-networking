@@ -42,8 +42,8 @@ import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
 import org.opendc.simulator.compute.model.StorageDevice
 import org.opendc.simulator.compute.power.CpuPowerModels
-import org.opendc.simulator.compute.workload.SimCompTrace
-import org.opendc.simulator.compute.workload.SimCompWorkload
+import org.opendc.simulator.compute.workload.SimTrace
+import org.opendc.simulator.compute.workload.SimWorkload
 import org.opendc.simulator.compute.workload.SimWorkloads
 import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.flow2.source.SimpleFlowSource
@@ -93,7 +93,7 @@ class SimMachineTest {
     fun testTraceWorkload() =
         runSimulation {
             val random = ThreadLocalRandom.current()
-            val builder = SimCompTrace.builder()
+            val builder = SimTrace.builder()
             repeat(1000000) {
                 val timestamp = it.toLong() * 1000
                 val deadline = timestamp + 1000
@@ -177,7 +177,7 @@ class SimMachineTest {
                 )
 
             machine.runWorkload(
-                object : SimCompWorkload {
+                object : SimWorkload {
                     override fun onStart(ctx: SimMachineContext) {
                         val cpu = ctx.cpus[0]
 
@@ -193,7 +193,7 @@ class SimMachineTest {
 
                     override fun onStop(ctx: SimMachineContext) {}
 
-                    override fun snapshot(): SimCompWorkload = TODO()
+                    override fun snapshot(): SimWorkload = TODO()
                 },
             )
         }
@@ -211,7 +211,7 @@ class SimMachineTest {
                 )
 
             machine.runWorkload(
-                object : SimCompWorkload {
+                object : SimWorkload {
                     override fun onStart(ctx: SimMachineContext) {
                         assertEquals(32_000 * 4.0, ctx.memory.capacity)
                         ctx.shutdown()
@@ -221,7 +221,7 @@ class SimMachineTest {
 
                     override fun onStop(ctx: SimMachineContext) {}
 
-                    override fun snapshot(): SimCompWorkload = TODO()
+                    override fun snapshot(): SimWorkload = TODO()
                 },
             )
         }
@@ -239,7 +239,7 @@ class SimMachineTest {
                 )
 
             machine.runWorkload(
-                object : SimCompWorkload {
+                object : SimWorkload {
                     override fun onStart(ctx: SimMachineContext) {
                         val source = SimpleFlowSource(ctx.graph, ctx.memory.capacity.toFloat(), 1.0f) { ctx.shutdown() }
                         ctx.graph.connect(source.output, ctx.memory.input)
@@ -249,7 +249,7 @@ class SimMachineTest {
 
                     override fun onStop(ctx: SimMachineContext) {}
 
-                    override fun snapshot(): SimCompWorkload = TODO()
+                    override fun snapshot(): SimWorkload = TODO()
                 },
             )
 
@@ -272,7 +272,7 @@ class SimMachineTest {
             adapter.connect(SimNetworkSink(graph, adapter.bandwidth.toFloat()))
 
             machine.runWorkload(
-                object : SimCompWorkload {
+                object : SimWorkload {
                     override fun onStart(ctx: SimMachineContext) {
                         val iface = ctx.networkInterfaces[0]
                         val source =
@@ -287,7 +287,7 @@ class SimMachineTest {
 
                     override fun onStop(ctx: SimMachineContext) {}
 
-                    override fun snapshot(): SimCompWorkload = TODO()
+                    override fun snapshot(): SimWorkload = TODO()
                 },
             )
 
@@ -307,7 +307,7 @@ class SimMachineTest {
                 )
 
             machine.runWorkload(
-                object : SimCompWorkload {
+                object : SimWorkload {
                     override fun onStart(ctx: SimMachineContext) {
                         val disk = ctx.storageInterfaces[0]
                         val source = SimpleFlowSource(ctx.graph, 800.0f, 0.8f) { ctx.shutdown() }
@@ -318,7 +318,7 @@ class SimMachineTest {
 
                     override fun onStop(ctx: SimMachineContext) {}
 
-                    override fun snapshot(): SimCompWorkload = TODO()
+                    override fun snapshot(): SimWorkload = TODO()
                 },
             )
 
@@ -338,7 +338,7 @@ class SimMachineTest {
                 )
 
             machine.runWorkload(
-                object : SimCompWorkload {
+                object : SimWorkload {
                     override fun onStart(ctx: SimMachineContext) {
                         val disk = ctx.storageInterfaces[0]
                         val source = SimpleFlowSource(ctx.graph, 800.0f, 0.8f) { ctx.shutdown() }
@@ -349,7 +349,7 @@ class SimMachineTest {
 
                     override fun onStop(ctx: SimMachineContext) {}
 
-                    override fun snapshot(): SimCompWorkload = TODO()
+                    override fun snapshot(): SimWorkload = TODO()
                 },
             )
 
@@ -415,7 +415,7 @@ class SimMachineTest {
                     machineModel,
                 )
 
-            val workload = mockk<SimCompWorkload>()
+            val workload = mockk<SimWorkload>()
             every { workload.onStart(any()) } throws IllegalStateException()
 
             assertThrows<IllegalStateException> { machine.runWorkload(workload) }
@@ -433,7 +433,7 @@ class SimMachineTest {
                     machineModel,
                 )
 
-            val workload = mockk<SimCompWorkload>()
+            val workload = mockk<SimWorkload>()
             every { workload.onStart(any()) } answers { (it.invocation.args[0] as SimMachineContext).shutdown() }
             every { workload.onStop(any()) } throws IllegalStateException()
 
@@ -452,7 +452,7 @@ class SimMachineTest {
                     machineModel,
                 )
 
-            val workload = mockk<SimCompWorkload>()
+            val workload = mockk<SimWorkload>()
             every { workload.onStart(any()) } answers { (it.invocation.args[0] as SimMachineContext).shutdown(IllegalStateException()) }
 
             assertThrows<IllegalStateException> { machine.runWorkload(workload) }
@@ -470,7 +470,7 @@ class SimMachineTest {
                     machineModel,
                 )
 
-            val workload = mockk<SimCompWorkload>()
+            val workload = mockk<SimWorkload>()
             every { workload.onStart(any()) } answers { (it.invocation.args[0] as SimMachineContext).shutdown(IllegalStateException()) }
             every { workload.onStop(any()) } throws IllegalStateException()
 

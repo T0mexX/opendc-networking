@@ -31,10 +31,10 @@ import org.opendc.simulator.flow2.FlowStageLogic;
 import org.opendc.simulator.flow2.OutPort;
 
 /**
- * A {@link SimCompWorkload} that models applications as a static number of floating point operations executed on
+ * A {@link SimWorkload} that models applications as a static number of floating point operations executed on
  * multiple cores of a compute resource.
  */
-public class SimFlopsCompWorkload implements SimCompWorkload, FlowStageLogic {
+public class SimFlopsWorkload implements SimWorkload, FlowStageLogic {
     private final long flops;
     private final double utilization;
 
@@ -46,12 +46,12 @@ public class SimFlopsCompWorkload implements SimCompWorkload, FlowStageLogic {
     private long lastUpdate;
 
     /**
-     * Construct a new {@link SimFlopsCompWorkload}.
+     * Construct a new {@link SimFlopsWorkload}.
      *
      * @param flops The number of floating point operations to perform for this task in MFLOPs.
      * @param utilization The CPU utilization of the workload.
      */
-    SimFlopsCompWorkload(long flops, double utilization) {
+    SimFlopsWorkload(long flops, double utilization) {
         if (flops < 0) {
             throw new IllegalArgumentException("Number of FLOPs must be positive");
         } else if (utilization <= 0.0 || utilization > 1.0) {
@@ -102,13 +102,13 @@ public class SimFlopsCompWorkload implements SimCompWorkload, FlowStageLogic {
     }
 
     @Override
-    public SimFlopsCompWorkload snapshot() {
+    public SimFlopsWorkload snapshot() {
         final FlowStage stage = this.stage;
         if (stage != null) {
             stage.sync();
         }
 
-        return new SimFlopsCompWorkload((long) remainingAmount, utilization);
+        return new SimFlopsWorkload((long) remainingAmount, utilization);
     }
 
     @Override
@@ -150,6 +150,6 @@ public class SimFlopsCompWorkload implements SimCompWorkload, FlowStageLogic {
 
     @Override
     public String toString() {
-        return "SimFlopsCompWorkload[FLOPs=" + flops + ",utilization=" + utilization + "]";
+        return "SimFlopsWorkload[FLOPs=" + flops + ",utilization=" + utilization + "]";
     }
 }

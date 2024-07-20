@@ -23,7 +23,7 @@
 package org.opendc.simulator.compute.kernel;
 
 /**
- * Performance counters of a {@link SimCompHypervisor}.
+ * Performance counters of a {@link SimHypervisor}.
  */
 public interface SimHypervisorCounters {
     /**

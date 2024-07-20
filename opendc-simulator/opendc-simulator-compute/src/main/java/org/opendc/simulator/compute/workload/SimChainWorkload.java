@@ -32,44 +32,44 @@ import org.opendc.simulator.compute.SimStorageInterface;
 import org.opendc.simulator.flow2.FlowGraph;
 
 /**
- * A {@link SimCompWorkload} that composes two {@link SimCompWorkload}s.
+ * A {@link SimWorkload} that composes two {@link SimWorkload}s.
  */
-final class SimChainCompWorkload implements SimCompWorkload {
-    private final SimCompWorkload[] workloads;
+final class SimChainWorkload implements SimWorkload {
+    private final SimWorkload[] workloads;
     private int activeWorkloadIndex;
 
     private Context activeContext;
 
     /**
-     * Construct a {@link SimChainCompWorkload} instance.
+     * Construct a {@link SimChainWorkload} instance.
      *
      * @param workloads The workloads to chain.
      * @param activeWorkloadIndex The index of the active workload.
      */
-    SimChainCompWorkload(SimCompWorkload[] workloads, int activeWorkloadIndex) {
+    SimChainWorkload(SimWorkload[] workloads, int activeWorkloadIndex) {
         this.workloads = workloads;
         this.activeWorkloadIndex = activeWorkloadIndex;
     }
 
     /**
-     * Construct a {@link SimChainCompWorkload} instance.
+     * Construct a {@link SimChainWorkload} instance.
      *
      * @param workloads The workloads to chain.
      */
-    SimChainCompWorkload(SimCompWorkload... workloads) {
+    SimChainWorkload(SimWorkload... workloads) {
         this(workloads, 0);
     }
 
     @Override
     public void setOffset(long now) {
-        for (SimCompWorkload workload : this.workloads) {
+        for (SimWorkload workload : this.workloads) {
             workload.setOffset(now);
         }
     }
 
     @Override
     public void onStart(SimMachineContext ctx) {
-        final SimCompWorkload[] workloads = this.workloads;
+        final SimWorkload[] workloads = this.workloads;
         final int activeWorkloadIndex = this.activeWorkloadIndex;
 
         if (activeWorkloadIndex >= workloads.length) {
@@ -84,7 +84,7 @@ final class SimChainCompWorkload implements SimCompWorkload {
 
     @Override
     public void onStop(SimMachineContext ctx) {
-        final SimCompWorkload[] workloads = this.workloads;
+        final SimWorkload[] workloads = this.workloads;
         final int activeWorkloadIndex = this.activeWorkloadIndex;
 
         if (activeWorkloadIndex >= workloads.length) {
@@ -98,16 +98,16 @@ final class SimChainCompWorkload implements SimCompWorkload {
     }
 
     @Override
-    public SimChainCompWorkload snapshot() {
+    public SimChainWorkload snapshot() {
         final int activeWorkloadIndex = this.activeWorkloadIndex;
-        final SimCompWorkload[] workloads = this.workloads;
-        final SimCompWorkload[] newWorkloads = new SimCompWorkload[workloads.length - activeWorkloadIndex];
+        final SimWorkload[] workloads = this.workloads;
+        final SimWorkload[] newWorkloads = new SimWorkload[workloads.length - activeWorkloadIndex];
 
         for (int i = 0; i < newWorkloads.length; i++) {
             newWorkloads[i] = workloads[activeWorkloadIndex + i].snapshot();
         }
 
-        return new SimChainCompWorkload(newWorkloads, 0);
+        return new SimChainWorkload(newWorkloads, 0);
     }
 
     /**
@@ -151,8 +151,8 @@ final class SimChainCompWorkload implements SimCompWorkload {
         }
 
         @Override
-        public SimCompWorkload snapshot() {
-            final SimCompWorkload workload = workloads[activeWorkloadIndex];
+        public SimWorkload snapshot() {
+            final SimWorkload workload = workloads[activeWorkloadIndex];
             return workload.snapshot();
         }
 
@@ -168,8 +168,8 @@ final class SimChainCompWorkload implements SimCompWorkload {
 
         @Override
         public void shutdown(Exception cause) {
-            final SimCompWorkload[] workloads = SimChainCompWorkload.this.workloads;
-            final int activeWorkloadIndex = ++SimChainCompWorkload.this.activeWorkloadIndex;
+            final SimWorkload[] workloads = SimChainWorkload.this.workloads;
+            final int activeWorkloadIndex = ++SimChainWorkload.this.activeWorkloadIndex;
 
             final Exception stopException = doStop(workloads[activeWorkloadIndex - 1]);
             if (cause == null) {
@@ -201,7 +201,7 @@ final class SimChainCompWorkload implements SimCompWorkload {
          * @return The {@link Exception} that occurred while starting the workload or <code>null</code> if the workload
          *         started successfully.
          */
-        private Exception doStart(SimCompWorkload workload) {
+        private Exception doStart(SimWorkload workload) {
             try {
                 workload.onStart(this);
             } catch (Exception cause) {
@@ -221,7 +221,7 @@ final class SimChainCompWorkload implements SimCompWorkload {
          * @return The {@link Exception} that occurred while stopping the workload or <code>null</code> if the workload
          *         stopped successfully.
          */
-        private Exception doStop(SimCompWorkload workload) {
+        private Exception doStop(SimWorkload workload) {
             try {
                 workload.onStop(this);
             } catch (Exception cause) {

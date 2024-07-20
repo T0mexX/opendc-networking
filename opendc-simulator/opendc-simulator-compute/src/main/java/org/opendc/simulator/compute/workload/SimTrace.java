@@ -30,26 +30,25 @@ import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.FlowStage;
 import org.opendc.simulator.flow2.FlowStageLogic;
 import org.opendc.simulator.flow2.OutPort;
-import org.opendc.trace.simtrace.SimTrace;
 
 /**
  * A workload trace that describes the resource utilization over time in a collection of {@link SimTraceFragment}s.
  */
-public final class SimCompTrace implements SimTrace<SimCompWorkload> {
+public final class SimTrace {
     private final double[] usageCol;
     private final long[] deadlineCol;
     private final int[] coresCol;
     private final int size;
 
     /**
-     * Construct a {@link SimCompTrace} instance.
+     * Construct a {@link SimTrace} instance.
      *
      * @param usageCol The column containing the CPU usage of each fragment (in MHz).
      * @param deadlineCol The column containing the ending timestamp for each fragment (in epoch millis).
      * @param coresCol The column containing the utilized cores.
      * @param size The number of fragments in the trace.
      */
-    private SimCompTrace(double[] usageCol, long[] deadlineCol, int[] coresCol, int size) {
+    private SimTrace(double[] usageCol, long[] deadlineCol, int[] coresCol, int size) {
         if (size < 0) {
             throw new IllegalArgumentException("Invalid trace size");
         } else if (usageCol.length < size) {
@@ -67,21 +66,21 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
     }
 
     /**
-     * Construct a {@link SimCompWorkload} for this trace.
+     * Construct a {@link SimWorkload} for this trace.
      *
      * //     * @param offset The offset for the timestamps.
      */
-    public SimCompWorkload createWorkload(long start) {
+    public SimWorkload createWorkload(long start) {
         return createWorkload(start, 0, 0);
     }
 
     /**
-     * Construct a {@link SimCompWorkload} for this trace.
+     * Construct a {@link SimWorkload} for this trace.
      *
      * //     * @param offset The offset for the timestamps.
      */
-    public SimCompWorkload createWorkload(long start, long checkpointTime, long checkpointWait) {
-        return new CompWorkload(start, usageCol, deadlineCol, coresCol, size, 0, checkpointTime, checkpointWait);
+    public SimWorkload createWorkload(long start, long checkpointTime, long checkpointWait) {
+        return new Workload(start, usageCol, deadlineCol, coresCol, size, 0, checkpointTime, checkpointWait);
     }
 
     /**
@@ -99,11 +98,11 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
     }
 
     /**
-     * Construct a {@link SimCompTrace} from the specified fragments.
+     * Construct a {@link SimTrace} from the specified fragments.
      *
      * @param fragments The array of fragments to construct the trace from.
      */
-    public static SimCompTrace ofFragments(SimTraceFragment... fragments) {
+    public static SimTrace ofFragments(SimTraceFragment... fragments) {
         final Builder builder = builder(fragments.length);
 
         for (SimTraceFragment fragment : fragments) {
@@ -114,11 +113,11 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
     }
 
     /**
-     * Construct a {@link SimCompTrace} from the specified fragments.
+     * Construct a {@link SimTrace} from the specified fragments.
      *
      * @param fragments The fragments to construct the trace from.
      */
-    public static SimCompTrace ofFragments(List<SimTraceFragment> fragments) {
+    public static SimTrace ofFragments(List<SimTraceFragment> fragments) {
         final Builder builder = builder(fragments.size());
 
         for (SimTraceFragment fragment : fragments) {
@@ -129,9 +128,9 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
     }
 
     /**
-     * Builder class for a {@link SimCompTrace}.
+     * Builder class for a {@link SimTrace}.
      */
-    public static final class Builder { // TODO: maybe make it implement SimTrace.Builder
+    public static final class Builder {
         private double[] usageCol;
         private long[] deadlineCol;
         private int[] coresCol;
@@ -176,11 +175,11 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
         }
 
         /**
-         * Build the {@link SimCompTrace} instance.
+         * Build the {@link SimTrace} instance.
          */
-        public SimCompTrace build() {
+        public SimTrace build() {
             isBuilt = true;
-            return new SimCompTrace(usageCol, deadlineCol, coresCol, size);
+            return new SimTrace(usageCol, deadlineCol, coresCol, size);
         }
 
         /**
@@ -199,7 +198,7 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
          * Clone the columns of the trace.
          *
          * <p>
-         * This is necessary when a {@link SimCompTrace} has been built already, but the user is again adding entries to
+         * This is necessary when a {@link SimTrace} has been built already, but the user is again adding entries to
          * the builder.
          */
         private void recreate() {
@@ -211,9 +210,9 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
     }
 
     /**
-     * Implementation of {@link SimCompWorkload} that executes a trace.
+     * Implementation of {@link SimWorkload} that executes a trace.
      */
-    private static class CompWorkload implements SimCompWorkload {
+    private static class Workload implements SimWorkload {
         private WorkloadStageLogic logic;
 
         private long offset;
@@ -229,7 +228,7 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
         private long checkpointWait; // How long to wait until a new checkpoint is made?
         private long total_checks;
 
-        private CompWorkload(
+        private Workload(
                 long start,
                 double[] usageCol,
                 long[] deadlineCol,
@@ -275,7 +274,7 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
         }
 
         @Override
-        public SimCompWorkload snapshot() {
+        public SimWorkload snapshot() {
             final WorkloadStageLogic logic = this.logic;
             int index = this.index;
 
@@ -283,7 +282,7 @@ public final class SimCompTrace implements SimTrace<SimCompWorkload> {
                 index = logic.getIndex();
             }
 
-            return new CompWorkload(start, usageCol, deadlineCol, coresCol, size, index, checkpointTime, checkpointWait);
+            return new Workload(start, usageCol, deadlineCol, coresCol, size, index, checkpointTime, checkpointWait);
         }
     }
 
