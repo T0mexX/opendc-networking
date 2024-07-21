@@ -1,7 +1,7 @@
 package org.opendc.simulator.network.components
 
 import kotlinx.coroutines.yield
-import org.opendc.simulator.network.components.internalstructs.FlowHandler
+import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable

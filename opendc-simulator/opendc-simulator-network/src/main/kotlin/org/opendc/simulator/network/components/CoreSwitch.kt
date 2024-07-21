@@ -3,6 +3,10 @@ package org.opendc.simulator.network.components
 import kotlinx.coroutines.Job
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.policies.fairness.FairnessPolicy
+import org.opendc.simulator.network.policies.fairness.MaxMin
+import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
+import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
 
 /**
@@ -12,8 +16,10 @@ import org.opendc.simulator.network.utils.Kbps
 internal class CoreSwitch(
     id: NodeId,
     portSpeed: Kbps,
-    numOfPorts: Int
-): Switch(id, portSpeed, numOfPorts), EndPointNode {
+    numOfPorts: Int,
+    fairnessPolicy: FairnessPolicy = MaxMin,
+    portSelectionPolicy: PortSelectionPolicy = StaticECMP,
+): Switch(id, portSpeed, numOfPorts, fairnessPolicy, portSelectionPolicy), EndPointNode {
 
     override suspend fun consumeUpdt() {
         super<EndPointNode>.consumeUpdt()
