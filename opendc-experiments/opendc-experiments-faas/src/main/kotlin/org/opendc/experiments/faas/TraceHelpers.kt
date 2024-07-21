@@ -46,7 +46,7 @@ public suspend fun FaaSService.replay(
         coroutineScope {
             for (entry in trace) {
                 launch {
-                    val workload = FunctionTraceCompWorkload(entry)
+                    val workload = FunctionTraceWorkload(entry)
                     val function = client.newFunction(entry.id, entry.maxMemory.toLong(), meta = mapOf("workload" to workload))
 
                     var offset = Long.MIN_VALUE

@@ -26,7 +26,7 @@ import kotlinx.coroutines.delay
 import org.opendc.compute.api.ComputeClient
 import org.opendc.compute.service.ComputeService
 import org.opendc.compute.simulator.SimHost
-import org.opendc.simulator.compute.workload.SimCompWorkload
+import org.opendc.simulator.compute.workload.SimWorkload
 
 /**
  * A type of [HostFault] where the hosts are stopped and recover after a given amount of time.
@@ -43,7 +43,7 @@ public class StartStopHostFault(
         for (host in victims) {
             val servers = host.instances
 
-            val snapshots = servers.map { (it.meta["workload"] as SimCompWorkload).snapshot() }
+            val snapshots = servers.map { (it.meta["workload"] as SimWorkload).snapshot() }
             host.fail()
 
             for ((server, snapshot) in servers.zip(snapshots)) {

@@ -38,12 +38,12 @@ import org.opendc.compute.simulator.internal.Guest
 import org.opendc.compute.simulator.internal.GuestListener
 import org.opendc.simulator.compute.SimBareMetalMachine
 import org.opendc.simulator.compute.SimMachineContext
-import org.opendc.simulator.compute.kernel.SimCompHypervisor
+import org.opendc.simulator.compute.kernel.SimHypervisor
 import org.opendc.simulator.compute.model.MachineModel
 import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
-import org.opendc.simulator.compute.workload.SimCompWorkload
+import org.opendc.simulator.compute.workload.SimWorkload
 import org.opendc.simulator.compute.workload.SimWorkloads
 import java.time.Duration
 import java.time.Instant
@@ -52,16 +52,16 @@ import java.util.UUID
 import java.util.function.Supplier
 
 /**
- * A [Host] implementation that simulates virtual machines on a physical machine using [SimCompHypervisor].
+ * A [Host] implementation that simulates virtual machines on a physical machine using [SimHypervisor].
  *
  * @param uid The unique identifier of the host.
  * @param name The name of the host.
  * @param meta The metadata of the host.
  * @param clock The (virtual) clock used to track time.
  * @param machine The [SimBareMetalMachine] on which the host runs.
- * @param hypervisor The [SimCompHypervisor] to run on top of the machine.
- * @param mapper A [SimWorkloadMapper] to map a [Server] to a [SimCompWorkload].
- * @param bootModel A [Supplier] providing the [SimCompWorkload] to execute during the boot procedure of the hypervisor.
+ * @param hypervisor The [SimHypervisor] to run on top of the machine.
+ * @param mapper A [SimWorkloadMapper] to map a [Server] to a [SimWorkload].
+ * @param bootModel A [Supplier] providing the [SimWorkload] to execute during the boot procedure of the hypervisor.
  * @param optimize A flag to indicate to optimize the machine models of the virtual machines.
  */
 public class SimHost(
@@ -70,9 +70,9 @@ public class SimHost(
     private val meta: Map<String, Any>,
     private val clock: InstantSource,
     private val machine: SimBareMetalMachine,
-    private val hypervisor: SimCompHypervisor,
+    private val hypervisor: SimHypervisor,
     private val mapper: SimWorkloadMapper = DefaultWorkloadMapper,
-    private val bootModel: Supplier<SimCompWorkload?> = Supplier { null },
+    private val bootModel: Supplier<SimWorkload?> = Supplier { null },
     private val optimize: Boolean = false,
 ) : Host, AutoCloseable {
     /**
@@ -306,7 +306,7 @@ public class SimHost(
         val bootWorkload = bootModel.get()
         val hypervisor = hypervisor
         val hypervisorWorkload =
-            object : SimCompWorkload by hypervisor {
+            object : SimWorkload by hypervisor {
                 override fun onStart(ctx: SimMachineContext) {
                     try {
                         localBootTime = clock.instant()

@@ -124,7 +124,7 @@ public suspend fun ComputeService.replay(
                 val checkpointTime = checkpointModelSpec?.checkpointTime ?: 0L
                 val checkpointWait = checkpointModelSpec?.checkpointWait ?: 0L
 
-//                val workload = SimRuntimeCompWorkload(
+//                val workload = SimRuntimeWorkload(
 //                    entry.duration,
 //                    1.0,
 //                    checkpointTime,
