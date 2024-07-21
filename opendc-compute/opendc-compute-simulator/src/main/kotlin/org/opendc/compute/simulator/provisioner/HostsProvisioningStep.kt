@@ -26,7 +26,7 @@ import org.opendc.compute.service.ComputeService
 import org.opendc.compute.simulator.SimHost
 import org.opendc.compute.topology.specs.HostSpec
 import org.opendc.simulator.compute.SimBareMetalMachine
-import org.opendc.simulator.compute.kernel.SimCompHypervisor
+import org.opendc.simulator.compute.kernel.SimHypervisor
 import org.opendc.simulator.flow2.FlowEngine
 import java.util.SplittableRandom
 
@@ -53,7 +53,7 @@ public class HostsProvisioningStep internal constructor(
 
         for (spec in specs) {
             val machine = SimBareMetalMachine.create(graph, spec.model, spec.psuFactory)
-            val hypervisor = SimCompHypervisor.create(spec.multiplexerFactory, SplittableRandom(ctx.seeder.nextLong()))
+            val hypervisor = SimHypervisor.create(spec.multiplexerFactory, SplittableRandom(ctx.seeder.nextLong()))
 
             val host =
                 SimHost(

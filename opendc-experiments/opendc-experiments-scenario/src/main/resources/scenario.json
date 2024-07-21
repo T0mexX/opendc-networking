@@ -1,13 +1,16 @@
 {
     "runs": 5,
-    "topologies": [{
+    "topology": {
         "pathToFile": "resources/env/single.json"
-    }],
-    "workloads": [{
+    },
+    "workload": {
         "pathToFile": "resources/bitbrains-small",
         "type": "ComputeWorkload"
-    }],
-    "allocationPolicies": [{
+    },
+    "allocationPolicy": {
         "policyType": "Mem"
-    }]  
+    },
+    "failureModel": {
+        "name": "TEST"
+    }
 }

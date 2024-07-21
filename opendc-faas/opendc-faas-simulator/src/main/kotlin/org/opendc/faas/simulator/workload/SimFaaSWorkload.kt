@@ -22,12 +22,12 @@
 
 package org.opendc.faas.simulator.workload
 
-import org.opendc.simulator.compute.workload.SimCompWorkload
+import org.opendc.simulator.compute.workload.SimWorkload
 
 /**
  * A model for a serverless function workload, which may be invoked multiple times.
  */
-public interface SimFaaSCompWorkload : SimCompWorkload {
+public interface SimFaaSWorkload : SimWorkload {
     /**
      * This method is invoked when an active function instance is invoked.
      */

@@ -23,7 +23,7 @@
 package org.opendc.compute.workload
 
 import org.opendc.simulator.compute.kernel.interference.VmInterferenceProfile
-import org.opendc.simulator.compute.workload.SimCompTrace
+import org.opendc.simulator.compute.workload.SimTrace
 import java.time.Instant
 import java.util.UUID
 
@@ -49,7 +49,7 @@ public data class VirtualMachine(
     val totalLoad: Double,
     val startTime: Instant,
     val stopTime: Instant,
-    val trace: SimCompTrace,
+    val trace: SimTrace,
     val interferenceProfile: VmInterferenceProfile?,
 ) {
     val duration: Long = stopTime.toEpochMilli() - startTime.toEpochMilli()

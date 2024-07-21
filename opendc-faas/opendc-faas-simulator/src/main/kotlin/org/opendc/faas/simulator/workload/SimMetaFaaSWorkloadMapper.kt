@@ -28,7 +28,7 @@ import org.opendc.faas.service.FunctionObject
  * A [SimFaaSWorkloadMapper] that maps a [FunctionObject] to a workload via the meta-data.
  */
 public class SimMetaFaaSWorkloadMapper(private val key: String = "workload") : SimFaaSWorkloadMapper {
-    override fun createWorkload(function: FunctionObject): SimFaaSCompWorkload {
-        return requireNotNull(function.meta[key]) as SimFaaSCompWorkload
+    override fun createWorkload(function: FunctionObject): SimFaaSWorkload {
+        return requireNotNull(function.meta[key]) as SimFaaSWorkload
     }
 }
