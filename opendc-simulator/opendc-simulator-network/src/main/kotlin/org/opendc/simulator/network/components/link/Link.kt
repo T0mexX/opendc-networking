@@ -9,6 +9,7 @@ internal interface Link {
     val maxPort2PortBW: Kbps
     val usedBW: Kbps
     val util: Double
+    val availableBW: Kbps get() = maxPort2PortBW - usedBW
 
     fun oppositeOf(p: Port): Port
 

@@ -25,8 +25,8 @@ private fun bitBrainsSim() {
     val net = FatTreeNetwork(allSwitchSpecs = Switch.SwitchSpecs(portSpeed = 1000.0, numOfPorts = 8))
 
     wl.execOn(net)
-    println(Duration.ofNanos(StaticECMP.nano).seconds)
-    println(Duration.ofNanos(NetworkController.nano).seconds)
+//    println(Duration.ofNanos(StaticECMP.nano).seconds)
+//    println(Duration.ofNanos(NetworkController.nano).seconds)
 //    wl2.execOn(net)
 
 

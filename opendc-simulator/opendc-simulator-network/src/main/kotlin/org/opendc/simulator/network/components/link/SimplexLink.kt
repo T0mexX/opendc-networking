@@ -33,8 +33,8 @@ internal class SimplexLink(
     }
 
     override fun updtFlowRate(fId: FlowId, rqstRate: Kbps): Kbps =
-         synchronized(_rateById) {
-             return@synchronized _rateById.compute(fId) { _, oldRate ->
+//         synchronized(_rateById) {
+              _rateById.compute(fId) { _, oldRate ->
                  val wouldBeDeltaBW: Kbps = rqstRate - (oldRate ?: .0)
                  val wouldBeUsedBW = usedBW + wouldBeDeltaBW
 
@@ -52,12 +52,12 @@ internal class SimplexLink(
 
                  if (deltaBw != .0)
                      currLinkUpdate.compute(fId) { _, oldDelta ->
-                         deltaBw + (oldDelta ?: .0)
+                         (deltaBw + (oldDelta ?: .0)).roundTo0ifErr()
                      }
 
                  return@compute newRate
              }!!
-         }
+//         }
 
     // Only called by sender which has the SendLink interface.
     override fun outgoingRateOf(fId: FlowId): Kbps =

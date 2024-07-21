@@ -2,16 +2,14 @@ package org.opendc.simulator.network.components
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import org.opendc.simulator.network.components.internalstructs.FlowHandler
+import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.port.PortImpl
 import org.opendc.simulator.network.utils.IdDispenser
-import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
-import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
-import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
+import org.opendc.simulator.network.policies.fairness.MaxMin
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
@@ -25,13 +23,12 @@ internal class HostNode(
     override val id: NodeId,
     override val portSpeed: Kbps,
     override val numOfPorts: Int = 1,
-    override val fairnessPolicy: FairnessPolicy = FirstComeFirstServed,
+    override val fairnessPolicy: FairnessPolicy = MaxMin,
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ): EndPointNode {
 
     override val updtChl = UpdateChl()
 
-    override val flowHandler = FlowHandler()
 
     override val routingTable: RoutingTable = RoutingTable(this.id)
 
@@ -41,6 +38,7 @@ internal class HostNode(
         buildList { repeat(numOfPorts) {
             add(PortImpl(maxSpeed = portSpeed, owner = this@HostNode))
         } }
+    override val flowHandler = FlowHandler(ports)
 
     override fun toString(): String = "[HostNode: id=$id]"
 
