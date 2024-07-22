@@ -95,14 +95,12 @@ private var clusterId = 0
 
 private fun ClusterSpec.toHostSpecs(random: RandomGenerator): List<HostSpec> {
     val hostSpecs =
-        hosts.flatMap { host ->
+        hosts.flatMap { hostJson ->
             (
-                List(host.count) {
-                    host.toHostSpecs(
-                        clusterId,
-                        random,
-                    )
-                }
+                hostJson.toHostsSpecs(
+                    clusterId,
+                    random,
+                )
             )
         }
     clusterId++
@@ -115,38 +113,38 @@ private fun ClusterSpec.toHostSpecs(random: RandomGenerator): List<HostSpec> {
 private var hostId = 0
 private var globalCoreId = 0
 
-private fun HostJSONSpec.toHostSpecs(
+private fun HostJSONSpec.toHostsSpecs(
     clusterId: Int,
     random: RandomGenerator,
-): HostSpec {
-    val unknownProcessingNode = ProcessingNode("unknown", "unknown", "unknown", cpu.coreCount)
-    val units = List(cpu.count) { ProcessingUnit(unknownProcessingNode, globalCoreId++, cpu.coreSpeed) }
+): List<HostSpec> {
+    return buildList {
+        repeat(count) {
+            val unknownProcessingNode = ProcessingNode("unknown", "unknown", "unknown", cpu.coreCount)
+            val units = List(cpu.count) { ProcessingUnit(unknownProcessingNode, globalCoreId++, cpu.coreSpeed) }
 
-    val unknownMemoryUnit = MemoryUnit(memory.vendor, memory.modelName, memory.memorySpeed, memory.memorySize)
-    val machineModel =
-        MachineModel(
-            units,
-            listOf(unknownMemoryUnit),
-        )
+            val unknownMemoryUnit = MemoryUnit(memory.vendor, memory.modelName, memory.memorySpeed, memory.memorySize)
+            val machineModel =
+                MachineModel(
+                    units,
+                    listOf(unknownMemoryUnit),
+                )
 
-    val powerModel = getPowerModel(powerModel.modelType, powerModel.power, powerModel.maxPower, powerModel.idlePower)
+            val powerModel =
+                getPowerModel(powerModel.modelType, powerModel.power, powerModel.maxPower, powerModel.idlePower)
 
-    var hostName: String
-    if (name == null) {
-        hostName = "Host-$hostId"
-    } else {
-        hostName = name
+            val hostName: String = name ?: "Host-$hostId"
+
+            add(
+                HostSpec(
+                    UUID(random.nextLong(), (hostId).toLong()),
+                    hostName,
+                    mapOf("cluster" to clusterId),
+                    machineModel,
+                    SimPsuFactories.simple(powerModel),
+                )
+            )
+
+            hostId++
+        }
     }
-
-    val hostSpec =
-        HostSpec(
-            UUID(random.nextLong(), (hostId).toLong()),
-            hostName,
-            mapOf("cluster" to clusterId),
-            machineModel,
-            SimPsuFactories.simple(powerModel),
-        )
-    hostId++
-
-    return hostSpec
 }
