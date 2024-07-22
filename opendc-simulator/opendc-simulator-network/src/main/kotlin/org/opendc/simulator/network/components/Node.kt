@@ -77,6 +77,7 @@ internal interface Node: FlowView {
 
     suspend fun run(invalidator: StabilityValidator.Invalidator? = null) {
         invalidator?.let { updtChl.withInvalidator(invalidator) }
+        updtChl.clear()
 
         while (true) {
             yield()

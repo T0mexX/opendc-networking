@@ -1,8 +1,5 @@
 package org.opendc.simulator.network.api.simworkloads
 
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.flow.FlowId
@@ -11,8 +8,6 @@ import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
-import kotlin.system.exitProcess
-import kotlin.system.measureNanoTime
 
 internal abstract class NetworkEvent: Comparable<NetworkEvent> {
     private companion object {
@@ -26,16 +21,16 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
 
 
     internal open fun involvedIds(): Set<NodeId> = setOf()
-    protected abstract suspend fun exec(controller: NetworkController)
+    protected abstract suspend fun NetworkController.exec()
 
-    suspend fun execIfNotPassed(controller: NetworkController) {
-        val msSinceLastUpdate: ms = deadline - controller.instantSrc.millis()
+    suspend fun NetworkController.execIfNotPassed() {
+        val msSinceLastUpdate: ms = deadline - this.instantSrc.millis()
         if (msSinceLastUpdate < 0)
             return log.error("unable to execute network event, deadline is passed")
 
-        controller.advanceBy(msSinceLastUpdate)
+        this.advanceBy(msSinceLastUpdate)
 
-        this.exec(controller)
+        exec()
     }
 
     override fun compareTo(other: NetworkEvent): Int =
@@ -50,8 +45,8 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
         val to: NodeId,
         val desiredDataRate: Kbps
     ): NetworkEvent() {
-        override suspend fun exec(controller: NetworkController) {
-            controller.startOrUpdateFlow(
+        override suspend fun NetworkController.exec() {
+            this.startOrUpdateFlow(
                 transmitterId = from,
                 destinationId = to,
                 desiredDataRate = desiredDataRate
@@ -72,7 +67,7 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
         val newRate: Kbps,
         private val flowGetter: suspend () -> NetFlow
     ): NetworkEvent() {
-        override suspend fun exec(controller: NetworkController) {
+        override suspend fun NetworkController.exec() {
             val flow = flowGetter()
             flow.setDesiredDataRate(newRate)
             targetFlow = flow
@@ -86,8 +81,8 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
         val desiredDataRate: Kbps,
         val flowId: FlowId = IdDispenser.nextFlowId
     ): NetworkEvent() {
-        override suspend fun exec(controller: NetworkController) {
-            controller.startFlow(
+        override suspend fun NetworkController.exec() {
+            this.startFlow(
                 transmitterId = from,
                 destinationId = to,
                 desiredDataRate = desiredDataRate,
@@ -102,8 +97,8 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
         override val deadline: ms,
         private val flowIdGetter: suspend () -> FlowId
     ): NetworkEvent() {
-        override suspend fun exec(controller: NetworkController) {
-            controller.stopFlow(
+        override suspend fun NetworkController.exec() {
+            this.stopFlow(
                 flowId = flowIdGetter.invoke()
             ) ?. let { targetFlow = it }
         }

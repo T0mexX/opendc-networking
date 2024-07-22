@@ -5,6 +5,9 @@ package org.opendc.simulator.network.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -28,7 +31,7 @@ internal abstract class Network {
 
     protected val validator = StabilityValidator()
 
-    protected val networkScope = CoroutineScope(Dispatchers.Default)
+    protected val networkScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /**
      * Maps [NodeId]s to their corresponding [Node]s, which are part of the [Network]
@@ -48,9 +51,10 @@ internal abstract class Network {
 
     protected abstract val internet: Internet
 
-    protected var runnerJob: Job? = null
+    internal var runnerJob: Job? = null
+        private set
 
-    protected val isRunning: Boolean
+    internal val isRunning: Boolean
         get() = runnerJob?.isActive ?: false
 
 
@@ -118,6 +122,7 @@ internal abstract class Network {
     }
 
     internal fun launch(): Job {
+        runBlocking { runnerJob?.cancelAndJoin() }
         validator.reset()
         runnerJob = networkScope.launch {
             nodes.forEach { (_, n) ->

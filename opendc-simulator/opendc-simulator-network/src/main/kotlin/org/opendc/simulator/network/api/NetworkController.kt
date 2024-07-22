@@ -1,6 +1,5 @@
 package org.opendc.simulator.network.api
 
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -26,20 +25,20 @@ import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.slf4j.Logger
+import org.opendc.simulator.network.utils.errAndNull
 import java.io.File
 import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
-import kotlin.time.TimeSource
+import kotlin.system.measureNanoTime
 
 
 @OptIn(ExperimentalSerializationApi::class)
 public class NetworkController internal constructor(
     private val network: Network,
     instantSource: InstantSource? = null,
-) {
+): AutoCloseable {
     public companion object {
         internal val log by logger()
 
@@ -48,30 +47,29 @@ public class NetworkController internal constructor(
             val netSpec = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
             return NetworkController(netSpec.buildFromSpecs(), instantSource)
         }
-
-        internal var nano: Long = 0
+        private var bo : Long = 0
+        private var nano: Long = 0
     }
 
     private val virtualMapping = mutableMapOf<Long, NodeId>()
 
-    internal val instantSrc: NetworkInstantSrc = NetworkInstantSrc(instantSource)
+    internal var instantSrc: NetworkInstantSrc = NetworkInstantSrc(instantSource)
 
     public val currentInstant: Instant
         get() = instantSrc.instant()
 
     private var lastUpdate: Instant = Instant.ofEpochMilli(ms.MIN_VALUE)
 
-    internal val flowsById: Map<FlowId, NetFlow>
-
     init {
         instantSource?.let { lastUpdate = it.instant() }
         StaticECMP.eToEFlows = network.flowsById
-        flowsById = network.flowsById
 
+        network.launch()
         log.info(buildString {
             appendLine("\nNetwork Info:")
             appendLine("num of core switches: ${network.getNodesById<CoreSwitch>().size}")
             appendLine("num of host nodes: ${network.getNodesById<HostNode>().size}")
+            appendLine("num of nodes: ${network.nodes.size}")
         })
     }
 
@@ -124,17 +122,27 @@ public class NetworkController internal constructor(
         claimNode(uuid.node())
 
     public fun claimNode(nodeId: NodeId): NetNodeInterface? {
-        check (nodeId !in claimedHostIds)
-        { "unable to claim node nodeId $nodeId, nodeId already claimed" }
+        // Check that node is not already claimed.
+        if (nodeId in claimedHostIds || nodeId in claimedCoreSwitchIds)
+            return log.errAndNull("unable to claim node nodeId $nodeId, nodeId already claimed")
 
-        (network.getNodesById<HostNode>() + network.getNodesById<CoreSwitch>())[nodeId]
+        // If node is host.
+        network.getNodesById<HostNode>()[nodeId]
             ?.let {
-            claimedHostIds.add(nodeId)
-        } ?: throw IllegalArgumentException(
-            "unable to claim node nodeId $nodeId, nodeId not existent or not associated to a core switch or a host node"
-        )
+                claimedHostIds.add(nodeId)
+                return getNetInterfaceOf(nodeId)
+            }
 
-        return getNetInterfaceOf(nodeId)
+        // If node is core switch.
+        network.getNodesById<CoreSwitch>()[nodeId]
+            ?.let {
+                claimedCoreSwitchIds.add(nodeId)
+                return getNetInterfaceOf(nodeId)
+            }
+
+        // else
+        return log.errAndNull("unable to claim node nodeId $nodeId, " +
+            "nodeId not existent or not associated to a core switch or a host node")
     }
 
     public suspend fun startFlow(
@@ -163,23 +171,17 @@ public class NetworkController internal constructor(
 
     private suspend fun startFlow(netFlow: NetFlow): NetFlow? {
         if (netFlow.transmitterId !in network.endPointNodes)
-            return log.errAndNull("unable to startInstant network flow from node ${netFlow.transmitterId}, " +
+            return log.errAndNull("unable to start network flow from node ${netFlow.transmitterId}, " +
                 "node does not exist or is not an end-point node")
 
         if (netFlow.destinationId !in network.endPointNodes)
-            return log.errAndNull("unable to startInstant network flow directed to node ${netFlow.destinationId}, " +
+            return log.errAndNull("unable to start network flow directed to node ${netFlow.destinationId}, " +
                 "node does not exist or it is not an end-point-node")
 
         if (netFlow.id in network.flowsById)
-            return log.errAndNull("unable to startInstant network flow with nodeId ${netFlow.id}, " +
-                "a flow with nodeId ${netFlow.id} already exists")
+            return log.errAndNull("unable to start network flow with flow id ${netFlow.id}, " +
+                "a flow that id already exists")
 
-//        if (netFlow.transmitterId in claimedHostIds
-//            || netFlow.transmitterId in claimedCoreSwitchIds)
-//            log.warn("starting flow through controller interface from node whose interface was claimed, " +
-//                "best practice would be to use either only the controller or the node interface for each node")
-
-//        network.flowsById[netFlow.id] = netFlow
         network.startFlow(netFlow)
 
         return netFlow
@@ -193,38 +195,29 @@ public class NetworkController internal constructor(
         dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
         physicalTransmitterId: Boolean = false
     ): NetFlow? {
+        bo++
         val mappedTransmitterId: NodeId =  if (physicalTransmitterId) transmitterId else mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
 
-        val tm = TimeSource.Monotonic.markNow()
-        network.flowsById.values.find {
+        return network.flowsById.values.find {
             it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
         } ?. let {
-            nano += tm.elapsedNow().inWholeNanoseconds
             it.setDesiredDataRate(desiredDataRate)
-
             if (dataRateOnChangeHandler != null) it.withThroughputOnChangeHandler(dataRateOnChangeHandler)
-            return it
-        } ?: let {
-            nano += tm.elapsedNow().inWholeNanoseconds
-            val f = startFlow(
+
+            it
+        } ?: startFlow(
                 transmitterId = transmitterId,
                 destinationId = destinationId,
                 desiredDataRate = desiredDataRate,
                 dataRateOnChangeHandler = dataRateOnChangeHandler
-            )
-
-            return f
-        }
+        )
     }
 
     public suspend fun stopFlow(flowId: FlowId): NetFlow? =
         network.stopFlow(flowId)
 
-    public fun getNetInterfaceOf(uuid: UUID): NetNodeInterface? =
-        getNetInterfaceOf(uuid.node())
-
-    public fun getNetInterfaceOf(nodeId: NodeId): NetNodeInterface? =
+    private fun getNetInterfaceOf(nodeId: NodeId): NetNodeInterface? =
         network.endPointNodes[nodeId]?.let {
             NetNodeInterfaceImpl(it, this)
         } ?: log.errAndNull("unable to retrieve network interface, " +
@@ -246,7 +239,7 @@ public class NetworkController internal constructor(
             instantSrc.advanceTime(ms)
         else  if (!suppressWarn)
             log.warn("advancing time directly while instant source is set, this can cause ambiguity. " +
-                "You can synchronize the network according to the instant source with 'sync()'")
+                "You can synchronize the network with the instant source with 'sync()'")
 
         network.advanceBy(ms)
         energyRecorder.advanceBy(ms)
@@ -254,76 +247,55 @@ public class NetworkController internal constructor(
 
     public fun execWorkload(
         netWorkload: SimNetWorkload,
-        resetFlows: Boolean = true,
-        resetTime: Boolean = true,
-        resetEnergy: Boolean = true,
-        resetClaimedNodes: Boolean = true,
-        resetVirtualMapping: Boolean = true,
-        withVirtualMapping: Boolean = true,
-        withProgressBar: Boolean = true
+        reset: Boolean = true,
+        withVirtualMapping: Boolean = true
     ) {
-        if (instantSrc.isExternalSource)
-            return log.error("unable to run a workload while controller has an external time source")
+        if (netWorkload.hasNext().not()) return log.error("network workload empty")
 
-        if (resetFlows) network.resetFlows()
-
-        if (resetTime) instantSrc.internal = netWorkload.startInstant.toEpochMilli()
-
-        if (resetEnergy) energyRecorder.reset()
-
-        if (resetClaimedNodes) {
-            claimedHostIds.clear()
-            claimedCoreSwitchIds.clear()
+        if (instantSrc.isExternalSource) {
+            log.warn("network controller external time source will " +
+                "be replaced with an internal one to tun the workload.")
+            instantSrc = NetworkInstantSrc(internal = instantSrc.instant().toEpochMilli())
         }
 
-        if (resetVirtualMapping) virtualMapping.clear()
+        if (reset) {
+            network.resetFlows()
+//            network.launch() //TODO
+            instantSrc.setInternalTime(netWorkload.peek().deadline)
+            energyRecorder.reset()
+            claimedHostIds.clear()
+            claimedCoreSwitchIds.clear()
+            virtualMapping.clear()
+        }
 
         if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
 
-
         runBlocking {
-            val netRunnerJob: Job = network.launch()
+            val pb: ProgressBar = ProgressBarBuilder()
+                .setInitialMax(netWorkload.size.toLong())
+                .setStyle(ProgressBarStyle.ASCII)
+                .setTaskName("Simulating...").build()
 
-            if (withProgressBar) {
-                val pb: ProgressBar = ProgressBarBuilder()
-                    .setInitialMax(netWorkload.size.toLong())
-                    .setStyle(ProgressBarStyle.ASCII)
-                    .setTaskName("Simulating...").build()
+            delay(1000)
 
-                delay(1000)
-
-                while (netWorkload.hasNext()) {
-                    val deadline = netWorkload.peek().deadline
-                    var steps: Long = 0
-
-                    while (netWorkload.hasNext() && netWorkload.peek().deadline <= deadline) {
-                        steps++
-                        netWorkload.execNext(controller = this@NetworkController)
-                    }
-
-                    network.awaitStability()
-                    pb.stepBy(steps)
-//                    println(currentInstant.toEpochMilli())
-//                    println(n.getFmtFlows())
+            with (netWorkload) {
+                while (hasNext()) {
+                    val nextDeadline = peek().deadline
+                    pb.stepBy(execUntil(nextDeadline))
+                    nano += measureNanoTime { network.awaitStability() }
                 }
-                pb.refresh()
             }
-
-            netRunnerJob.cancelAndJoin()
+            pb.refresh()
         }
+        println("bo: $bo")
+        println("nano: $nano")
     }
 
     private fun mappedOrSelf(id: NodeId): NodeId =
         virtualMapping[id] ?: let { id }
 
-
-
-
-
+    override fun close() {
+        network.runnerJob?.cancel()
+    }
 }
 
-
-private fun Logger.errAndNull(msg: String): Nothing? {
-    this.error(msg)
-    return null
-}

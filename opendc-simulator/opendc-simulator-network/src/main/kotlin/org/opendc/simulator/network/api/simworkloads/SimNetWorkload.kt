@@ -95,21 +95,23 @@ public class SimNetWorkload internal constructor(
                 "some ids were not categorizable as specific node types")
     }
 
-    internal suspend fun execNext(controller: NetworkController) {
-        events.poll()?.execIfNotPassed(controller)
+    internal suspend fun NetworkController.execNext() {
+        events.poll()?.let { with(it) { execIfNotPassed() } }
             ?: log.error("unable to execute network event, no more events remaining in the workload")
     }
 
     internal fun hasNext(): Boolean =
         events.isNotEmpty()
 
-    internal suspend fun execUntil(controller: NetworkController, until: ms) {
-        var event: NetworkEvent?
+    internal suspend fun NetworkController.execUntil(until: ms): Long {
+        var consumed: Long = 0
 
-        while ((events.peek()?.deadline ?: ms.MAX_VALUE) < until) {
-            event = events.poll()
-            event?.execIfNotPassed(controller)
+        while ((events.peek()?.deadline ?: ms.MAX_VALUE) <= until) {
+            events.poll()?.let { with(it) { execIfNotPassed() } }
+            consumed++
         }
+
+        return consumed
     }
 
     internal fun peek(): NetworkEvent = events.peek()
@@ -193,6 +195,4 @@ public class SimNetWorkload internal constructor(
             return SimNetWorkload(netEvents, hostIds = vmIds)
         }
     }
-
-
 }

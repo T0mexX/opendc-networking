@@ -1,6 +1,5 @@
 package org.opendc.simulator.network.api
 
-import org.opendc.simulator.network.api.NetworkController.Companion.log
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.NodeId
