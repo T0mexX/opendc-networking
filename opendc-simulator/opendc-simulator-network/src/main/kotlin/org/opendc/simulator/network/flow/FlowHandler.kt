@@ -63,7 +63,7 @@ internal class FlowHandler(private val ports: Collection<Port>) {
     /**
      * Adds [newFlow] in the [generatedFlows] table. Additionally, it queues the [RateUpdt]
      * associated to the new flow automatically. The caller does **NOT** need to queue
-     * an update itself. An observer on [newFlow] for changes of [NetFlow.desiredDataRate],
+     * an update itself. An observer on [newFlow] for changes of [NetFlow.demand],
      * is set up. This observer queues a demand update whenever a change occurs.
      */
     suspend fun Node.generateFlow(newFlow: NetFlow) {
@@ -73,16 +73,16 @@ internal class FlowHandler(private val ports: Collection<Port>) {
             ?. let { currFlow ->
                 log.error("adding generated flow whose id is already present. Replacing...")
                 _generatedFlows[newFlow.id] = newFlow
-                mapOf(newFlow.id to (newFlow.desiredDataRate - currFlow.desiredDataRate))
+                mapOf(newFlow.id to (newFlow.demand - currFlow.demand))
             // Else
-            } ?: mapOf(newFlow.id to newFlow.desiredDataRate)
+            } ?: mapOf(newFlow.id to newFlow.demand)
         )
 
         // Sets up the handler of any data rate changes, propagating updates to other nodes
         // changes of this flow data rate can be performed through a NetworkController,
-        // the NetNodeInterface of this node, or through the instance of the NetFlow itself.
-        newFlow.withDesiredDataRateOnChangeHandler { _, old, new ->
-            if (old == new) return@withDesiredDataRateOnChangeHandler
+        // the NetworkInterface of this node, or through the instance of the NetFlow itself.
+        newFlow.withDemandOnChangeHandler { _, old, new ->
+            if (old == new) return@withDemandOnChangeHandler
 
             if (new < 0) log.warn("unable to change generated flow with id '${newFlow.id}' " +
                 "data-rate to $new, data-rate should be positive. Falling back to 0")
@@ -103,7 +103,7 @@ internal class FlowHandler(private val ports: Collection<Port>) {
             }
 
         // Update to be processed by the node runner coroutine
-        updtChl.send(  RateUpdt(fId, -removedFlow.desiredDataRate)  )
+        updtChl.send(  RateUpdt(fId, -removedFlow.demand)  )
     }
 
     /**

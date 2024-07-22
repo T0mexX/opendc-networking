@@ -2,6 +2,7 @@ package org.opendc.simulator.network.components
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.components.internalstructs.port.Port
@@ -65,7 +66,7 @@ internal open class Switch(
         val portSpeed: Kbps,
         val id: NodeId? = null
     ): Specs<Switch> {
-        override fun buildFromSpecs(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts)
+        override fun build(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts)
 
         fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts)
     }

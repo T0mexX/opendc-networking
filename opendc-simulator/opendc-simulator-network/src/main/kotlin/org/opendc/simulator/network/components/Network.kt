@@ -5,15 +5,21 @@ package org.opendc.simulator.network.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.NonSerializable
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.errAndGet
+import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.utils.withWarn
@@ -23,12 +29,12 @@ import org.opendc.simulator.network.utils.withWarn
  * Interface representing a network of [Node]s.
  */
 @Serializable(with = NonSerializable::class)
-internal abstract class Network {
+public sealed class Network {
 
 
-    protected val validator = StabilityValidator()
+    internal val validator: StabilityValidator = StabilityValidator()
 
-    protected val networkScope = CoroutineScope(Dispatchers.Default)
+    private val networkScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /**
      * Maps [NodeId]s to their corresponding [Node]s, which are part of the [Network]
@@ -39,18 +45,21 @@ internal abstract class Network {
      * Maps [NodeId]s to their corresponding [EndPointNode]s, which are part of the [Network].
      * This map is a subset of [nodes].
      */
-    abstract val endPointNodes: Map<NodeId, EndPointNode>
+    internal abstract val endPointNodes: Map<NodeId, EndPointNode>
 
     /**
      * Maps flow ids to their corresponding [NetFlow].
      */
-    abstract val flowsById: MutableMap<FlowId, NetFlow>
+    internal val flowsById = mutableMapOf<FlowId, NetFlow>()
 
-    protected abstract val internet: Internet
+    internal val flowsByName = mutableMapOf<String, NetFlow>()
 
-    protected var runnerJob: Job? = null
+    internal abstract val internet: Internet
 
-    protected val isRunning: Boolean
+    internal var runnerJob: Job? = null
+        private set
+
+    internal val isRunning: Boolean
         get() = runnerJob?.isActive ?: false
 
 
@@ -58,30 +67,38 @@ internal abstract class Network {
     /**
      * Starts a [NetFlow] if the flow can be established.
      * @param[flow] the flow to be established.
+     * @return      `null` if the flow could not be started, otherwise the flow itself.
      */
-    suspend fun startFlow(flow: NetFlow): Result {
-        if (flow.desiredDataRate < 0)
-            return log.errAndGet("Unable to start flow, data rate should be >= 0.")
+    internal suspend fun startFlow(flow: NetFlow): NetFlow? {
+        // If name defined and already exists.
+        if (flow.name != NetFlow.DEFAULT_NAME && flow.name in flowsByName)
+            return null
+
+        if (flow.demand < 0)
+            return log.errAndNull("Unable to start flow, data rate should be >= 0.")
 
         val sender: EndPointNode = endPointNodes[flow.transmitterId]
-            ?: return log.errAndGet("Unable to start flow $flow, sender does not exist or it is not able to start a flow")
+            ?: return log.errAndNull("Unable to start flow $flow, sender does not exist or it is not able to start a flow")
 
         val receiver: EndPointNode = endPointNodes[flow.destinationId]
-            ?: return log.errAndGet("Unable to start flow $flow, receiver does not exist or it is not able to start a flow")
+            ?: return log.errAndNull("Unable to start flow $flow, receiver does not exist or it is not able to start a flow")
 
         flowsById[flow.id] = flow
+        if (flow.name != NetFlow.DEFAULT_NAME)
+            flowsByName[flow.name] = flow
+
         receiver.addReceivingEtoEFlow(flow)
 
         sender.startFlow(flow)
 
-        return SUCCESS
+        return flow
     }
 
     /**
      * Stops a [NetFlow] if the flow is running through the network.
      * @param[flowId]   id of the flow to be stopped.
      */
-    suspend fun stopFlow(flowId: FlowId): NetFlow? =
+    internal suspend fun stopFlow(flowId: FlowId): NetFlow? =
         flowsById[flowId]?.let { eToEFlow ->
             endPointNodes[eToEFlow.transmitterId]
                 ?.stopFlow(eToEFlow.id)
@@ -94,14 +111,14 @@ internal abstract class Network {
         } ?: log.withWarn(null, "unable to stop flow with id $flowId")
 
 
-    fun resetFlows() = runBlocking {
+    internal fun resetFlows() = runBlocking {
         flowsById.keys.toSet().forEach { stopFlow(it) }
     }
 
     /**
      * Returns a string with all [nodes] string representations, each in one line.
      */
-    fun allNodesToString(): String {
+    internal fun allNodesToString(): String {
         val sb = StringBuilder()
         nodes.forEach { sb.append("\n$it") }
         sb.append("\n")
@@ -109,15 +126,16 @@ internal abstract class Network {
         return sb.toString()
     }
 
-    fun advanceBy(ms: ms) {
+    internal fun advanceBy(ms: ms) {
         flowsById.values.forEach { it.advanceBy(ms) }
     }
 
-    suspend fun awaitStability() {
+    internal suspend fun awaitStability() {
         validator.awaitStability()
     }
 
     internal fun launch(): Job {
+        runBlocking { runnerJob?.cancelAndJoin() }
         validator.reset()
         runnerJob = networkScope.launch {
             nodes.forEach { (_, n) ->
@@ -131,10 +149,10 @@ internal abstract class Network {
     }
 
 
-    companion object {
+    internal companion object {
         private val log by logger()
 
-        inline fun <reified T: Node> Network.getNodesById(): Map<NodeId, T> {
+        internal inline fun <reified T: Node> Network.getNodesById(): Map<NodeId, T> {
             return this.nodes.values.filterIsInstance<T>().associateBy { it.id }
         }
     }

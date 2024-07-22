@@ -11,6 +11,7 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.NonSerializable
@@ -30,9 +31,6 @@ internal class CustomNetwork(
 ): Network() {
     companion object { val log by logger() }
 
-
-    override val flowsById: MutableMap<FlowId, NetFlow> = HashMap()
-
     override val nodes: MutableMap<NodeId, Node> =
         nodes.associateBy { it.id }.toMutableMap()
 
@@ -48,7 +46,6 @@ internal class CustomNetwork(
     init {
         this.nodes[internet.id] = internet
         endPointNodes[internet.id] = internet
-        println("internet id: ${internet.id}")
     }
 
     /**
@@ -128,8 +125,8 @@ internal class CustomNetwork(
 
         companion object { val log by logger()}
 
-        override fun buildFromSpecs(): CustomNetwork {
-            val nodes: List<Node> = nodesSpecs.map { it.buildFromSpecs() }
+        override fun build(): CustomNetwork {
+            val nodes: List<Node> = nodesSpecs.map { it.build() }
             val distinctNodes = nodes.distinctBy { it.id }
             if (nodes.size != distinctNodes.size)
                 log.warn("Some nodes with already existing ids got filtered out.")

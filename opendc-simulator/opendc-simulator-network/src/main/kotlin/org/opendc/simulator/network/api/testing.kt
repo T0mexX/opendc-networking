@@ -20,11 +20,12 @@ import kotlin.system.measureNanoTime
 private fun bitBrainsSim() {
     val bitBrains = BitBrains.fromFolderWithVmTables(File("resources/traces/bitbrains"))
     val wl: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..125)
+    val opt = wl.optimize()
 //    val wl2: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..250)
 
     val net = FatTreeNetwork(allSwitchSpecs = Switch.SwitchSpecs(portSpeed = 1000.0, numOfPorts = 8))
 
-    wl.execOn(net)
+    opt.execOn(net)
 //    println(Duration.ofNanos(StaticECMP.nano).seconds)
 //    println(Duration.ofNanos(NetworkController.nano).seconds)
 //    wl2.execOn(net)
@@ -33,55 +34,6 @@ private fun bitBrainsSim() {
 //    wl.execOn(File("resources/bo.json"))
 }
 
-private suspend fun bo() {
-    val h1 = HostNode(
-        id = 0,
-        portSpeed = 1000.0,
-        numOfPorts = 1,
-    )
-    val h2 = HostNode(
-        id = 1,
-        portSpeed = 1000.0,
-        numOfPorts = 1,
-    )
-    h1.connect(h2)
-
-    val net = CustomNetwork(listOf(h1, h2))
-
-    StaticECMP.eToEFlows = net.flowsById
-
-    val stbl = StabilityValidator()
-
-    val f = NetFlow(
-        transmitterId = 0,
-        destinationId = 1,
-        id = 0,
-        desiredDataRate = 1.0
-    )
-
-
-
-
-    coroutineScope {
-        val netJob = net.launch()
-
-
-        delay(500)
-
-        println("\nTESTING START")
-
-        val bo = measureNanoTime {
-            net.startFlow(f)
-            stbl.awaitStability()
-        }
-        println(bo)
-
-        println(h1.getFmtFlows())
-        println(h2.getFmtFlows())
-
-        netJob.cancelAndJoin()
-    }
-}
 
 
 internal fun main() {

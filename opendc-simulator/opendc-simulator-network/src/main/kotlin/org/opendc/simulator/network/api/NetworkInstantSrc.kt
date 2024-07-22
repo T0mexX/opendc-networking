@@ -7,9 +7,11 @@ import java.time.Instant
 import java.time.InstantSource
 
 internal class NetworkInstantSrc(
-    private val external: InstantSource?,
-    var internal: ms = ms.MIN_VALUE
+    private val external: InstantSource? = null,
+    internal: ms = ms.MIN_VALUE
 ): InstantSource {
+    var internal = internal
+        private set
     val isExternalSource: Boolean = external != null
     val isInternalSource: Boolean = isExternalSource.not()
     override fun instant(): Instant =
@@ -19,5 +21,9 @@ internal class NetworkInstantSrc(
     fun advanceTime(ms: ms) {
         external?.let { return log.error("unable to advance internal time, network has external time source") }
         internal += ms
+    }
+
+    fun setInternalTime(ms: ms) {
+        internal = ms
     }
 }
