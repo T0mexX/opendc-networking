@@ -8,24 +8,24 @@ import java.io.File
 
 /**
  * Type serializable from json, representing the specifics of concrete object of type `T`.
- * The object of type `T` can then be built with [buildFromSpecs].
+ * The object of type `T` can then be built with [build].
  */
 @Serializable
-internal sealed interface Specs<T> { // Needs to be sealed, otherwise serialization won't work
+public sealed interface Specs<T> { // Needs to be sealed, otherwise serialization won't work
     /**
      * Builds the corresponding object of type `T`
      */
-    fun buildFromSpecs(): T
+    public fun build(): T
 
 
-    companion object {
+    public companion object {
         @OptIn(ExperimentalSerializationApi::class)
-        fun <T> fromFile(file: File): Specs<T> {
+        public fun <T> fromFile(file: File): Specs<T> {
             val json = Json { ignoreUnknownKeys = true }
             return json.decodeFromStream(file.inputStream())
         }
 
-        fun <T> fromFile(filePath: String): Specs<T> =
+        public fun <T> fromFile(filePath: String): Specs<T> =
             fromFile(File(filePath))
 
     }

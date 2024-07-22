@@ -101,9 +101,11 @@ internal class OutFlow(
 
     private fun tryIncreaseRate(targetRate: Kbps) {
         check(targetRate >= totRateOut)
+        if (outRatesByPort.isEmpty()) return
         var deltaRemaining: Kbps = targetRate - totRateOut
         val targetPerPort: Kbps = targetRate / outRatesByPort.size
         check (targetPerPort >= .0)
+        {"${outRatesByPort.size}"}
 
         // reluctant
         _outRatesByPort.replaceAll { port, rate ->

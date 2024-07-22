@@ -1,9 +1,7 @@
 package org.opendc.simulator.network.components.internalstructs
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.utils.RWLock
 

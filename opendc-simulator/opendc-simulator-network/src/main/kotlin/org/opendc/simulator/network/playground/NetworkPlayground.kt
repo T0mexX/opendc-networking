@@ -18,7 +18,7 @@ import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
@@ -84,13 +84,11 @@ private class NetworkPlayground: CliktCommand() {
         if (file.exists()) {
             val jsonReader = Json { ignoreUnknownKeys = true }
             val networkSpecs: Specs<Network> = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
-            network = networkSpecs.buildFromSpecs()
+            network = networkSpecs.build()
         } else {
             println("file not provided or invalid, falling back to an empty custom network...")
             network = CustomNetwork()
         }
-
-        StaticECMP.eToEFlows = network.flowsById
 
         energyRecorder = NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
         env = PlaygroundEnv(network = network, energyRecorder = energyRecorder)
@@ -195,16 +193,14 @@ private enum class Cmd {
                     ?: return@cmdJob cancelAfter { log.error("unable to parse data-rate '${groups[3]}'") }
 
                 val newFLow = NetFlow(
-                    id = IdDispenser.nextFlowId,
-                    desiredDataRate = dataRate,
+                    demand = dataRate,
                     transmitterId = senderId,
                     destinationId = destId,
                 )
 
-                when (val it = async { env.network.startFlow(newFLow) }.await()) {
-                    is Result.ERROR -> log.error("unable to create flow. Reason: ${it.msg}")
-                    is Result.SUCCESS -> log.info("successfully create $newFLow")
-                }
+                env.network.startFlow(newFLow)?.let {
+                    log.info("successfully create $newFLow")
+                } ?: log.error("unable to create flow.")
             }
     },
     RM_FLOW {
@@ -212,7 +208,7 @@ private enum class Cmd {
         override fun CoroutineScope.exec(result: MatchResult, env: PlaygroundEnv): Job =
             launchNamed cmdJob@ {
                 val groups: List<String> = result.groupValues
-                val flowId: FlowId = groups[1].toIntOrNull() ?: return@cmdJob cancelAfter { log.unableToParseId(groups[1]) }
+                val flowId: FlowId = groups[1].toLongOrNull() ?: return@cmdJob cancelAfter { log.unableToParseId(groups[1]) }
 
                 env.network.stopFlow(flowId)
                     ?.let { log.error("unable to stop flow.") }
@@ -278,7 +274,7 @@ private enum class Cmd {
                         flow.id.toString().padEnd(5) +
                             flow.transmitterId.toString().padEnd(10) +
                             flow.destinationId.toString().padEnd(10) +
-                            flow.desiredDataRate.toString().padEnd(20) +
+                            flow.demand.toString().padEnd(20) +
                             flow.throughput.toString().padEnd(20)
                     )
                 }

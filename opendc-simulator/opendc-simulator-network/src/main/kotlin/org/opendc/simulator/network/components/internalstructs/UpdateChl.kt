@@ -3,6 +3,7 @@ package org.opendc.simulator.network.components.internalstructs
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
+import kotlinx.coroutines.channels.consume
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -27,7 +28,12 @@ internal class UpdateChl private constructor(
     private val pendingLock = Mutex()
 
 
-    internal suspend fun withInvalidator(inv: Invalidator): UpdateChl {
+    fun clear() {
+        do { val res = chl.tryReceive() }
+        while (res.getOrNull() != null)
+    }
+
+    suspend fun withInvalidator(inv: Invalidator): UpdateChl {
         invalidator = inv
         pendingLock.withLock { if (pending > 0) invalidator?.invalidate()}
         return this

@@ -1,8 +1,7 @@
 package org.opendc.simulator.network.components
 
-import kotlinx.coroutines.Job
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMin
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy

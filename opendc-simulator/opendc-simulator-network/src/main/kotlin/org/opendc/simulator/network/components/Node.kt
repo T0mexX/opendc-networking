@@ -1,6 +1,7 @@
 package org.opendc.simulator.network.components
 
 import kotlinx.coroutines.yield
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.components.internalstructs.port.Port
@@ -12,11 +13,6 @@ import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.logger
-
-/**
- * Type alias for improved understandability.
- */
-internal typealias NodeId = Long
 
 /**
  * Interface representing a node in a [Network].
@@ -77,6 +73,7 @@ internal interface Node: FlowView {
 
     suspend fun run(invalidator: StabilityValidator.Invalidator? = null) {
         invalidator?.let { updtChl.withInvalidator(invalidator) }
+        updtChl.clear()
 
         while (true) {
             yield()

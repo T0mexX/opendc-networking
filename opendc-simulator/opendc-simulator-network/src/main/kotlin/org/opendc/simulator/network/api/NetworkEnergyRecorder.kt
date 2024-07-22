@@ -1,6 +1,5 @@
 package org.opendc.simulator.network.api
 
-import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.utils.OnChangeHandler

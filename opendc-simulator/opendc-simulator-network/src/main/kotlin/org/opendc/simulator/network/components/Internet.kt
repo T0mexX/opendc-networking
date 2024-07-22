@@ -1,6 +1,7 @@
 package org.opendc.simulator.network.components
 
 import kotlinx.coroutines.runBlocking
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.port.PortImpl
