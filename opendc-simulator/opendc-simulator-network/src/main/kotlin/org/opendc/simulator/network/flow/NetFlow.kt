@@ -1,15 +1,13 @@
 package org.opendc.simulator.network.flow
 
 import org.opendc.simulator.network.components.EndPointNode
-import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.utils.Kb
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.SuspOnChangeHandler
 import org.opendc.simulator.network.utils.ms
-import java.time.Duration
 import kotlin.properties.Delegates
-import kotlin.system.measureNanoTime
 
 /**
  * Represents an end-to-end flow, meaning the flow from one [EndPointNode] to another.

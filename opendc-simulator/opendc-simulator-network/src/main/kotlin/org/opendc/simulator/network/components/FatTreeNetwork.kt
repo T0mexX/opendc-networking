@@ -3,6 +3,7 @@ package org.opendc.simulator.network.components
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.NonSerializable
@@ -134,7 +135,7 @@ internal class FatTreeNetwork(
             }
 
             torSwitches = buildList {
-                    repeat (k / 2) { add(torSpecs.buildFromSpecs()) }
+                    repeat (k / 2) { add(torSpecs.build()) }
                 }
 
             hostNodes.forEachIndexed { index, server ->
@@ -143,7 +144,7 @@ internal class FatTreeNetwork(
 
             aggrSwitches = torSwitches
                 .map { _ ->
-                    val newSwitch = aggrSpecs.buildFromSpecs()
+                    val newSwitch = aggrSpecs.build()
                     torSwitches.forEach { runBlocking { newSwitch.connect(it) } }
                     newSwitch
                 }.toList()
@@ -152,7 +153,7 @@ internal class FatTreeNetwork(
 
     companion object {
         internal fun fromFile(file: File) =
-            Specs.fromFile<FatTreeNetwork>(file).buildFromSpecs()
+            Specs.fromFile<FatTreeNetwork>(file).build()
 
         operator fun invoke(allSwitchSpecs: SwitchSpecs): FatTreeNetwork =
             FatTreeNetwork(coreSpecs = allSwitchSpecs, aggrSpecs = allSwitchSpecs, torSpecs = allSwitchSpecs)
@@ -173,7 +174,7 @@ internal class FatTreeNetwork(
         /**
          * Returns a [FatTreeNetwork] if the specs are valid, throws error otherwise.
          */
-        override fun buildFromSpecs(): FatTreeNetwork {
+        override fun build(): FatTreeNetwork {
             val error by lazy { IllegalArgumentException("Unable to build Fat-Tree from specs. " +
                 "Either define all layers specs or provide a general switch specs") }
             return FatTreeNetwork(

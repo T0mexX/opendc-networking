@@ -2,6 +2,7 @@ package org.opendc.simulator.network.components
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.port.PortImpl
@@ -49,7 +50,7 @@ internal class HostNode(
         val portSpeed: Kbps,
         val numOfPorts: Int = 1
     ): Specs<HostNode> {
-        override fun buildFromSpecs(): HostNode =
+        override fun build(): HostNode =
             HostNode(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts = numOfPorts)
     }
 }

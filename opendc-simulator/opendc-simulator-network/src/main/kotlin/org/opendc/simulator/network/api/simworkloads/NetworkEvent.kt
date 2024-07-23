@@ -1,7 +1,7 @@
 package org.opendc.simulator.network.api.simworkloads
 
 import org.opendc.simulator.network.api.NetworkController
-import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.IdDispenser

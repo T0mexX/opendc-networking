@@ -3,7 +3,7 @@ package org.opendc.simulator.network.api.simtraces
 //import org.opendc.simulator.network.api.simworkloads.NetworkEvent
 //import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 //import org.opendc.simulator.network.components.INTERNET_ID
-//import org.opendc.simulator.network.components.NodeId
+//import org.opendc.simulator.network.api.NodeId
 //import org.opendc.simulator.network.utils.Kbps
 //import org.opendc.simulator.network.utils.ms
 //import org.opendc.trace.TableReader

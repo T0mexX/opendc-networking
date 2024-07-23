@@ -18,7 +18,7 @@ import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.energy.EnergyConsumer
@@ -84,7 +84,7 @@ private class NetworkPlayground: CliktCommand() {
         if (file.exists()) {
             val jsonReader = Json { ignoreUnknownKeys = true }
             val networkSpecs: Specs<Network> = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
-            network = networkSpecs.buildFromSpecs()
+            network = networkSpecs.build()
         } else {
             println("file not provided or invalid, falling back to an empty custom network...")
             network = CustomNetwork()

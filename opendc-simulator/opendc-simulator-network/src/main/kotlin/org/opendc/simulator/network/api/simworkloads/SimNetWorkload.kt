@@ -3,11 +3,10 @@ package org.opendc.simulator.network.api.simworkloads
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network
-import org.opendc.simulator.network.components.NodeId
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
-import org.opendc.simulator.network.utils.withWarn
 import org.opendc.trace.preset.BitBrains
 import org.opendc.trace.table.Table
 import org.opendc.trace.table.TableReader

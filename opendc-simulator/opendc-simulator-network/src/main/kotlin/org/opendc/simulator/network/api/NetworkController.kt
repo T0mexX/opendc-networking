@@ -1,6 +1,5 @@
 package org.opendc.simulator.network.api
 
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -12,7 +11,6 @@ import me.tongfei.progressbar.ProgressBarStyle
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
-import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.NetFlow
@@ -26,6 +24,7 @@ import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.errAndNull
+import org.slf4j.Logger
 import java.io.File
 import java.time.Duration
 import java.time.Instant
@@ -35,18 +34,22 @@ import kotlin.system.measureNanoTime
 
 
 @OptIn(ExperimentalSerializationApi::class)
-public class NetworkController internal constructor(
-    private val network: Network,
+public class NetworkController(
+    internal val network: Network,
     instantSource: InstantSource? = null,
 ): AutoCloseable {
     public companion object {
-        internal val log by logger()
+        public val log: Logger by logger()
 
         public fun fromFile(file: File, instantSource: InstantSource? = null): NetworkController {
             val jsonReader = Json() { ignoreUnknownKeys = true }
             val netSpec = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
-            return NetworkController(netSpec.buildFromSpecs(), instantSource)
+            return NetworkController(netSpec.build(), instantSource)
         }
+
+        public fun fromPath(path: String, instantSource: InstantSource? = null): NetworkController =
+            fromFile(File(path))
+
         private var bo : Long = 0
         private var nano: Long = 0
     }
@@ -54,6 +57,11 @@ public class NetworkController internal constructor(
     private val virtualMapping = mutableMapOf<Long, NodeId>()
 
     internal var instantSrc: NetworkInstantSrc = NetworkInstantSrc(instantSource)
+        private set
+
+    public fun setInstantSource(instantSource: InstantSource) {
+        instantSrc = NetworkInstantSrc(instantSource)
+    }
 
     public val currentInstant: Instant
         get() = instantSrc.instant()
@@ -80,17 +88,19 @@ public class NetworkController internal constructor(
         getNetInterfaceOf(INTERNET_ID)
             ?: throw IllegalStateException("network did not initialize the internet abstract node correctly")
 
-    private val claimedHostIds = mutableSetOf<NodeId>()
+    private val _claimedHostIds = mutableSetOf<NodeId>()
+    internal val claimedHostIds: Set<NodeId> get() = _claimedHostIds
+
     private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
 
 
     public fun claimNextHostNode(): NetNodeInterface? {
         val hostsById = network.getNodesById<HostNode>()
         return hostsById.keys
-            .filterNot { it in claimedHostIds }
+            .filterNot { it in _claimedHostIds }
             .firstOrNull()
             ?.let {
-                claimedHostIds.add(it)
+                _claimedHostIds.add(it)
                 getNetInterfaceOf(it)
             } ?: log.errAndNull("unable to claim host node, none available")
     }
@@ -99,7 +109,7 @@ public class NetworkController internal constructor(
         val coreSwitches = network.getNodesById<CoreSwitch>()
         return coreSwitches
             .keys
-            .filterNot { it in claimedHostIds }
+            .filterNot { it in _claimedHostIds }
             .firstOrNull()
             ?.let {
                 claimedCoreSwitchIds.add(it)
@@ -123,13 +133,13 @@ public class NetworkController internal constructor(
 
     public fun claimNode(nodeId: NodeId): NetNodeInterface? {
         // Check that node is not already claimed.
-        if (nodeId in claimedHostIds || nodeId in claimedCoreSwitchIds)
+        if (nodeId in _claimedHostIds || nodeId in claimedCoreSwitchIds)
             return log.errAndNull("unable to claim node nodeId $nodeId, nodeId already claimed")
 
         // If node is host.
         network.getNodesById<HostNode>()[nodeId]
             ?.let {
-                claimedHostIds.add(nodeId)
+                _claimedHostIds.add(nodeId)
                 return getNetInterfaceOf(nodeId)
             }
 
@@ -263,7 +273,7 @@ public class NetworkController internal constructor(
 //            network.launch() //TODO
             instantSrc.setInternalTime(netWorkload.peek().deadline)
             energyRecorder.reset()
-            claimedHostIds.clear()
+            _claimedHostIds.clear()
             claimedCoreSwitchIds.clear()
             virtualMapping.clear()
         }

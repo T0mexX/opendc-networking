@@ -1,11 +1,16 @@
 package org.opendc.simulator.network.api
 
 import org.opendc.simulator.network.components.Internet
-import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.Kbps
 
+
+
+/**
+ * Type alias for improved understandability.
+ */
+public typealias NodeId = Long
 
 /**
  * Interface that can be used by other modules

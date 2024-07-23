@@ -25,6 +25,11 @@ internal fun Logger.errAndNull(msg: String): Nothing? {
     return null
 }
 
+public fun Logger.warnAndNull(msg: String): Nothing? {
+    this.warn(msg)
+    return null
+}
+
 /**
  * TODO: remove
  * Logs [msg] as error and returns an instance of [Result.ERROR].

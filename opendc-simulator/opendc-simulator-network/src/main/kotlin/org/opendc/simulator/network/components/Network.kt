@@ -7,10 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.NonSerializable
@@ -26,12 +26,12 @@ import org.opendc.simulator.network.utils.withWarn
  * Interface representing a network of [Node]s.
  */
 @Serializable(with = NonSerializable::class)
-internal abstract class Network {
+public sealed class Network {
 
 
-    protected val validator = StabilityValidator()
+    internal val validator: StabilityValidator = StabilityValidator()
 
-    protected val networkScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val networkScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     /**
      * Maps [NodeId]s to their corresponding [Node]s, which are part of the [Network]
@@ -42,14 +42,14 @@ internal abstract class Network {
      * Maps [NodeId]s to their corresponding [EndPointNode]s, which are part of the [Network].
      * This map is a subset of [nodes].
      */
-    abstract val endPointNodes: Map<NodeId, EndPointNode>
+    internal abstract val endPointNodes: Map<NodeId, EndPointNode>
 
     /**
      * Maps flow ids to their corresponding [NetFlow].
      */
-    abstract val flowsById: MutableMap<FlowId, NetFlow>
+    internal abstract val flowsById: MutableMap<FlowId, NetFlow>
 
-    protected abstract val internet: Internet
+    internal abstract val internet: Internet
 
     internal var runnerJob: Job? = null
         private set
@@ -63,7 +63,7 @@ internal abstract class Network {
      * Starts a [NetFlow] if the flow can be established.
      * @param[flow] the flow to be established.
      */
-    suspend fun startFlow(flow: NetFlow): Result {
+    internal suspend fun startFlow(flow: NetFlow): Result {
         if (flow.desiredDataRate < 0)
             return log.errAndGet("Unable to start flow, data rate should be >= 0.")
 
@@ -85,7 +85,7 @@ internal abstract class Network {
      * Stops a [NetFlow] if the flow is running through the network.
      * @param[flowId]   id of the flow to be stopped.
      */
-    suspend fun stopFlow(flowId: FlowId): NetFlow? =
+    internal suspend fun stopFlow(flowId: FlowId): NetFlow? =
         flowsById[flowId]?.let { eToEFlow ->
             endPointNodes[eToEFlow.transmitterId]
                 ?.stopFlow(eToEFlow.id)
@@ -98,14 +98,14 @@ internal abstract class Network {
         } ?: log.withWarn(null, "unable to stop flow with id $flowId")
 
 
-    fun resetFlows() = runBlocking {
+    internal fun resetFlows() = runBlocking {
         flowsById.keys.toSet().forEach { stopFlow(it) }
     }
 
     /**
      * Returns a string with all [nodes] string representations, each in one line.
      */
-    fun allNodesToString(): String {
+    internal fun allNodesToString(): String {
         val sb = StringBuilder()
         nodes.forEach { sb.append("\n$it") }
         sb.append("\n")
@@ -113,11 +113,11 @@ internal abstract class Network {
         return sb.toString()
     }
 
-    fun advanceBy(ms: ms) {
+    internal fun advanceBy(ms: ms) {
         flowsById.values.forEach { it.advanceBy(ms) }
     }
 
-    suspend fun awaitStability() {
+    internal suspend fun awaitStability() {
         validator.awaitStability()
     }
 
@@ -136,10 +136,10 @@ internal abstract class Network {
     }
 
 
-    companion object {
+    internal companion object {
         private val log by logger()
 
-        inline fun <reified T: Node> Network.getNodesById(): Map<NodeId, T> {
+        internal inline fun <reified T: Node> Network.getNodesById(): Map<NodeId, T> {
             return this.nodes.values.filterIsInstance<T>().associateBy { it.id }
         }
     }
