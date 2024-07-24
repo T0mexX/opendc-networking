@@ -64,6 +64,7 @@ public class HostsProvisioningStep internal constructor(
                     machine,
                     hypervisor,
                     optimize = optimize,
+                    networkInterface = spec.networkInterface
                 )
 
             require(hosts.add(host)) { "Host with uid ${spec.uid} already exists" }
