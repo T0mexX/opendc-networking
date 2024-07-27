@@ -1,11 +1,14 @@
 package org.opendc.simulator.network.components
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMin
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
+import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
 
 /**
@@ -27,5 +30,20 @@ internal class CoreSwitch(
 
     override suspend fun run(invalidator: StabilityValidator.Invalidator?) {
         return super<EndPointNode>.run(invalidator)
+    }
+
+
+    /**
+     * Serializable representation of the specifics from which a core switch can be built.
+     * Core switches in [CustomNetwork]s are automatically connected to the internet.
+     */
+    @Serializable
+    @SerialName("core-switch-specs")
+    internal data class CoreSwitchSpecs (
+        val numOfPorts: Int,
+        val portSpeed: Kbps,
+        val id: NodeId? = null
+    ): Specs<CoreSwitch> {
+        override fun build(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts + 1)
     }
 }
