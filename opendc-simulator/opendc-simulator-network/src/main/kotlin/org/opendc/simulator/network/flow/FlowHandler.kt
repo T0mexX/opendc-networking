@@ -94,16 +94,18 @@ internal class FlowHandler(private val ports: Collection<Port>) {
         updtChl.send(updt)
     }
 
-    suspend fun Node.stopGeneratedFlow(fId: FlowId) {
+    suspend fun Node.stopGeneratedFlow(fId: FlowId): NetFlow? {
         val removedFlow = _generatedFlows.remove(fId)
             ?: let {
                 log.error("unable to stop generated flow with id $fId in node $this, " +
                     "flow is not present in the generated flows table")
-                return
+                return null
             }
 
         // Update to be processed by the node runner coroutine
         updtChl.send(  RateUpdt(fId, -removedFlow.demand)  )
+
+        return removedFlow
     }
 
     /**

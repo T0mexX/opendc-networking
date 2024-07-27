@@ -211,8 +211,8 @@ private enum class Cmd {
                 val flowId: FlowId = groups[1].toLongOrNull() ?: return@cmdJob cancelAfter { log.unableToParseId(groups[1]) }
 
                 env.network.stopFlow(flowId)
-                    ?.let { log.error("unable to stop flow.") }
-                    ?: log.info("flow successfully stopped")
+                    ?.let { log.info("flow successfully stopped") }
+                    ?: log.error("unable to stop flow.")
             }
     },
     NEW_LINK {
