@@ -1,5 +1,6 @@
 package org.opendc.simulator.network.api
 
+import kotlinx.coroutines.runBlocking
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
@@ -62,6 +63,8 @@ public data class NetworkSnapshot internal constructor(
 
         public fun NetworkController.snapshot(): NetworkSnapshot {
             val network = this.network
+
+            runBlocking { network.awaitStability() }
 
             return NetworkSnapshot(
                 instant = this.currentInstant,

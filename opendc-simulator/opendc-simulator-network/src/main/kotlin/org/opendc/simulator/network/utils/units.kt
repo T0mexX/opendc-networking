@@ -29,11 +29,20 @@ internal fun Double.roundTo0ifErr(err: Double = 0.00001): Double =
     else this
 
 private val dfltEpsilon: Double = 1.0e-05
-internal fun Double.approx(other: Double, epsilon: Double = dfltEpsilon ): Boolean =
+
+internal fun Double.approx(other: Double, epsilon: Double = dfltEpsilon): Boolean =
     this == other || abs(this - other) <= epsilon * max(abs(this), abs(other))
+
+internal infix fun Double.approx(other: Double): Boolean =
+    approx(other, epsilon = dfltEpsilon)
+
+
 
 internal fun Double.approxLarger(other: Double, epsilon: Double = dfltEpsilon): Boolean =
     (this - other) > epsilon * max(abs(this), abs(other))
+
+internal infix fun Double.approxLarger(other: Double): Boolean =
+    this.approxLarger(other, epsilon = dfltEpsilon)
 
 
 
