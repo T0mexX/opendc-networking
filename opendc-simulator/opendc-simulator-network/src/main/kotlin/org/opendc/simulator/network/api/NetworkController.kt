@@ -21,6 +21,8 @@ import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
+import org.opendc.simulator.network.utils.approx
+import org.opendc.simulator.network.utils.approxLarger
 import org.opendc.simulator.network.utils.errAndNull
 import org.slf4j.Logger
 import java.io.File
@@ -233,6 +235,7 @@ public class NetworkController(
     public fun sync() {
         if (instantSrc.isExternalSource) {
             val timeSpan = instantSrc.millis() - lastUpdate.toEpochMilli()
+            if (timeSpan == 0L) return
             advanceBy(timeSpan, suppressWarn = true)
         } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
     }
@@ -242,6 +245,8 @@ public class NetworkController(
     }
 
     public fun advanceBy(ms: ms, suppressWarn: Boolean = false) {
+        runBlocking { network.awaitStability() }
+
         if (instantSrc.isInternalSource)
             instantSrc.advanceTime(ms)
         else  if (!suppressWarn)
@@ -250,6 +255,7 @@ public class NetworkController(
 
         network.advanceBy(ms)
         energyRecorder.advanceBy(ms)
+        lastUpdate = instantSrc.instant()
     }
 
     public fun execWorkload(
@@ -303,6 +309,15 @@ public class NetworkController(
 
     override fun close() {
         network.runnerJob?.cancel()
+    }
+
+    private suspend fun checkFlowConsistency() {
+        network.awaitStability()
+
+        network.flowsById.values.forEach {
+            check(it.demand approxLarger it.throughput || it.demand approx it.throughput)
+            {" Inconsistent state: flow ${it.id} has demand=${it.demand} and throuput=${it.throughput}"}
+        }
     }
 }
 
