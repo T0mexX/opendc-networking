@@ -2,6 +2,7 @@ package org.opendc.simulator.network.flow
 
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.roundTo0ifErr
 import org.opendc.simulator.network.utils.withWarn
@@ -31,9 +32,8 @@ internal class OutFlow(
      */
     var demand: Kbps = .0
         set(value) {
-            if (value.roundTo0ifErr(0.00001) == .0) {
+            if (value approx .0) {
                 tryUpdtRate(.0)
-                return
             }
 
             with (unsFlowsTracker) { handlePropChange { field = value } }

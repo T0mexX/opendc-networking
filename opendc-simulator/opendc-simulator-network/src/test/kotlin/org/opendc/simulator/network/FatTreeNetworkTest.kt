@@ -29,7 +29,7 @@ class FatTreeNetworkTest: FunSpec({
 
         File("src/test/resources/fat-tree-network/specs-k4-override-layer.json").let { testFile ->
             context("convert json with per layer switch specs").config(enabled = testFile.exists()) {
-                shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).buildFromSpecs() }
+                shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).build() }
             }
         }
     }
@@ -42,7 +42,7 @@ class FatTreeNetworkTest: FunSpec({
 //            SwitchSpecs(numOfPorts = 10, portSpeed = .0)
         ) { switchSpecs ->
             val k: Int = switchSpecs.numOfPorts
-            val fatTree: FatTreeNetwork = FatTreeTopologySpecs(switchSpecs = switchSpecs).buildFromSpecs()
+            val fatTree: FatTreeNetwork = FatTreeTopologySpecs(switchSpecs = switchSpecs).build()
             fatTree.pods.size shouldBeExactly k
             fatTree.leafs.size shouldBeExactly (k / 2).toDouble().pow(2).toInt() * k
             fatTree.torSwitches.size shouldBeExactly k * k / 2

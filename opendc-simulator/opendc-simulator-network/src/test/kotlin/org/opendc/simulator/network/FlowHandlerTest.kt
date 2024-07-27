@@ -9,23 +9,26 @@ import io.kotest.property.Arb
 import io.kotest.property.arbitrary.bind
 import io.kotest.property.arbitrary.double
 import io.kotest.property.arbitrary.int
+import io.kotest.property.arbitrary.long
 import io.kotest.property.arbitrary.next
 import io.kotest.property.checkAll
 import kotlinx.coroutines.runBlocking
 import org.opendc.simulator.network.components.CoreSwitch
-import org.opendc.simulator.network.components.NodeConnectionExt.connect
 import org.opendc.simulator.network.components.Switch
-import org.opendc.simulator.network.components.internalstructs.FlowHandler
+import org.opendc.simulator.network.components.connect
+import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
+import org.opendc.simulator.network.flow.OutFlow
+import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
 
 class FlowHandlerTest: FunSpec({
 
     /**
-     * Each [FlowHandler.OutFlow] stores its rates per port
-     * ([FlowHandler.OutFlow.outRatesByPort]) itself instead of fetching from the
+     * Each [OutFlow] stores its rates per port
+     * ([OutFlow.outRatesByPort]) itself instead of fetching from the
      * link table for performance reasons. Each OutFlow table is a fraction
      * of the number of ports of the node, usually 1-4. The link table can have
      * hundreds ot thousands of entries. This redundancy needs to remain consistent.
@@ -38,8 +41,8 @@ class FlowHandlerTest: FunSpec({
             Arb.int(50..1000),
             Arb.int(2..10)
         ) { numOfFlows, numOfUpdts, numOfInBetweenSwitches ->
-            val arbFlowId = Arb.int(0..<numOfFlows)
-            val rateTracker: MutableMap<FlowId, Kbps> = (0..<numOfFlows).associateWith { .0 }.toMutableMap()
+            val arbFlowId = Arb.long(0L..<numOfFlows)
+            val rateTracker: MutableMap<FlowId, Kbps> = (0L..<numOfFlows).associateWith { .0 }.toMutableMap()
             val updts = buildList {
                 (1..numOfUpdts).forEach { _ ->
                     val fId = arbFlowId.next()
@@ -54,6 +57,7 @@ class FlowHandlerTest: FunSpec({
         }
 
         checkAll(iterations = 5, testDataGenerator) { testData ->
+            NetFlow.reset()
             val sender = CoreSwitch(id = -1, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = 10000.0)
             val receiver = CoreSwitch(id = -2, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = 10000.0)
             val inBetweenSwitches = buildList {
@@ -61,19 +65,18 @@ class FlowHandlerTest: FunSpec({
                     add(Switch(id = id, numOfPorts = 2, portSpeed = 1000.0))
                 }
             }
-            StaticECMP.eToEFlows = buildMap {
-                (0..<testData.numOfFlows).forEach { id -> put(id, NetFlow(id, sender.id, receiver.id)) }
-            }
+
+            repeat(testData.numOfFlows + 1) { NetFlow(transmitterId = sender.id, destinationId = receiver.id) }
 
             inBetweenSwitches.forEach { it.connect(sender); it.connect(receiver) }
             val fh: FlowHandler = sender.flowHandler
-            val nFlows: Map<FlowId, FlowHandler.OutFlow> = fh.outgoingFlows
+            val nFlows: Map<FlowId, OutFlow> = fh.outgoingFlows
 
 //            // Adds the flows to the outgoing flows table by updates of .0 rate.
 //            // The purpose of this test is not to test whether th update mechanism works.
 //            with(fh) { sender.updtFlows(  (0..<testData.numOfFlows).associateWith { .0 }  ) }
 
-            suspend fun FlowHandler.OutFlow?.isConsistent(id: FlowId) {
+            suspend fun OutFlow?.isConsistent(id: FlowId) {
                 context("rate in the OutFlow table should match the rate on the Link") {
                     this@isConsistent?.let {
                         outRatesByPort.forEach { (port, rate) ->
@@ -98,7 +101,7 @@ class FlowHandlerTest: FunSpec({
 
             testData.flowUpdts.forEach { (fId, deltaRate) ->
                 runBlocking {
-                    with(fh) { sender.updtFlows( mapOf(fId to deltaRate) ) }
+                    with(fh) { sender.updtFlows( RateUpdt(fId to deltaRate) ) }
                 }
                 nFlows[fId].isConsistent(fId)
             }
