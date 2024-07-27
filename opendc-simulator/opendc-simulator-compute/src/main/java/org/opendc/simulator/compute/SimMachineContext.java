@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import org.opendc.simulator.compute.workload.SimWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A simulated execution context in which a bootable image runs.
@@ -62,6 +63,7 @@ public interface SimMachineContext {
      * Return the network interfaces available to the workload.
      */
     List<? extends SimNetworkInterface> getNetworkInterfaces();
+    NetworkInterface getNetworkInterface();
 
     /**
      * Return the storage devices available to the workload.

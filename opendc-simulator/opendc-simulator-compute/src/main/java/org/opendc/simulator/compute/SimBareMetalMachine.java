@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
 import org.opendc.simulator.compute.model.ProcessingUnit;
@@ -34,6 +36,7 @@ import org.opendc.simulator.compute.workload.SimWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.InPort;
 import org.opendc.simulator.flow2.Inlet;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A simulated bare-metal machine that is able to run a single workload.
@@ -43,6 +46,9 @@ import org.opendc.simulator.flow2.Inlet;
  * example, the class expects only a single concurrent call to {@link #startWorkload(SimWorkload, Map, Consumer)} )}.
  */
 public final class SimBareMetalMachine extends SimAbstractMachine {
+    private final @Nullable NetworkInterface netIface;
+    @Override public @Nullable NetworkInterface getNetworkInterface() { return netIface; }
+
     /**
      * The {@link FlowGraph} in which the simulation takes places.
      */
@@ -69,9 +75,14 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
      * @param model The machine model to simulate.
      * @param psuFactory The {@link SimPsuFactory} to construct the power supply of the machine.
      */
-    private SimBareMetalMachine(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory) {
+    private SimBareMetalMachine(FlowGraph graph,
+                                MachineModel model,
+                                SimPsuFactory psuFactory,
+                                @Nullable NetworkInterface netIface
+    ) {
         super(model);
 
+        this.netIface = netIface;
         this.graph = graph;
         this.psu = psuFactory.newPsu(this, graph);
 
@@ -107,7 +118,10 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
      * @param psuFactory The {@link SimPsuFactory} to construct the power supply of the machine.
      */
     public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory) {
-        return new SimBareMetalMachine(graph, model, psuFactory);
+        return new SimBareMetalMachine(graph, model, psuFactory, /* networkInterface */ null);
+    }
+    public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory, NetworkInterface netIface) {
+        return new SimBareMetalMachine(graph, model, psuFactory, netIface);
     }
 
     /**
@@ -117,8 +131,12 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
      * @param model The machine model to simulate.
      */
     public static SimBareMetalMachine create(FlowGraph graph, MachineModel model) {
-        return new SimBareMetalMachine(graph, model, SimPsuFactories.noop());
+        return new SimBareMetalMachine(graph, model, SimPsuFactories.noop(), /* networkInterface */ null);
     }
+    public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, NetworkInterface netIface) {
+        return new SimBareMetalMachine(graph, model, SimPsuFactories.noop(), netIface);
+    }
+
 
     /**
      * Return the {@link SimPsu} belonging to this bare metal machine.
@@ -207,6 +225,7 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
         private final Memory memory;
         private final List<NetworkAdapter> net;
         private final List<StorageDevice> disk;
+        private final NetworkInterface netIface;
 
         private Context(
                 SimBareMetalMachine machine,
@@ -215,12 +234,16 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
                 Consumer<Exception> completion) {
             super(machine, workload, meta, completion);
 
+            this.netIface = machine.netIface;
             this.graph = machine.graph;
             this.cpus = machine.cpus;
             this.memory = machine.memory;
             this.net = machine.net;
             this.disk = machine.disk;
         }
+
+        @Override
+        public NetworkInterface getNetworkInterface() { return netIface; }
 
         @Override
         public FlowGraph getGraph() {

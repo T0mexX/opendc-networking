@@ -28,11 +28,14 @@ import java.util.function.Consumer;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
 import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A generic machine that is able to execute {@link SimWorkload} objects.
  */
 public interface SimMachine {
+    NetworkInterface getNetworkInterface();
+
     /**
      * Return the model of the machine containing its specifications.
      */

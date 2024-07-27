@@ -24,12 +24,18 @@ package org.opendc.simulator.compute.workload;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.SimMachineContext;
 import org.opendc.simulator.compute.SimProcessingUnit;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.FlowStage;
 import org.opendc.simulator.flow2.FlowStageLogic;
 import org.opendc.simulator.flow2.OutPort;
+import org.opendc.simulator.network.api.NetworkController;
+import org.opendc.simulator.network.api.NetworkInterface;
+import org.opendc.simulator.network.flow.NetFlow;
 
 /**
  * A workload trace that describes the resource utilization over time in a collection of {@link SimTraceFragment}s.
@@ -38,6 +44,8 @@ public final class SimTrace {
     private final double[] usageCol;
     private final long[] deadlineCol;
     private final int[] coresCol;
+    private final double @Nullable [] netTxKbpsCol;
+    private final double @Nullable [] netRxKbpsCol;
     private final int size;
 
     /**
@@ -48,7 +56,12 @@ public final class SimTrace {
      * @param coresCol The column containing the utilized cores.
      * @param size The number of fragments in the trace.
      */
-    private SimTrace(double[] usageCol, long[] deadlineCol, int[] coresCol, int size) {
+    private SimTrace(double[] usageCol,
+                     long[] deadlineCol,
+                     int[] coresCol,
+                     double @Nullable [] netTxKbpsCol,
+                     double @Nullable [] netRxKbpsCol,
+                     int size) {
         if (size < 0) {
             throw new IllegalArgumentException("Invalid trace size");
         } else if (usageCol.length < size) {
@@ -57,11 +70,17 @@ public final class SimTrace {
             throw new IllegalArgumentException("Invalid number of deadline entries");
         } else if (coresCol.length < size) {
             throw new IllegalArgumentException("Invalid number of core entries");
+        } else if (netTxKbpsCol != null && netTxKbpsCol.length < size) {
+            throw new IllegalArgumentException("Invalid number of netTx entries");
+        } else if (netRxKbpsCol != null && netRxKbpsCol.length < size) {
+            throw new IllegalArgumentException("Invalid number of netRx entries");
         }
 
         this.usageCol = usageCol;
         this.deadlineCol = deadlineCol;
         this.coresCol = coresCol;
+        this.netTxKbpsCol = netTxKbpsCol;
+        this.netRxKbpsCol = netRxKbpsCol;
         this.size = size;
     }
 
@@ -80,7 +99,7 @@ public final class SimTrace {
      * //     * @param offset The offset for the timestamps.
      */
     public SimWorkload createWorkload(long start, long checkpointTime, long checkpointWait) {
-        return new Workload(start, usageCol, deadlineCol, coresCol, size, 0, checkpointTime, checkpointWait);
+        return new Workload(start, usageCol, deadlineCol, coresCol, netTxKbpsCol, netRxKbpsCol, size, 0, checkpointTime, checkpointWait);
     }
 
     /**
@@ -134,6 +153,9 @@ public final class SimTrace {
         private double[] usageCol;
         private long[] deadlineCol;
         private int[] coresCol;
+        private double[] netTxKbpsCol;
+        private double[] netRxKbpsCol;
+        private boolean hasNetworking = false;
 
         private int size;
         private boolean isBuilt;
@@ -145,6 +167,8 @@ public final class SimTrace {
             this.usageCol = new double[initialCapacity];
             this.deadlineCol = new long[initialCapacity];
             this.coresCol = new int[initialCapacity];
+            this.netTxKbpsCol = new double[initialCapacity];
+            this.netRxKbpsCol = new double[initialCapacity];
         }
 
         /**
@@ -171,7 +195,25 @@ public final class SimTrace {
             usageCol[size] = usage;
             coresCol[size] = cores;
 
+            // If never set with add overloaded method with netTx and netRx
+            // params then the arrays are discarded upon trace creation.
+            netTxKbpsCol[size] = 0;
+            netRxKbpsCol[size] = 0;
+
             this.size++;
+        }
+        public void add(long deadline, double usage, int cores, double netTxKbps, double netRxKbps) {
+            if (netTxKbps < 0d || netRxKbps < 0d)
+                throw new IllegalArgumentException("network transmit and receive should be positive values");
+
+            add(deadline, usage, cores);
+            // size index has been incremented in above line.
+            netTxKbpsCol[size - 1] = netTxKbps;
+            netRxKbpsCol[size - 1] = netRxKbps;
+
+            // determines if the netTx and netRx
+            // arrays are used to create the trace instance.
+            hasNetworking = true;
         }
 
         /**
@@ -179,7 +221,10 @@ public final class SimTrace {
          */
         public SimTrace build() {
             isBuilt = true;
-            return new SimTrace(usageCol, deadlineCol, coresCol, size);
+            if (hasNetworking)
+                return new SimTrace(usageCol, deadlineCol, coresCol, netTxKbpsCol, netRxKbpsCol, size);
+            else
+                return new SimTrace(usageCol, deadlineCol, coresCol, null, null, size);
         }
 
         /**
@@ -192,6 +237,8 @@ public final class SimTrace {
             usageCol = Arrays.copyOf(usageCol, newSize);
             deadlineCol = Arrays.copyOf(deadlineCol, newSize);
             coresCol = Arrays.copyOf(coresCol, newSize);
+            netTxKbpsCol = Arrays.copyOf(netTxKbpsCol, newSize);
+            netRxKbpsCol = Arrays.copyOf(netRxKbpsCol, newSize);
         }
 
         /**
@@ -206,6 +253,8 @@ public final class SimTrace {
             usageCol = usageCol.clone();
             deadlineCol = deadlineCol.clone();
             coresCol = coresCol.clone();
+            netTxKbpsCol = netTxKbpsCol.clone();
+            netRxKbpsCol = netRxKbpsCol.clone();
         }
     }
 
@@ -221,6 +270,9 @@ public final class SimTrace {
         private final double[] usageCol;
         private final long[] deadlineCol;
         private final int[] coresCol;
+        private final double @Nullable [] netTxKbpsCol;
+        private final double @Nullable [] netRxKbpsCol;
+
         private final int size;
         private final int index;
 
@@ -233,6 +285,8 @@ public final class SimTrace {
                 double[] usageCol,
                 long[] deadlineCol,
                 int[] coresCol,
+                double @Nullable [] netTxColKbps,
+                double @Nullable [] netRxColKbps,
                 int size,
                 int index,
                 long checkpointTime,
@@ -241,6 +295,8 @@ public final class SimTrace {
             this.usageCol = usageCol;
             this.deadlineCol = deadlineCol;
             this.coresCol = coresCol;
+            this.netTxKbpsCol = netTxColKbps;
+            this.netRxKbpsCol = netRxColKbps;
             this.size = size;
             this.index = index;
             this.checkpointTime = checkpointTime;
@@ -256,9 +312,9 @@ public final class SimTrace {
         public void onStart(SimMachineContext ctx) {
             final WorkloadStageLogic logic;
             if (ctx.getCpus().size() == 1) {
-                logic = new SingleWorkloadLogic(ctx, offset, usageCol, deadlineCol, size, index);
+                logic = new SingleWorkloadLogic(ctx, offset, usageCol, deadlineCol, netTxKbpsCol, netRxKbpsCol, size, index);
             } else {
-                logic = new MultiWorkloadLogic(ctx, offset, usageCol, deadlineCol, coresCol, size, index);
+                logic = new MultiWorkloadLogic(ctx, offset, usageCol, deadlineCol, coresCol, netTxKbpsCol, netRxKbpsCol, size, index);
             }
             this.logic = logic;
         }
@@ -282,7 +338,7 @@ public final class SimTrace {
                 index = logic.getIndex();
             }
 
-            return new Workload(start, usageCol, deadlineCol, coresCol, size, index, checkpointTime, checkpointWait);
+            return new Workload(start, usageCol, deadlineCol, coresCol, netTxKbpsCol, netRxKbpsCol, size, index, checkpointTime, checkpointWait);
         }
     }
 
@@ -312,17 +368,33 @@ public final class SimTrace {
         private final long workloadOffset;
         private final double[] cpuUsages;
         private final long[] deadlines;
+
+        private final double @Nullable [] netTxKbpsCol;
+        private final double @Nullable [] netRxKbpsCol;
+        private final @Nullable NetFlow txFlow;
+        private final @Nullable NetFlow rxFlow;
+
         private final int traceSize;
 
         private final SimMachineContext ctx;
 
         private SingleWorkloadLogic(
-                SimMachineContext ctx, long offset, double[] usageCol, long[] deadlineCol, int size, int index) {
+            SimMachineContext ctx,
+            long offset,
+            double[] usageCol,
+            long[] deadlineCol,
+            double @Nullable [] netTxKbpsCol,
+            double @Nullable [] netRxKbpsCol,
+            int size,
+            int index
+        ) {
             this.ctx = ctx;
             this.workloadOffset = offset;
             this.cpuUsages = usageCol;
             this.deadlines = deadlineCol;
             this.traceSize = size;
+            this.netTxKbpsCol = netTxKbpsCol;
+            this.netRxKbpsCol = netRxKbpsCol;
             this.index = index;
 
             final FlowGraph graph = ctx.getGraph();
@@ -333,6 +405,22 @@ public final class SimTrace {
             final SimProcessingUnit cpu = cpus.get(0);
             final OutPort output = stage.getOutlet("cpu");
             this.output = output;
+
+            // If networking columns are defined.
+            if (netRxKbpsCol != null && netTxKbpsCol != null) {
+                // Network interface provided by the context, to which
+                // is provided by the machine (vm or baremetal, in this case vm)
+                final @Nullable NetworkInterface netIface = ctx.getNetworkInterface();
+//                if (netIface == null) NetworkController.Companion.getLog().warn(
+//                    "workload has network columns defined but context does not provide a network interface"
+//                );
+
+                // If network interface is provided by context then start flows (to/from internet).
+                txFlow = netIface == null ? null : netIface.startFlow(); // default destination = INTERNET
+                rxFlow = netIface == null ? null : netIface.fromInternet();
+
+            // If networking columns are not defined.
+            } else { txFlow = null; rxFlow = null; }
 
             graph.connect(output, cpu.getInput());
         }
@@ -350,6 +438,10 @@ public final class SimTrace {
                 }
                 deadline = this.deadlines[this.index];
             }
+
+            // If transmit and receive flows (to / from internet) are defined then update.
+            if (txFlow != null) txFlow.setDemand(Objects.requireNonNull(netTxKbpsCol)[index]);
+            if (rxFlow != null) rxFlow.setDemand(Objects.requireNonNull(netRxKbpsCol)[index]);
 
             this.output.push((float) this.cpuUsages[this.index]);
             return deadline + this.workloadOffset;
@@ -391,6 +483,8 @@ public final class SimTrace {
         private final double[] usageCol;
         private final long[] deadlineCol;
         private final int[] coresCol;
+        private final double @Nullable [] netTxKbpsCol;
+        private final double @Nullable [] netRxKbpsCol;
         private final int traceSize;
 
         private final SimMachineContext ctx;
@@ -401,6 +495,8 @@ public final class SimTrace {
                 double[] usageCol,
                 long[] deadlineCol,
                 int[] coresCol,
+                double @Nullable [] netTxKbpsCol,
+                double @Nullable [] netRxKbpsCol,
                 int traceSize,
                 int index) {
             this.ctx = ctx;
@@ -408,6 +504,8 @@ public final class SimTrace {
             this.usageCol = usageCol;
             this.deadlineCol = deadlineCol;
             this.coresCol = coresCol;
+            this.netTxKbpsCol = netTxKbpsCol;
+            this.netRxKbpsCol = netRxKbpsCol;
             this.traceSize = traceSize;
             this.index = index;
 

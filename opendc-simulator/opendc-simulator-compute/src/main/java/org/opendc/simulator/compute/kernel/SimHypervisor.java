@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.SimAbstractMachine;
 import org.opendc.simulator.compute.SimMachine;
 import org.opendc.simulator.compute.SimMachineContext;
@@ -57,6 +59,7 @@ import org.opendc.simulator.flow2.OutHandler;
 import org.opendc.simulator.flow2.OutPort;
 import org.opendc.simulator.flow2.mux.FlowMultiplexer;
 import org.opendc.simulator.flow2.mux.FlowMultiplexerFactory;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A SimHypervisor facilitates the execution of multiple concurrent {@link SimWorkload}s, while acting as a single
@@ -156,7 +159,14 @@ public final class SimHypervisor implements SimWorkload {
             throw new IllegalArgumentException("Machine does not fit");
         }
 
-        VirtualMachine vm = new VirtualMachine(model);
+        VirtualMachine vm;
+        NetworkInterface hvNetIface = activeContext.ctx.getNetworkInterface();
+        if (hvNetIface != null)
+            vm = new VirtualMachine(model, hvNetIface.getSubInterface());
+        else
+            vm = new VirtualMachine(model);
+
+
         vms.add(vm);
         return vm;
     }
@@ -429,12 +439,24 @@ public final class SimHypervisor implements SimWorkload {
      * A virtual machine running on the hypervisor.
      */
     private class VirtualMachine extends SimAbstractMachine implements SimVirtualMachine {
+        private final @Nullable NetworkInterface netIface;
+
         private boolean isClosed;
         private final VmCounters counters = new VmCounters(this);
 
+        private VirtualMachine(MachineModel model, NetworkInterface netIface) {
+            super(model);
+
+            netIface.setOwner(this.toString());
+            this.netIface = netIface;
+        }
         private VirtualMachine(MachineModel model) {
             super(model);
+            this.netIface = null;
         }
+
+        @Override
+        public @Nullable NetworkInterface getNetworkInterface() { return netIface; }
 
         @Override
         public SimHypervisorCounters getCounters() {
@@ -630,6 +652,9 @@ public final class SimHypervisor implements SimWorkload {
                 disk.add(new SimAbstractMachine.StorageDevice(graph, device, diskIndex++));
             }
         }
+
+        @Override
+        public @Nullable NetworkInterface getNetworkInterface() { return context.ctx.getNetworkInterface(); }
 
         /**
          * Update the performance counters of the virtual machine.

@@ -6,10 +6,10 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.Kbps
 
-internal class NetNodeInterfaceImpl(
+internal class NetworkInterfaceImpl(
     private val node: EndPointNode,
     private val netController: NetworkController
-): NetNodeInterface {
+): NetworkInterface {
 
     override val nodeId: NodeId = node.id
 

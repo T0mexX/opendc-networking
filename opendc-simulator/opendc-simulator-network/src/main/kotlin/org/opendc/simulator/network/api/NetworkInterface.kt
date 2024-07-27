@@ -16,7 +16,7 @@ public typealias NodeId = Long
  * Interface that can be used by other modules
  * to control the networking of a single node.
  */
-public interface NetNodeInterface {
+public interface NetworkInterface {
 
     /**
      * Physical id associated with this node.
