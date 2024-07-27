@@ -39,14 +39,14 @@ val serializationVersion = "1.6.0"
 
 dependencies {
     api(projects.opendcSimulator.opendcSimulatorFlow)
+    implementation("io.github.microutils:kotlin-logging-jvm:$kLoggingVersion")
+    implementation("ch.qos.logback:logback-classic:$logBackVersion")
     implementation(projects.opendcTrace.opendcTraceApiNew)
     implementation(libs.progressbar)
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
     implementation(projects.opendcSimulator.opendcSimulatorCore)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
-    implementation("io.github.microutils:kotlin-logging-jvm:$kLoggingVersion")
-    implementation("ch.qos.logback:logback-classic:$logBackVersion")
     implementation(libs.clikt)
 
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")

@@ -17,9 +17,10 @@ public data class NetworkSnapshot internal constructor(
     public val totEnergyConsumpt: Watts
 ) {
     public fun fmt(flags: Int = ALL): String {
-        val colWidth = 15
+        val colWidth = 25
 
         val firstLine = buildString {
+            appendLine()
             flags.withFlagSet(INSTANT) { append("instant".padEnd(colWidth)) }
             flags.withFlagSet(NODES) { append("nodes".padEnd(colWidth)) }
             flags.withFlagSet(HOST_NODES) { append("hosts (assigned)".padEnd(colWidth)) }
@@ -69,7 +70,7 @@ public data class NetworkSnapshot internal constructor(
                 assignedHostNodes = this.claimedHostIds.size,
                 numOfCoreSwitches = network.getNodesById<CoreSwitch>().size,
                 numOfFlows = network.flowsById.size,
-                avrgThroughputPerc = network.flowsById.values.let { fs -> fs.sumOf { it.throughput } / fs.sumOf { it.desiredDataRate } },
+                avrgThroughputPerc = network.flowsById.values.let { fs -> fs.sumOf { it.throughput } / fs.sumOf { it.demand } },
                 totEnergyConsumpt = this.energyRecorder.totalConsumption
             )
         }

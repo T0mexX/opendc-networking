@@ -156,7 +156,7 @@ public class SimHost(
         guests.computeIfAbsent(server) { key ->
             require(canFit(key)) { "Server does not fit" }
 
-            val machine = hypervisor.newMachine(key.flavor.toMachineModel())
+        val machine = hypervisor.newMachine(key.flavor.toMachineModel())
             val newGuest =
                 Guest(
                     clock,

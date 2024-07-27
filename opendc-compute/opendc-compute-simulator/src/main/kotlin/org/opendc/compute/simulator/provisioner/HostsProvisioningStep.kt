@@ -52,7 +52,8 @@ public class HostsProvisioningStep internal constructor(
         val hosts = mutableSetOf<SimHost>()
 
         for (spec in specs) {
-            val machine = SimBareMetalMachine.create(graph, spec.model, spec.psuFactory)
+            println("netIface: ${spec.netIface}")
+            val machine = SimBareMetalMachine.create(graph, spec.model, spec.psuFactory, spec.netIface)
             val hypervisor = SimHypervisor.create(spec.multiplexerFactory, SplittableRandom(ctx.seeder.nextLong()))
 
             val host =
@@ -64,7 +65,6 @@ public class HostsProvisioningStep internal constructor(
                     machine,
                     hypervisor,
                     optimize = optimize,
-                    networkInterface = spec.networkInterface
                 )
 
             require(hosts.add(host)) { "Host with uid ${spec.uid} already exists" }

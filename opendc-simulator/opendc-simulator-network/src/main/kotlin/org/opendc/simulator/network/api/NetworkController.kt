@@ -70,7 +70,6 @@ public class NetworkController(
 
     init {
         instantSource?.let { lastUpdate = it.instant() }
-        StaticECMP.eToEFlows = network.flowsById
 
         network.launch()
         log.info(buildString {
@@ -84,7 +83,7 @@ public class NetworkController(
     public val energyRecorder: NetworkEnergyRecorder =
         NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
 
-    public val internetNetworkInterface: NetNodeInterface =
+    public val internetNetworkInterface: NetworkInterface =
         getNetInterfaceOf(INTERNET_ID)
             ?: throw IllegalStateException("network did not initialize the internet abstract node correctly")
 
@@ -94,7 +93,7 @@ public class NetworkController(
     private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
 
 
-    public fun claimNextHostNode(): NetNodeInterface? {
+    public fun claimNextHostNode(): NetworkInterface? {
         val hostsById = network.getNodesById<HostNode>()
         return hostsById.keys
             .filterNot { it in _claimedHostIds }
@@ -105,7 +104,7 @@ public class NetworkController(
             } ?: log.errAndNull("unable to claim host node, none available")
     }
 
-    public fun claimNextCoreNode(): NetNodeInterface? {
+    public fun claimNextCoreNode(): NetworkInterface? {
         val coreSwitches = network.getNodesById<CoreSwitch>()
         return coreSwitches
             .keys
@@ -128,10 +127,10 @@ public class NetworkController(
         virtualMapping[from] = to
     }
 
-    public fun claimNode(uuid: UUID): NetNodeInterface? =
+    public fun claimNode(uuid: UUID): NetworkInterface? =
         claimNode(uuid.node())
 
-    public fun claimNode(nodeId: NodeId): NetNodeInterface? {
+    public fun claimNode(nodeId: NodeId): NetworkInterface? {
         // Check that node is not already claimed.
         if (nodeId in _claimedHostIds || nodeId in claimedCoreSwitchIds)
             return log.errAndNull("unable to claim node nodeId $nodeId, nodeId already claimed")
@@ -169,7 +168,7 @@ public class NetworkController(
                 transmitterId = mappedTransmitterId,
                 destinationId = mappedDestId,
                 id = flowId,
-                desiredDataRate = desiredDataRate,
+                demand = desiredDataRate,
             )
 
         dataRateOnChangeHandler?.let {
@@ -212,7 +211,7 @@ public class NetworkController(
         return network.flowsById.values.find {
             it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
         } ?. let {
-            it.setDesiredDataRate(desiredDataRate)
+            it.setDemand(desiredDataRate)
             if (dataRateOnChangeHandler != null) it.withThroughputOnChangeHandler(dataRateOnChangeHandler)
 
             it
@@ -227,9 +226,9 @@ public class NetworkController(
     public suspend fun stopFlow(flowId: FlowId): NetFlow? =
         network.stopFlow(flowId)
 
-    private fun getNetInterfaceOf(nodeId: NodeId): NetNodeInterface? =
+    private fun getNetInterfaceOf(nodeId: NodeId): NetworkInterface? =
         network.endPointNodes[nodeId]?.let {
-            NetNodeInterfaceImpl(it, this)
+            NetworkInterface(node = it, netController = this, owner = "physical node $nodeId")
         } ?: log.errAndNull("unable to retrieve network interface, " +
                 "node does not exist or does not provide an interface")
 

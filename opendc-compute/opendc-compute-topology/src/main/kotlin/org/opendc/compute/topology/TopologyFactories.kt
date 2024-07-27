@@ -34,9 +34,8 @@ import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
 import org.opendc.simulator.compute.power.getPowerModel
-import org.opendc.simulator.network.api.NetNodeInterface
+import org.opendc.simulator.network.api.NetworkInterface
 import org.opendc.simulator.network.api.NetworkController
-import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.utils.warnAndNull
 import java.io.File
 import java.io.InputStream
@@ -149,7 +148,7 @@ private fun HostJSONSpec.toHostsSpecs(
             val powerModel =
                 getPowerModel(powerModel.modelType, powerModel.power, powerModel.maxPower, powerModel.idlePower)
 
-            val networkInterface: NetNodeInterface? =
+            val networkInterface: NetworkInterface? =
                 // networkController != null  => network specifications were provided and network simulation is requested.
                 networkController?.let { controller ->
                     // The id specified in the "nodeIds" property in the Host JSON schema if any.
@@ -157,9 +156,9 @@ private fun HostJSONSpec.toHostsSpecs(
                     jsonNodeId?.let jsonIdTry@{
                         // The network interface of the node with id corresponding to jsonNodeId if exists.
                         controller.claimNode(nodeId = it)
-                            ?: NetworkController.log.warnAndNull("nodeId $it provided in JSON topology file " +
-                                "does not correspond to any node id of the network defined in the 'networkFile' property (or duplicate ids are provided)." +
-                                "Falling back to first unclaimed host node (might cause a chain of claiming each other node ids)")
+//                            ?: NetworkController.log.warnAndNull("nodeId $it provided in JSON topology file " +
+//                                "does not correspond to any node id of the network defined in the 'networkFile' property (or duplicate ids are provided)." +
+//                                "Falling back to first unclaimed host node (might cause a chain of claiming each other node ids)")
                     }
                         // The network interface of any unclaimed host node in the network.
                         ?: controller.claimNextHostNode()
@@ -179,7 +178,7 @@ private fun HostJSONSpec.toHostsSpecs(
                     mapOf("cluster" to clusterId),
                     machineModel,
                     SimPsuFactories.simple(powerModel),
-                    networkInterface = networkInterface
+                    netIface = networkInterface
                 )
             )
         }

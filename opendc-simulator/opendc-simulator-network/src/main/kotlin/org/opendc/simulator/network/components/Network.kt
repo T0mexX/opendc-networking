@@ -7,12 +7,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.NonSerializable
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.Result
@@ -64,7 +66,7 @@ public sealed class Network {
      * @param[flow] the flow to be established.
      */
     internal suspend fun startFlow(flow: NetFlow): Result {
-        if (flow.desiredDataRate < 0)
+        if (flow.demand < 0)
             return log.errAndGet("Unable to start flow, data rate should be >= 0.")
 
         val sender: EndPointNode = endPointNodes[flow.transmitterId]

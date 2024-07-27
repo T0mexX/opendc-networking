@@ -196,7 +196,7 @@ private enum class Cmd {
 
                 val newFLow = NetFlow(
                     id = IdDispenser.nextFlowId,
-                    desiredDataRate = dataRate,
+                    demand = dataRate,
                     transmitterId = senderId,
                     destinationId = destId,
                 )
@@ -278,7 +278,7 @@ private enum class Cmd {
                         flow.id.toString().padEnd(5) +
                             flow.transmitterId.toString().padEnd(10) +
                             flow.destinationId.toString().padEnd(10) +
-                            flow.desiredDataRate.toString().padEnd(20) +
+                            flow.demand.toString().padEnd(20) +
                             flow.throughput.toString().padEnd(20)
                     )
                 }

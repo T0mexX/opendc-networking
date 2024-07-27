@@ -26,6 +26,7 @@ import org.opendc.simulator.compute.SimPsuFactories
 import org.opendc.simulator.compute.SimPsuFactory
 import org.opendc.simulator.compute.model.MachineModel
 import org.opendc.simulator.flow2.mux.FlowMultiplexerFactory
+import org.opendc.simulator.network.api.NetworkInterface
 import java.util.UUID
 
 /**
@@ -45,4 +46,6 @@ public data class HostSpec(
     val model: MachineModel,
     val psuFactory: SimPsuFactory = SimPsuFactories.noop(),
     val multiplexerFactory: FlowMultiplexerFactory = FlowMultiplexerFactory.maxMinMultiplexer(),
+
+    val netIface: NetworkInterface? = null
 )

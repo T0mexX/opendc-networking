@@ -29,6 +29,7 @@ import org.opendc.compute.service.ComputeService
 import org.opendc.compute.service.scheduler.ComputeScheduler
 import org.opendc.compute.telemetry.ComputeMonitor
 import org.opendc.compute.topology.specs.HostSpec
+import org.opendc.simulator.network.api.NetworkController
 import java.time.Duration
 
 /**
@@ -79,3 +80,7 @@ public fun setupHosts(
 ): ProvisioningStep {
     return HostsProvisioningStep(serviceDomain, specs, optimize)
 }
+
+public fun setUpNetwork(
+    networkController: NetworkController?
+): ProvisioningStep = NetworkProvisioningStep(networkController)

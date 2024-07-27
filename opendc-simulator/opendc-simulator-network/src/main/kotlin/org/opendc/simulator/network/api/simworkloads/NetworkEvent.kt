@@ -69,7 +69,7 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
     ): NetworkEvent() {
         override suspend fun NetworkController.exec() {
             val flow = flowGetter()
-            flow.setDesiredDataRate(newRate)
+            flow.setDemand(newRate)
             targetFlow = flow
         }
     }
