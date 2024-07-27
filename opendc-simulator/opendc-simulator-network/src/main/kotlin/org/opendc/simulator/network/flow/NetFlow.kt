@@ -1,6 +1,7 @@
 package org.opendc.simulator.network.flow
 
 import kotlinx.coroutines.runBlocking
+import org.jetbrains.annotations.VisibleForTesting
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.utils.Kb
@@ -125,6 +126,12 @@ public class NetFlow internal constructor(
 
     internal companion object {
         internal const val DEFAULT_NAME: String = "unknown"
+
+        @VisibleForTesting
+        internal fun reset() {
+            nextId = 0
+            _flowsDestIds.clear()
+        }
 
         /**
          * Returns a unique flow id [Long].

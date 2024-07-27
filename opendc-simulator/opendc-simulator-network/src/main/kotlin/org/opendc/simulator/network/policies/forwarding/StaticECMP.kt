@@ -2,7 +2,6 @@ package org.opendc.simulator.network.policies.forwarding
 
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.flow.NetFlow

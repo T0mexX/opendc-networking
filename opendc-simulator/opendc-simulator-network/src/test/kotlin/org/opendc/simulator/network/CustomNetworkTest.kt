@@ -16,11 +16,11 @@ import io.kotest.property.checkAll
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.CustomNetwork.CustomNetworkSpecs
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.components.NodeId
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
 import java.io.File
@@ -45,20 +45,20 @@ class CustomNetworkTest: FunSpec({
 
         specsTest2File.let { testFile ->
             context("build network from specs").config(enabled = testFile.exists()) {
-                shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).buildFromSpecs() }
+                shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).build() }
             }
         }
 
         context("build network from incorrect specs") {
             dupNodesFile.let { testFile ->
                 context("duplicate node ids (eliminating duplicates)").config(enabled = testFile.exists()) {
-                    shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).buildFromSpecs() }
+                    shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).build() }
                 }
             }
 
             undeployableLinksFile.let { testFile ->
                 context("link between non-existing nodes (ignoring)").config(enabled = testFile.exists()) {
-                    shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).buildFromSpecs() }
+                    shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).build() }
                 }
             }
 

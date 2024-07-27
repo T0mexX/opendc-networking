@@ -80,7 +80,7 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * @param[nextHopId]    the next hop [NodeId] of the path to be removed.
      */
     private fun rmPath(destId: NodeId, nextHopId: NodeId) {
-        isTableChanged = table[destId]?.remove(nextHopId) != null
+        isTableChanged = (table[destId]?.remove(nextHopId) != null).or(isTableChanged)
         if (table[destId]?.isEmpty() == true)
             table.remove(destId)
     }
