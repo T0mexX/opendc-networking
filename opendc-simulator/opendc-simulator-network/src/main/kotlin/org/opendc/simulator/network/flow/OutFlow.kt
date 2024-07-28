@@ -1,8 +1,8 @@
 package org.opendc.simulator.network.flow
 
 import org.opendc.simulator.network.components.internalstructs.port.Port
+import org.opendc.simulator.network.flow.tracker.FlowTracker
 import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.roundTo0withEps
 import org.opendc.simulator.network.utils.withWarn
@@ -12,7 +12,7 @@ import org.opendc.simulator.network.utils.withWarn
  */
 internal class OutFlow(
     val id: FlowId,
-    private val unsFlowsTracker: UnsatisfiedFlowsTracker
+    private val flowTracker: FlowTracker
 ): Comparable<OutFlow> {
     /**
      * The sum of the outgoing data rate for flow with [id] on all ports.
@@ -21,7 +21,7 @@ internal class OutFlow(
         private set(value) {
             @Suppress("NAME_SHADOWING")
             val value = value.roundTo0withEps()
-            with(unsFlowsTracker) { handlePropChange { field = value } }
+            with(flowTracker) { handlePropChange { field = value } }
         }
     val totRateOut: Kbps get() = _totRateOut
 
@@ -38,7 +38,7 @@ internal class OutFlow(
                 tryUpdtRate(.0)
             }
 
-            with (unsFlowsTracker) { handlePropChange { field = value } }
+            with (flowTracker) { handlePropChange { field = value } }
         }
 
     /**
