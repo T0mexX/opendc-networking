@@ -68,6 +68,7 @@ public class NetFlow internal constructor(
     @JvmSynthetic
     public suspend fun setDemandSus(newDemand: Kbps): Unit = demandMutex.withLock {
         val oldDemand = demand
+        if (newDemand approx oldDemand) return
         demand = newDemand
 
         // calls observers handlers

@@ -42,9 +42,13 @@ internal infix fun Double.approx(other: Double): Boolean =
 
 internal fun Double.approxLarger(other: Double, epsilon: Double = dfltEpsilon): Boolean =
     (this - other) > epsilon * maxOf(minErr, abs(this), abs(other))
+internal fun Double.approxLargerOrEqual(other: Double, epsilon: Double = dfltEpsilon): Boolean =
+    (this - other) > -epsilon * maxOf(minErr, abs(this), abs(other))
 
 internal infix fun Double.approxLarger(other: Double): Boolean =
     this.approxLarger(other, epsilon = dfltEpsilon)
+internal infix fun Double.approxLargerOrEqual(other: Double): Boolean =
+    this.approxLargerOrEqual(other, epsilon = dfltEpsilon)
 
 internal infix fun Double.ifNanThen(default: Double): Double =
     if (this.isNaN()) default else this
