@@ -4,7 +4,7 @@ import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.roundTo0ifErr
+import org.opendc.simulator.network.utils.roundTo0withEps
 import org.opendc.simulator.network.utils.withWarn
 
 /**
@@ -20,7 +20,7 @@ internal class OutFlow(
     private var _totRateOut: Kbps = .0
         private set(value) {
             @Suppress("NAME_SHADOWING")
-            val value = value.roundTo0ifErr()
+            val value = value.roundTo0withEps()
             with(unsFlowsTracker) { handlePropChange { field = value } }
         }
     val totRateOut: Kbps get() = _totRateOut
@@ -32,7 +32,9 @@ internal class OutFlow(
      */
     var demand: Kbps = .0
         set(value) {
-            if (value approx .0) {
+            @Suppress("NAME_SHADOWING")
+            val value = value.roundTo0withEps()
+            if (value == .0) {
                 tryUpdtRate(.0)
             }
 
@@ -52,7 +54,7 @@ internal class OutFlow(
      */
     fun tryUpdtRate(newRate: Kbps = demand): Kbps {
         @Suppress("NAME_SHADOWING")
-        val newRate = newRate.roundTo0ifErr(0.00001)
+        val newRate = newRate.roundTo0withEps(0.00001)
 
         val deltaRate = newRate - totRateOut
         if (deltaRate < 0) reduceRate(targetRate = newRate)
@@ -69,7 +71,7 @@ internal class OutFlow(
      */
     fun tryUpdtPortRate(port: Port, newRate: Kbps): Kbps {
         @Suppress("NAME_SHADOWING")
-        val newRate = newRate.roundTo0ifErr(0.00001)
+        val newRate = newRate.roundTo0withEps(0.00001)
 
         return _outRatesByPort.computeIfPresent(port) { _, _ ->
             val resultingRate = port.tryUpdtRateOf(fId = id, targetRate = newRate)
@@ -112,7 +114,7 @@ internal class OutFlow(
             if (rate >= targetPerPort) return@replaceAll rate
             val resultingRate = port.tryUpdtRateOf(fId = id, targetPerPort)
 
-            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundTo0ifErr()
+            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundTo0withEps()
 
             return@replaceAll resultingRate
         }
@@ -125,7 +127,7 @@ internal class OutFlow(
             {"\n $rate ${port.incomingRateOf(id)}"}
             val resultingRate = port.tryUpdtRateOf(fId = id, targetRate = rate + deltaRemaining)
 
-            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundTo0ifErr()
+            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundTo0withEps()
             return@replaceAll resultingRate
         }
     }
@@ -135,7 +137,7 @@ internal class OutFlow(
         val deltaRate = targetRate - totRateOut
         _outRatesByPort.replaceAll { port, currRate ->
             // Each port rate is reduced proportionally to its contribution to the total.
-            val portTargetRate = (currRate + deltaRate * (currRate / totRateOut)).roundTo0ifErr()
+            val portTargetRate = (currRate + deltaRate * (currRate / totRateOut)).roundTo0withEps()
             port.tryUpdtRateOf(fId = id, targetRate = portTargetRate)
         }
     }

@@ -1,6 +1,8 @@
 package org.opendc.simulator.network.flow
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.api.NodeId
@@ -8,7 +10,9 @@ import org.opendc.simulator.network.utils.Kb
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.SuspOnChangeHandler
+import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.ms
+import org.opendc.simulator.network.utils.roundTo0withEps
 import kotlin.properties.Delegates
 
 /**
@@ -48,6 +52,7 @@ public class NetFlow internal constructor(
      */
     public var demand: Kbps = demand
         private set
+    private val demandMutex = Mutex()
 
     init {
         // Sets up the static destination id retrieval for the flow.
@@ -61,7 +66,7 @@ public class NetFlow internal constructor(
      * Call observers change handlers, added with [withDemandOnChangeHandler].
      */
     @JvmSynthetic
-    public suspend fun setDemandSus(newDemand: Kbps) {
+    public suspend fun setDemandSus(newDemand: Kbps): Unit = demandMutex.withLock {
         val oldDemand = demand
         demand = newDemand
 
@@ -79,11 +84,17 @@ public class NetFlow internal constructor(
     /**
      * The end-to-end throughput of the flow.
      */
-    public var throughput: Kbps by Delegates.observable(.0) { _, old, new ->
-        if (old == new) return@observable
-        throughputOnChangeHandlers.forEach { it.handleChange(obj = this, oldValue = old, newValue = new) }
-    }
-    internal set
+    public var throughput: Kbps = .0
+        internal set(new) = runBlocking { throughputMutex.withLock {
+            if (new == field) return@runBlocking
+            val old = field
+            field = if (new approx demand) demand else new.roundTo0withEps()
+
+            throughputOnChangeHandlers.forEach {
+                it.handleChange(obj = this@NetFlow, oldValue = old, newValue = field)
+            }
+        } }
+    private val throughputMutex = Mutex()
 
     /**
      * Adds [f] among the functions invoked whenever the throughput of the flow changes.

@@ -7,7 +7,7 @@ import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.roundTo0ifErr
+import org.opendc.simulator.network.utils.roundTo0withEps
 
 /**
  * Handles all incoming and outgoing flows of the node this handler belongs to,
@@ -94,18 +94,16 @@ internal class FlowHandler(private val ports: Collection<Port>) {
         updtChl.send(updt)
     }
 
-    suspend fun Node.stopGeneratedFlow(fId: FlowId): NetFlow? {
+    suspend fun Node.stopGeneratedFlow(fId: FlowId) {
         val removedFlow = _generatedFlows.remove(fId)
             ?: let {
                 log.error("unable to stop generated flow with id $fId in node $this, " +
                     "flow is not present in the generated flows table")
-                return null
+                return
             }
 
         // Update to be processed by the node runner coroutine
         updtChl.send(  RateUpdt(fId, -removedFlow.demand)  )
-
-        return removedFlow
     }
 
     /**
@@ -120,12 +118,12 @@ internal class FlowHandler(private val ports: Collection<Port>) {
      */
     suspend fun Node.updtFlows(updt: RateUpdt) {
         updt.forEach { (fId, dr) ->
-            val deltaRate = dr.roundTo0ifErr()
+            val deltaRate = dr.roundTo0withEps()
             if (deltaRate == .0) return@forEach
 
             // if this node is the destination
             receivingFlows[fId]?.let {
-                it.throughput += deltaRate
+                it.throughput = (it.throughput + deltaRate).roundTo0withEps()
                 return@forEach
             }
             // else
@@ -139,7 +137,7 @@ internal class FlowHandler(private val ports: Collection<Port>) {
                 it.demand += deltaRate
 
                 // if demand is 0 the entry is removed
-                if (it.demand.roundTo0ifErr() == .0) {
+                if (it.demand.roundTo0withEps() == .0) {
                     _outgoingFlows.remove(it.id)
                 }
             }

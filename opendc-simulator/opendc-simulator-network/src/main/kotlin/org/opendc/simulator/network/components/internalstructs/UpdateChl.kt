@@ -35,7 +35,7 @@ internal class UpdateChl private constructor(
 
     suspend fun withInvalidator(inv: Invalidator): UpdateChl {
         invalidator = inv
-        pendingLock.withLock { if (pending > 0) invalidator?.invalidate()}
+        pendingLock.withLock { if (pending > 0) inv.invalidate() else inv.validate()}
         return this
     }
 
@@ -44,7 +44,10 @@ internal class UpdateChl private constructor(
         chlReceiveLock.tryWithRLock {
             val chlResult = chl.tryReceive()
             chlResult.getOrNull()?.let {
-                runBlocking { pendingLock.withLock { pending-- } }
+                runBlocking { pendingLock.withLock {
+                    pending--
+                    check (pending > 0)
+                } }
             }
 
             chlResult

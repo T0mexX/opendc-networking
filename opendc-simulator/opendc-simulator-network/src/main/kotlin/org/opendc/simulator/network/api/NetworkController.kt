@@ -8,6 +8,7 @@ import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
+import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
@@ -66,7 +67,7 @@ public class NetworkController(
     public val currentInstant: Instant
         get() = instantSrc.instant()
 
-    private var lastUpdate: Instant = Instant.ofEpochMilli(ms.MIN_VALUE)
+    private var lastUpdate: Instant = Instant.EPOCH
 
     init {
         instantSource?.let { lastUpdate = it.instant() }
@@ -232,8 +233,13 @@ public class NetworkController(
         } ?: log.errAndNull("unable to retrieve network interface, " +
                 "node does not exist or does not provide an interface")
 
-    public fun sync() {
+    @JvmOverloads
+    public fun sync(printSnapshot: Boolean = false, consistencyCheck: Boolean = false) {
         if (instantSrc.isExternalSource) {
+            runBlocking { network.awaitStability() }
+            if (consistencyCheck) runBlocking { checkFlowConsistency() }
+            if (printSnapshot) println(snapshot().fmt())
+
             val timeSpan = instantSrc.millis() - lastUpdate.toEpochMilli()
             if (timeSpan == 0L) return
             advanceBy(timeSpan, suppressWarn = true)
@@ -245,6 +251,7 @@ public class NetworkController(
     }
 
     public fun advanceBy(ms: ms, suppressWarn: Boolean = false) {
+        if (ms < 0) return log.error("advanceBy received negative time-span parameter($ms), ignoring...")
         runBlocking { network.awaitStability() }
 
         if (instantSrc.isInternalSource)
