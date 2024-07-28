@@ -5,7 +5,9 @@ import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.flow.UnsatisfiedFlowsTracker
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.roundTo0ifErr
+import org.opendc.simulator.network.utils.approxLarger
+import org.opendc.simulator.network.utils.isSorted
+import org.opendc.simulator.network.utils.roundTo0withEps
 
 internal object MaxMin: FairnessPolicy {
     override fun FlowHandler.applyPolicy(updt: RateUpdt) {
@@ -13,6 +15,8 @@ internal object MaxMin: FairnessPolicy {
 
         val tracker: UnsatisfiedFlowsTracker = unsatisfiedFlowsTracker
         var availableBW = this.availableBW
+        check(outgoingFlows.values.filter { it.demand approxLarger it.totRateOut }.all { it in tracker.unsatisfiedFlowsSortedByRate })
+        check(tracker.unsatisfiedFlowsSortedByRate.isSorted())
 
         while (true) {
             // Fetch updated list.
@@ -34,7 +38,7 @@ internal object MaxMin: FairnessPolicy {
                 val prevRate = it.totRateOut
                 val afterUpdt = it.tryUpdtRate(newRate = kotlin.math.min(currCeil, it.demand))
 
-                availableBW -= (afterUpdt - prevRate).roundTo0ifErr()
+                availableBW -= (afterUpdt - prevRate).roundTo0withEps()
             } }
 
             // If iteration did not increase data rate then the flows that necessitate

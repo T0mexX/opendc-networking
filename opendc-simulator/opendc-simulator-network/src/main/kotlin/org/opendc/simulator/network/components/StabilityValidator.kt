@@ -50,7 +50,7 @@ internal class StabilityValidator {
          * Keeps track of the last state of this invalidator.
          * [invalidate] and [validate] are assumed to be used synchronously.
          */
-        private var isValid = true
+        internal var isValid = true
 
         /**
          * Invalidates the state of this instance if not already invalidated.

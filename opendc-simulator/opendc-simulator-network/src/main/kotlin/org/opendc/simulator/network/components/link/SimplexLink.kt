@@ -4,7 +4,7 @@ import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.RateUpdt.Companion.toRateUpdt
 import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.roundTo0ifErr
+import org.opendc.simulator.network.utils.roundTo0withEps
 import kotlin.math.min
 
 internal class SimplexLink(
@@ -42,17 +42,17 @@ internal class SimplexLink(
                  // reducing the bandwidth increase to the maximum available
                  val newRate: Kbps =
                      if (wouldBeUsedBW > maxPort2PortBW)
-                         (rqstRate - (wouldBeUsedBW - maxPort2PortBW)).roundTo0ifErr()
+                         (rqstRate - (wouldBeUsedBW - maxPort2PortBW)).roundTo0withEps()
                      else rqstRate
 
-                 val deltaBw = (newRate - (oldRate ?: .0)).roundTo0ifErr()
+                 val deltaBw = (newRate - (oldRate ?: .0)).roundTo0withEps()
 
                  // Updates the current link bandwidth usage
                  usedBW += deltaBw
 
                  if (deltaBw != .0)
                      currLinkUpdate.compute(fId) { _, oldDelta ->
-                         (deltaBw + (oldDelta ?: .0)).roundTo0ifErr()
+                         (deltaBw + (oldDelta ?: .0)).roundTo0withEps()
                      }
 
                  return@compute newRate
