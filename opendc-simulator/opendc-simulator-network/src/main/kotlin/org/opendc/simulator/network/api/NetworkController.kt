@@ -31,6 +31,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
+import kotlin.system.exitProcess
 import kotlin.system.measureNanoTime
 
 
@@ -73,12 +74,19 @@ public class NetworkController(
         instantSource?.let { lastUpdate = it.instant() }
 
         network.launch()
-        log.info(buildString {
-            appendLine("\nNetwork Info:")
-            appendLine("num of core switches: ${network.getNodesById<CoreSwitch>().size}")
-            appendLine("num of host nodes: ${network.getNodesById<HostNode>().size}")
-            appendLine("num of nodes: ${network.nodes.size}")
-        })
+        log.info(
+            """
+
+                | == NETWORK INFO ===
+                | num of core switches: ${network.getNodesById<CoreSwitch>().size}
+                | num of host nodes: ${network.getNodesById<HostNode>().size}
+                | num of nodes: ${network.nodes.size} (including INTERNET)
+            """.trimIndent()
+//            appendLine("\n| Network Info:")
+//            appendLine("| num of core switches: ${network.getNodesById<CoreSwitch>().size}")
+//            appendLine("| num of host nodes: ${network.getNodesById<HostNode>().size}")
+//            appendLine("| num of nodes: ${network.nodes.size}")
+        )
     }
 
     public val energyRecorder: NetworkEnergyRecorder =
@@ -121,9 +129,10 @@ public class NetworkController(
         if (from in virtualMapping)
             log.warn("overriding mapping of virtual node id $from")
 
-        if (from in network.endPointNodes)
-            log.warn("shadowing physical node $from with virtual mapping, " +
-                "it will not be possible to use the physical id directly")
+        // Not needed anymore since virtual mapping is handled exclusively internally.
+//        if (from in network.endPointNodes)
+//            log.warn("shadowing physical node $from with virtual mapping, " +
+//                "it will not be possible to use the physical id directly")
 
         virtualMapping[from] = to
     }
@@ -252,6 +261,7 @@ public class NetworkController(
 
     public fun advanceBy(ms: ms, suppressWarn: Boolean = false) {
         if (ms < 0) return log.error("advanceBy received negative time-span parameter($ms), ignoring...")
+        if (ms == 0L) return
         runBlocking { network.awaitStability() }
 
         if (instantSrc.isInternalSource)
@@ -298,11 +308,15 @@ public class NetworkController(
 
             delay(1000)
 
+            var bo = 0
             with (netWorkload) {
                 while (hasNext()) {
                     val nextDeadline = peek().deadline
                     pb.stepBy(execUntil(nextDeadline))
-                    nano += measureNanoTime { network.awaitStability() }
+                    network.awaitStability()
+//                    println(snapshot().fmt())
+                    bo++
+//                    if (bo>=2)exitProcess(0)
                 }
             }
             pb.refresh()

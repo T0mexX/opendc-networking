@@ -2,9 +2,11 @@ package org.opendc.simulator.network.policies.fairness
 
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.RateUpdt
+import org.opendc.simulator.network.flow.tracker.TrackerMode
 import org.opendc.simulator.network.utils.logger
 
 internal interface FairnessPolicy {
+
     fun FlowHandler.applyPolicy(updt: RateUpdt)
 
     /**
@@ -20,5 +22,8 @@ internal interface FairnessPolicy {
         }
     }
 
-    private companion object { val log by logger() }
+    companion object {
+        val log by logger()
+        var VERIFY: Boolean = false
+    }
 }

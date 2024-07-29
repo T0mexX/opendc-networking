@@ -10,6 +10,7 @@ import org.opendc.simulator.network.utils.NonSerializable
 import kotlin.math.pow
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
 import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.utils.logger
 import java.io.File
 import kotlin.math.min
 
@@ -72,7 +73,7 @@ internal class FatTreeNetwork(
         @Suppress("NAME_SHADOWING")
         val coreSpecs = coreSpecs.copy(numOfPorts = coreSpecs.numOfPorts + 1)
 
-        println("k = $k")
+        log.info("building fat-tree with k=$k")
         pods = buildList { repeat(k) { add(FatTreePod(aggrSpecs, torSpecs)) } }
 
         val coreSwitchesChunked = buildList {
@@ -152,6 +153,8 @@ internal class FatTreeNetwork(
     }
 
     companion object {
+        private val log by logger()
+
         internal fun fromFile(file: File) =
             Specs.fromFile<FatTreeNetwork>(file).build()
 

@@ -4,6 +4,7 @@ import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
 import kotlinx.coroutines.channels.consume
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -39,20 +40,27 @@ internal class UpdateChl private constructor(
         return this
     }
 
+
     @OptIn(InternalCoroutinesApi::class)
-    override fun tryReceive(): ChannelResult<RateUpdt> =
-        chlReceiveLock.tryWithRLock {
+    suspend fun tryReceiveSus(): ChannelResult<RateUpdt> =
+        chlReceiveLock.withRLock {
             val chlResult = chl.tryReceive()
             chlResult.getOrNull()?.let {
-                runBlocking { pendingLock.withLock {
+                pendingLock.withLock {
                     pending--
                     check (pending > 0)
-                } }
+                }
             }
 
             chlResult
         } ?: ChannelResult.failure()
 
+
+    @Deprecated(level = DeprecationLevel.ERROR, message = "use suspending version instead",
+        replaceWith = ReplaceWith("tryReceiveSus()")
+    )
+    override fun tryReceive(): ChannelResult<RateUpdt> =
+        throw UnsupportedOperationException()
 
     override suspend fun receive(): RateUpdt =
         chlReceiveLock.withRLock {

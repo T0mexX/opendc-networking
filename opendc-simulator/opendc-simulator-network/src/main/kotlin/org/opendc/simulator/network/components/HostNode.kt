@@ -11,6 +11,7 @@ import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
+import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
@@ -24,7 +25,7 @@ internal class HostNode(
     override val id: NodeId,
     override val portSpeed: Kbps,
     override val numOfPorts: Int = 1,
-    override val fairnessPolicy: FairnessPolicy = MaxMinNoForcedReduction,
+    override val fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ): EndPointNode {
 

@@ -1,8 +1,10 @@
 package org.opendc.simulator.network.flow
 
+import org.jetbrains.annotations.TestOnly
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.tracker.FlowTracker
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.roundTo0withEps
 import org.opendc.simulator.network.utils.withWarn
@@ -55,6 +57,7 @@ internal class OutFlow(
     fun tryUpdtRate(newRate: Kbps = demand): Kbps {
         @Suppress("NAME_SHADOWING")
         val newRate = newRate.roundTo0withEps(0.00001)
+        if (newRate == totRateOut) return totRateOut
 
         val deltaRate = newRate - totRateOut
         if (deltaRate < 0) reduceRate(targetRate = newRate)
@@ -74,9 +77,9 @@ internal class OutFlow(
         val newRate = newRate.roundTo0withEps(0.00001)
 
         return _outRatesByPort.computeIfPresent(port) { _, _ ->
-            val resultingRate = port.tryUpdtRateOf(fId = id, targetRate = newRate)
+             port.tryUpdtRateOf(fId = id, targetRate = newRate)
+        }?.also {
             updtTotRateOut()
-            resultingRate
         } ?: log.withWarn(.0, "trying to update a data rate of flow id $id through port $port," +
             " which is not among those used to output this flow")
     }
@@ -146,7 +149,7 @@ internal class OutFlow(
         totRateOut.compareTo(other.totRateOut)
 
     override fun toString(): String {// TODO: remove/change
-        return "[dem:${demand}, rateOut:${totRateOut}]"
+        return "[id=$id, dem:${demand}, rateOut:${totRateOut}]"
     }
 
     override fun hashCode(): Int =
@@ -154,6 +157,14 @@ internal class OutFlow(
 
     override fun equals(other: Any?): Boolean =
         this.javaClass == other?.javaClass && this === other
+
+    @TestOnly
+    internal fun verify() {
+        _outRatesByPort.forEach { (port, rate) ->
+            check(port.outgoingRateOf(id) approx rate)
+            { "($id) portRate=${port.outgoingRateOf(id)}, tableRate=$rate" }
+        }
+    }
 
     private companion object { val log by logger() }
 }

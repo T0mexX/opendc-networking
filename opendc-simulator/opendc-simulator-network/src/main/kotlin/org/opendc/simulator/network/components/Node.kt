@@ -85,8 +85,8 @@ internal interface Node: FlowView {
         var updt: RateUpdt = updtChl.receive()
 
         while (true)
-            updtChl.tryReceive().getOrNull()
-                ?.let { updt = updt.merge(it) }
+            updtChl.tryReceiveSus().getOrNull()
+                ?.also { updt = updt.merge(it) }
                 ?: break
 
         with(flowHandler) { updtFlows(updt) }
@@ -120,8 +120,6 @@ internal interface Node: FlowView {
 
     companion object {
         private val log by logger()
-
-
     }
 }
 

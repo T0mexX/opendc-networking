@@ -20,15 +20,16 @@ import org.opendc.simulator.network.utils.roundTo0withEps
  * @param[ports]    ports of the node this handler belongs to.
  * Only used to provide the [availableBW].
  */
-internal class FlowHandler(private val ports: Collection<Port>) {
+internal class FlowHandler(internal val ports: Collection<Port>) {
 
-    private companion object { val log by logger() }
+    private companion object { val log by logger(); var bo = 0 }
 
     /**
      * The current total available bandwidth on the switch,
      * as the sum of the available bw of the connected active ports.
      */
     val availableBW: Kbps get() = ports.sumOf { it.sendLink?.availableBW ?: .0 }
+    val totalNodeBW: Kbps get() = ports.sumOf { it.sendLink?.maxPort2PortBW ?: .0 }
 
     /**
      * [NetFlow]s whose sender is the node to which this flow handler belongs.
@@ -143,6 +144,7 @@ internal class FlowHandler(private val ports: Collection<Port>) {
                 // if demand is 0 the entry is removed
                 if (it.demand.roundTo0withEps() == .0) {
                     _outgoingFlows.remove(it.id)
+                    flowTracker.remove(it)
                 }
             }
         }

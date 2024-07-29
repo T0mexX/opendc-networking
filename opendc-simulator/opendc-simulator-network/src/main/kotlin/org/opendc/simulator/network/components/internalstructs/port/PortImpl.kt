@@ -59,7 +59,7 @@ internal class PortImpl(
     override val outgoingRatesById: Map<FlowId, Kbps> =
         sendLink?.outgoingRatesById ?: emptyMap()
 
-    override val maxPortToPortBW: Kbps = sendLink?.maxPort2PortBW ?: .0
+    override val maxPortToPortBW: Kbps get() =  sendLink?.maxPort2PortBW ?: .0
 
     override val nodeUpdtChl: UpdateChl = owner.updtChl
 
@@ -115,8 +115,10 @@ internal class PortImpl(
         sendLink?.outgoingRateOf(fId) ?: .0
 
     override fun tryUpdtRateOf(fId: FlowId, targetRate: Kbps): Kbps =
-        sendLink?.updtFlowRate(fId, targetRate)
-            ?: log.withErr(.0, "unable to update rate on port, port does not have an outgoing connection")
+        with(sendLink) {
+            this ?: return log.withErr(.0, "unable to update rate on port, port does not have an outgoing connection")
+            updtFlowRate(fId, targetRate)
+        }
 
     override suspend fun notifyReceiver() {
         sendLink?.notifyReceiver()

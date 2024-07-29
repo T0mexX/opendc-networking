@@ -6,10 +6,13 @@ import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
+import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.Mbps
+import org.opendc.simulator.network.utils.toLowerDataUnit
 
 /**
  * Switch that also implements [EndPointNode].
@@ -19,7 +22,7 @@ internal class CoreSwitch(
     id: NodeId,
     portSpeed: Kbps,
     numOfPorts: Int,
-    fairnessPolicy: FairnessPolicy = MaxMinNoForcedReduction,
+    fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ): Switch(id, portSpeed, numOfPorts, fairnessPolicy, portSelectionPolicy), EndPointNode {
 
@@ -41,9 +44,9 @@ internal class CoreSwitch(
     @SerialName("core-switch-specs")
     internal data class CoreSwitchSpecs (
         val numOfPorts: Int,
-        val portSpeed: Kbps,
+        val portSpeed: Mbps,
         val id: NodeId? = null
     ): Specs<CoreSwitch> {
-        override fun build(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts + 1)
+        override fun build(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts + 1)
     }
 }
