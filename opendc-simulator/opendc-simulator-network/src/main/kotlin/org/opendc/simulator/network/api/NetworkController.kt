@@ -371,7 +371,7 @@ public class NetworkController(
         if (instantSrc.isExternalSource) {
             runBlocking { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
-            if (logSnapshot) log.info("\n" + snapshot().fmt(NetworkSnapshot.ENERGY))
+            if (logSnapshot) log.info(snapshot().fmt(NetworkSnapshot.ENERGY))
 
             val timeSpan = instantSrc.millis() - lastUpdate.toEpochMilli()
             if (timeSpan == 0L) return
