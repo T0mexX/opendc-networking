@@ -20,19 +20,13 @@ import kotlin.system.measureNanoTime
 private fun bitBrainsSim() {
     val bitBrains = BitBrains.fromFolderWithVmTables(File("resources/traces/bitbrains"))
     val wl: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..80)
-    val opt = wl.optimize()
+//    val opt = wl.optimize()
 //    val wl2: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..250)
 
     val net = FatTreeNetwork(allSwitchSpecs = Switch.SwitchSpecs(portSpeed = 1.0, numOfPorts = 8))
 //    println(net.allNodesToString())
 
-    opt.execOn(net)
-//    println(Duration.ofNanos(StaticECMP.nano).seconds)
-//    println(Duration.ofNanos(NetworkController.nano).seconds)
-//    wl2.execOn(net)
-
-
-//    wl.execOn(File("resources/bo.json"))
+    wl.execOn(net)
 }
 
 

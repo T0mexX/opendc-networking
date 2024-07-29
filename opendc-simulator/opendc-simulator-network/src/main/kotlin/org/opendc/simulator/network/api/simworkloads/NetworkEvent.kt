@@ -7,6 +7,7 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
+import java.time.Instant
 
 internal abstract class NetworkEvent: Comparable<NetworkEvent> {
     private companion object {
@@ -25,7 +26,10 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
     suspend fun NetworkController.execIfNotPassed() {
         val msSinceLastUpdate: ms = deadline - this.instantSrc.millis()
         if (msSinceLastUpdate < 0)
-            return log.error("unable to execute network event, deadline is passed")
+            return log.error("unable to execute network event, " +
+                "deadline is passed (deadline=${Instant.ofEpochMilli(deadline)}, " +
+                "currentInstant=${instantSrc.instant()})"
+            )
 
         this.advanceBy(msSinceLastUpdate)
 
@@ -33,7 +37,7 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
     }
 
     override fun compareTo(other: NetworkEvent): Int =
-        (this.deadline - other.deadline).toInt()
+        this.deadline.compareTo(other.deadline)
 
     /**
      * Only one flow is allowed between 2 nodes.

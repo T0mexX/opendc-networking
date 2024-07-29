@@ -15,6 +15,8 @@ import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.Mbps
+import org.opendc.simulator.network.utils.toLowerDataUnit
 
 /**
  * Represent an [EndPointNode] cluster with hosts.
@@ -48,11 +50,11 @@ internal class HostNode(
     @SerialName("host-node-specs")
     internal data class HostNodeSpec(
         val id: NodeId?,
-        val portSpeed: Kbps,
+        val portSpeed: Mbps,
         val numOfPorts: Int = 1
     ): Specs<HostNode> {
         override fun build(): HostNode =
-            HostNode(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts = numOfPorts)
+            HostNode(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts = numOfPorts)
     }
 }
 

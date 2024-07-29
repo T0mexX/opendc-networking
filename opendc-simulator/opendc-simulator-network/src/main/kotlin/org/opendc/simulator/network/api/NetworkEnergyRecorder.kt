@@ -31,11 +31,10 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
 
     internal fun getFmtReport(): String {
         // TODO: change/improve
-        return """
-            === ENERGY REPORT ===
-            Current Power Usage: ${currentConsumption} W
-            Total EnergyConsumed: ${totalConsumption} KWh
-            =====================
+        return "\n" + """
+            | === ENERGY REPORT ===
+            | Current Power Usage: ${currentConsumption} W
+            | Total EnergyConsumed: ${totalConsumption} KWh
         """.trimIndent()
     }
 
