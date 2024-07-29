@@ -15,7 +15,7 @@ public class NetworkProvisioningStep(
         netController.setInstantSource(ctx.dispatcher.timeSource)
 
         // Prints the status of the network.
-        println(netController.snapshot().fmt(ALL))
+//        println(netController.snapshot().fmt(ALL))
 
         return netController
     }

@@ -30,7 +30,6 @@ import kotlin.coroutines.CoroutineContext;
 import org.jetbrains.annotations.Nullable;
 import org.opendc.common.Dispatcher;
 import org.opendc.simulator.network.api.NetworkController;
-import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A {@link FlowEngine} simulates a generic flow network.

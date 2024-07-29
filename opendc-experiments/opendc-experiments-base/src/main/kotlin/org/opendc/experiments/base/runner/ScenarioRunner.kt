@@ -147,8 +147,6 @@ public fun runScenario(
 
             val service = provisioner.registry.resolve(serviceDomain, ComputeService::class.java)!!
             service.replay(timeSource, vms, failureModelSpec = scenario.failureModelSpec, seed = seed)
-
-            println(networkController?.snapshot()?.fmt())
         }
     }
 
