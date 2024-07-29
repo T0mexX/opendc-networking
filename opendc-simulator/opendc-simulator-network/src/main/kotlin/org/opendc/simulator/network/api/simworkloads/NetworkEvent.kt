@@ -4,7 +4,6 @@ import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
@@ -49,7 +48,7 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
             this.startOrUpdateFlow(
                 transmitterId = from,
                 destinationId = to,
-                desiredDataRate = desiredDataRate
+                demand = desiredDataRate
             ) ?. let { targetFlow = it }
         }
 
@@ -85,7 +84,7 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
             this.startFlow(
                 transmitterId = from,
                 destinationId = to,
-                desiredDataRate = desiredDataRate,
+                demand = desiredDataRate,
             ) ?. let { targetFlow = it }
         }
 
