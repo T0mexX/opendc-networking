@@ -1,5 +1,6 @@
 package org.opendc.simulator.network.api.simworkloads
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network
@@ -58,6 +59,7 @@ public class SimNetWorkload internal constructor(
                 | start instant: $startInstant
                 | end instant: $endInstant
                 | duration: ${Duration.ofMillis(endInstant.toEpochMilli() - startInstant.toEpochMilli())}
+                | num of network events: ${events.size}
             """.trimIndent()
         )
     }
@@ -100,9 +102,9 @@ public class SimNetWorkload internal constructor(
             coreIds + hostIds
 
         // warns if any node id present in the workload has not been mapped
-        if (allWorkLoadIds.any { it !in  allMappedIds})
-            log.warn("not all workload ids have been mapped to physical network, " +
-                "some ids were not categorizable as specific node types")
+        if (allWorkLoadIds.any { it !in  allMappedIds && it != INTERNET_ID}) {
+            log.warn("the following workloads node ids were not mapped to network node ids: [INTERNET_ID]")
+        }
     }
 
     internal suspend fun NetworkController.execNext() {
@@ -126,6 +128,7 @@ public class SimNetWorkload internal constructor(
 
     internal fun peek(): NetworkEvent = events.peek()
 
+    @OptIn(ExperimentalSerializationApi::class)
     public fun execOn(networkFile: File, withVirtualMapping: Boolean = true) {
         val controller = NetworkController.fromFile(networkFile)
 
@@ -138,8 +141,6 @@ public class SimNetWorkload internal constructor(
         val controller = NetworkController(network)
 
         controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
-
-        println(controller.energyRecorder.getFmtReport())
     }
 
     internal fun optimize(): SimNetWorkload {
@@ -176,7 +177,7 @@ public class SimNetWorkload internal constructor(
             val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() } )!!
             val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { it * 8 /* KBps to Kbps*/ } )!!
             val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { it * 8 /* KBps to Kbps*/} )!!
-            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP)!!
+            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP_SEC_EPOCH, process = { Instant.ofEpochSecond(it).toEpochMilli() })!!
 
             val vmIds = mutableSetOf<Long>()
             val netEvents = mutableListOf<NetworkEvent>()

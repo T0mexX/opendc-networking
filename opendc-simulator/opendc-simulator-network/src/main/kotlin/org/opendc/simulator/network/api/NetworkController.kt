@@ -38,6 +38,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
+import kotlin.system.exitProcess
 
 /**
  * Interface through which control the network (from external modules).
@@ -127,14 +128,7 @@ public class NetworkController(
         instantSource?.let { lastUpdate = it.instant() }
 
         network.launch()
-        log.info(
-            "\n" + """
-                | == NETWORK INFO ===
-                | num of core switches: ${network.getNodesById<CoreSwitch>().size}
-                | num of host nodes: ${network.getNodesById<HostNode>().size}
-                | num of nodes: ${network.nodes.size} (including INTERNET)
-            """.trimIndent()
-        )
+        log.info(network.nodesFmt())
     }
 
     /**
@@ -467,10 +461,12 @@ public class NetworkController(
                     // included (with all events with that deadline).
                     pb.stepBy(execUntil(nextDeadline))
                     network.awaitStability()
-                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
+//                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
                 }
             }
             pb.refresh()
+            println()
+            log.info(energyRecorder.getFmtReport())
         }
     }
 

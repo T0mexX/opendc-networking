@@ -54,9 +54,10 @@ internal class PortImpl(
     override val isConnected: Boolean
         get() = sendLink != null || receiveLink != null
 
-    override val incomingRatesById: Map<FlowId, Kbps> =
+    override val incomingRatesById: Map<FlowId, Kbps> get() =
         receiveLink?.incomingRateById ?: emptyMap()
-    override val outgoingRatesById: Map<FlowId, Kbps> =
+
+    override val outgoingRatesById: Map<FlowId, Kbps> get() =
         sendLink?.outgoingRatesById ?: emptyMap()
 
     override val maxPortToPortBW: Kbps get() =  sendLink?.maxPort2PortBW ?: .0

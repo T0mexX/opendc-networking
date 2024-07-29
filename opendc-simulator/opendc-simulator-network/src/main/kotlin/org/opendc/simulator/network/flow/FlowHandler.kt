@@ -140,6 +140,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
 
                 // TODO: solve bug, in some cases (125 vms bitbrains, 8ports per node) fails
                 check(it.demand >= .0)
+                { "solve bug, in some cases (125 vms bitbrains, 8ports per node 1000Mbps) fails" }
 
                 // if demand is 0 the entry is removed
                 if (it.demand.roundTo0withEps() == .0) {
