@@ -11,9 +11,9 @@ import org.opendc.simulator.network.utils.logger
 private val log by Unit.logger("NodeConnectionExt")
 
 internal suspend fun Node.connect(other: Node, duplex: Boolean = true, linkBW: Kbps? = null) {
-    updtChl.whileReceivingLocked {
+    updtChl.whileUpdtProcessingLocked {
         if (other.id in portToNode.keys)
-            return@whileReceivingLocked log.warn("unable to connect $this to $other, nodes already connected")
+            return@whileUpdtProcessingLocked log.warn("unable to connect $this to $other, nodes already connected")
 
         val freePort: Port = getFreePort()
             ?: throw RuntimeException("unable to connect, max num of connected nodes reached ($numOfPorts).")
@@ -43,11 +43,11 @@ internal suspend fun Node.connect(other: Node, duplex: Boolean = true, linkBW: K
  * @param[other]    node that is requesting to connect.
  */
 private suspend fun Node.accept(other: Node): Port? =
-    updtChl.whileReceivingLocked {
+    updtChl.whileUpdtProcessingLocked {
         val freePort: Port = getFreePort()
             ?: let {
                 log.error("Unable to accept connection, maximum number of connected nodes reached ($numOfPorts).")
-                return@whileReceivingLocked null
+                return@whileUpdtProcessingLocked null
             }
 
         portToNode[other.id] = freePort
@@ -72,9 +72,9 @@ internal suspend fun Node.disconnectAll() {
  * @return      [Result.SUCCESS] on success, [Result.ERROR] otherwise.
  */
 private suspend fun Node.disconnect(other: Node, notifyOther: Boolean) {
-    updtChl.whileReceivingLocked {
+    updtChl.whileUpdtProcessingLocked {
         val portToOther: Port = portToNode[other.id]
-            ?: return@whileReceivingLocked log.warn("unable to disconnect $this from $other, nodes are not connected")
+            ?: return@whileUpdtProcessingLocked log.warn("unable to disconnect $this from $other, nodes are not connected")
 
 
         if (notifyOther)
@@ -86,6 +86,10 @@ private suspend fun Node.disconnect(other: Node, notifyOther: Boolean) {
         portToNode.remove(other.id)
 
         shareRoutingVect(exchange = true)
+
+        with (flowHandler) { updtAllRouts() }
+        updateAllFlows()
+        notifyAdjNodes()
     }
 }
 
@@ -130,7 +134,9 @@ private tailrec suspend fun Node.shareRoutingVect(except: Collection<Node> = lis
                 val otherVect: RoutingVect = adjNode.exchangeRoutVect(routingTable.getVect(), vectOwner = this)
                 routingTable.mergeRoutingVector(otherVect, vectOwner = adjNode)
                 if (!routingTable.isTableChanged) return@forEach
-
+                with (flowHandler) { updtAllRouts() }
+                updateAllFlows()
+                notifyAdjNodes()
 
                 if (!routingTable.isVectChanged) return@forEach
                 shareRoutingVect(except = listOf(adjNode), exchange = true)

@@ -127,14 +127,7 @@ public class NetworkController(
         instantSource?.let { lastUpdate = it.instant() }
 
         network.launch()
-        log.info(
-            "\n" + """
-                | == NETWORK INFO ===
-                | num of core switches: ${network.getNodesById<CoreSwitch>().size}
-                | num of host nodes: ${network.getNodesById<HostNode>().size}
-                | num of nodes: ${network.nodes.size} (including INTERNET)
-            """.trimIndent()
-        )
+        log.info(network.nodesFmt())
     }
 
     /**

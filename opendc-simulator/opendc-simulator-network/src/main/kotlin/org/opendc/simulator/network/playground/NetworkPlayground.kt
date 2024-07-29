@@ -50,18 +50,11 @@ private fun Logger.unableToParseId(str: String) {
     this.error("unable to parse id $str")
 }
 
-private fun invalidNodeErr(id: NodeId): Exception =
-    RuntimeException("invalid node id $id")
-
-private fun unableToParseIdErr(str: String): Exception =
-    RuntimeException("unable to parse id $str")
-
-@OptIn(ExperimentalSerializationApi::class)
 private class NetworkPlayground: CliktCommand() {
 
     companion object { val log by logger() }
 
-    private val file: File = File("resources/bo2.json")
+    private val file: File = File("resources/TOBEDEL.json")
     private val network: Network
     private val energyRecorder: NetworkEnergyRecorder
     private val env: PlaygroundEnv
@@ -85,6 +78,7 @@ private class NetworkPlayground: CliktCommand() {
             val jsonReader = Json { ignoreUnknownKeys = true }
             val networkSpecs: Specs<Network> = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
             network = networkSpecs.build()
+            log.info("starting network built from file ${file.name} ${network.nodesFmt()}")
         } else {
             println("file not provided or invalid, falling back to an empty custom network...")
             network = CustomNetwork()
@@ -92,7 +86,6 @@ private class NetworkPlayground: CliktCommand() {
 
         energyRecorder = NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
         env = PlaygroundEnv(network = network, energyRecorder = energyRecorder)
-        println(network.allNodesToString())
     }
 
 
@@ -266,16 +259,16 @@ private enum class Cmd {
                     "id".padEnd(5) +
                         "sender".padEnd(10) +
                         "dest".padEnd(10) +
-                        "desired data rate".padEnd(20) +
-                        "actual data rate".padEnd(20)
+                        "demand (Kbps)".padEnd(20) +
+                        "throughput (Kbps)".padEnd(20)
                 )
                 env.network.flowsById.values.forEach { flow ->
                     println(
                         flow.id.toString().padEnd(5) +
                             flow.transmitterId.toString().padEnd(10) +
                             flow.destinationId.toString().padEnd(10) +
-                            flow.demand.toString().padEnd(20) +
-                            flow.throughput.toString().padEnd(20)
+                            String.format("%.3f", flow.demand).padEnd(20) +
+                            String.format("%.3f", flow.throughput).padEnd(20)
                     )
                 }
             }

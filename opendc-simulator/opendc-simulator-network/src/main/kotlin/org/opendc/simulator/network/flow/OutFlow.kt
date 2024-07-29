@@ -64,6 +64,7 @@ internal class OutFlow(
         else tryIncreaseRate(targetRate = newRate)
 
         updtTotRateOut()
+        verify()
         return totRateOut
     }
 

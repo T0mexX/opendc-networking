@@ -148,6 +148,14 @@ public sealed class Network {
         return runnerJob !!
     }
 
+    public fun nodesFmt(): String =
+        "\n" + """
+            | == NETWORK INFO ===
+            | num of core switches: ${getNodesById<CoreSwitch>().size}
+            | num of host nodes: ${getNodesById<HostNode>().size}
+            | num of nodes: ${nodes.size} (including INTERNET)
+        """.trimIndent()
+
 
     internal companion object {
         private val log by logger()
