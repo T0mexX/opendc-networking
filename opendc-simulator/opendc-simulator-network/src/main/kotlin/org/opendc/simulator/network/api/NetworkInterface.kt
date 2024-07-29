@@ -77,9 +77,9 @@ public class NetworkInterface internal constructor(
         val newFlow: NetFlow? = netController.startFlow(
             transmitterId = this.nodeId,
             destinationId = destinationId,
-            desiredDataRate = demand,
+            demand = demand,
             name = name ?: NetFlow.DEFAULT_NAME,
-            dataRateOnChangeHandler = throughputChangeHandler,
+            throughputOnChangeHandler = throughputChangeHandler,
         )?.also {
             // If name is not default.
             if (it.name != NetFlow.DEFAULT_NAME) flowsByName[name]

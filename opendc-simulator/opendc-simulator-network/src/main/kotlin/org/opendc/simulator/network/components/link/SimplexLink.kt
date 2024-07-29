@@ -91,7 +91,8 @@ internal class SimplexLink(
         // channel has unlimited size => should never suspend
         if (currLinkUpdate.isEmpty()) return
 
-        receiverP.nodeUpdtChl.send(currLinkUpdate.toRateUpdt())
+
+        receiverP.nodeUpdtChl.send(currLinkUpdate.filterNot { it.key in receiverP.outgoingRatesById }.toRateUpdt())
         currLinkUpdate.clear()
     }
 
