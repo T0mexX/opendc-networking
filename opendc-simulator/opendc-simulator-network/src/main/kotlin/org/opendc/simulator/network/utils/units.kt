@@ -1,10 +1,10 @@
 package org.opendc.simulator.network.utils
 
 import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
 
-internal typealias Watts = Double
+internal typealias W = Double
+internal typealias Wh = Double
+internal typealias KWh = Double
 
 internal typealias Mbps = Double
 internal typealias Mb = Double

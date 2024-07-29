@@ -30,11 +30,14 @@ internal class SimplexLink(
 
     override fun notifyPortSpeedChange() {
         maxPort2PortBW = minOf(senderP.currSpeed, receiverP.currSpeed, linkBW)
+        TODO()
     }
 
-    override fun updtFlowRate(fId: FlowId, rqstRate: Kbps): Kbps =
+    override fun Port.updtFlowRate(fId: FlowId, rqstRate: Kbps): Kbps =
 //         synchronized(_rateById) {
               _rateById.compute(fId) { _, oldRate ->
+                  if (this !== senderP) throw RuntimeException()
+
                  val wouldBeDeltaBW: Kbps = rqstRate - (oldRate ?: .0)
                  val wouldBeUsedBW = usedBW + wouldBeDeltaBW
 
@@ -52,7 +55,9 @@ internal class SimplexLink(
 
                  if (deltaBw != .0)
                      currLinkUpdate.compute(fId) { _, oldDelta ->
-                         (deltaBw + (oldDelta ?: .0)).roundTo0withEps()
+                         val newFlowDelta = (deltaBw + (oldDelta ?: .0)).roundTo0withEps()
+                         if (newFlowDelta == .0) null
+                         else newFlowDelta
                      }
 
                  return@compute newRate

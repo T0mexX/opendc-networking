@@ -43,7 +43,9 @@ internal class FlowTracker(
         return treesByMode[mode]?.toList()!!
     }
 
-
+    fun remove(outFlow: OutFlow) {
+        treesByMode.values.forEach { it.remove(outFlow) }
+    }
 
 
 
@@ -83,6 +85,7 @@ internal class FlowTracker(
      * should be added (or its order updated) in the sortedSet.
      */
     fun OutFlow.handlePropChange(fieldChanger: () -> Unit) {
+        fun OutFlow.isNew(): Boolean = demand == .0 && totRateOut == .0
 
         treesByMode.forEach { (mode, tree) ->
             with(mode) {
@@ -91,7 +94,7 @@ internal class FlowTracker(
                 // The removal of the flow has to be executed before field is updated.
                 if (shouldBeTracked())
                     tree.remove(this@handlePropChange).let {
-                        if (!it) log.warn("outflow $this should have been in the sortedSet but wasn't")
+                        if (isNew().not() && !it) log.warn("outflow ${this@handlePropChange} should have been in the sortedSet but wasn't")
                     }
             }
         }

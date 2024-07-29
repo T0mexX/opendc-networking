@@ -14,6 +14,7 @@ import org.opendc.trace.table.concatWithName
 import org.opendc.simulator.network.api.simworkloads.NetworkEvent.*
 import org.opendc.simulator.network.utils.withErr
 import java.io.File
+import java.time.Duration
 import java.time.Instant
 import java.util.LinkedList
 import java.util.Queue
@@ -37,18 +38,28 @@ public class SimNetWorkload internal constructor(
     public val startInstant: Instant = events.peek()?.deadline?.let { Instant.ofEpochMilli(it) }
         ?: Instant.ofEpochMilli(ms.MIN_VALUE)
 
+    public val endInstant: Instant = events.last()?.deadline?.let { Instant.ofEpochMilli(it) }
+        ?: Instant.ofEpochMilli(ms.MIN_VALUE)
+
 
     init {
         check(hostIds.none { it in coreIds } && INTERNET_ID !in coreIds && INTERNET_ID !in hostIds)
         { "unable to create workload, conflicting ids" }
 
-        if (events.any { it !is NetworkEvent.FlowUpdate } && events.any { it is NetworkEvent.FlowUpdate }) {
+        if (events.any { it !is NetworkEvent.FlowUpdate } && events.any { it is FlowUpdate }) {
             log.warn("A network workload should be built with either only FlowUpdates (which assume ony 1 flow between 2 nodes) " +
                 "or with FlowStart, Stop, RateUpdate. A FlowUpdate will update the first flow with the same transmitter and receiver " +
                 "that it finds, if there is more than 1 between nodes, undesired behaviour is to be expected.")
         }
 
-        println("grouped: ${events.groupBy { it.deadline }.size}")
+        log.info(
+            "\n" + """
+                | == NETWORK WORKLOAD ===
+                | start instant: $startInstant
+                | end instant: $endInstant
+                | duration: ${Duration.ofMillis(endInstant.toEpochMilli() - startInstant.toEpochMilli())}
+            """.trimIndent()
+        )
     }
 
     /**

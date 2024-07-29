@@ -15,9 +15,12 @@ import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.emodels.SwitchDfltEnModel
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
+import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.utils.Mbps
+import org.opendc.simulator.network.utils.toLowerDataUnit
 
 /**
  * A [Node] whose job is to route incoming flows according to [portSelectionPolicy].
@@ -30,7 +33,7 @@ internal open class Switch(
     final override val id: NodeId,
     override val portSpeed: Kbps,
     override val numOfPorts: Int,
-    override val fairnessPolicy: FairnessPolicy = MaxMinNoForcedReduction,
+    override val fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ): Node, EnergyConsumer<Switch> {
 
@@ -63,12 +66,12 @@ internal open class Switch(
     @SerialName("switch-specs")
     internal data class SwitchSpecs (
         val numOfPorts: Int,
-        val portSpeed: Kbps,
+        val portSpeed: Mbps,
         val id: NodeId? = null
     ): Specs<Switch> {
-        override fun build(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts)
+        override fun build(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts)
 
-        fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed, numOfPorts)
+        fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts)
     }
 }
 

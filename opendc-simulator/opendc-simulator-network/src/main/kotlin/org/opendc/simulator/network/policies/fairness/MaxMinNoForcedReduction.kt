@@ -3,6 +3,7 @@ package org.opendc.simulator.network.policies.fairness
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.RateUpdt
+import org.opendc.simulator.network.flow.tracker.AllByDemand
 import org.opendc.simulator.network.flow.tracker.FlowTracker
 import org.opendc.simulator.network.flow.tracker.UnsatisfiedByRateOut
 import org.opendc.simulator.network.utils.Kbps
@@ -14,6 +15,7 @@ import org.opendc.simulator.network.utils.roundTo0withEps
 internal object MaxMinNoForcedReduction: FairnessPolicy {
     override fun FlowHandler.applyPolicy(updt: RateUpdt) {
         execRateReductions(updt)
+
 
         val tracker: FlowTracker = flowTracker
         var availableBW = this.availableBW

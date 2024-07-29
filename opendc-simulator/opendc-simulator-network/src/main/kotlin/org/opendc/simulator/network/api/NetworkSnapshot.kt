@@ -4,10 +4,9 @@ import kotlinx.coroutines.runBlocking
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
-import org.opendc.simulator.network.utils.Watts
+import org.opendc.simulator.network.utils.W
 import org.opendc.simulator.network.utils.ifNanThen
 import java.time.Instant
-import kotlin.system.exitProcess
 
 public data class NetworkSnapshot internal constructor(
     public val instant: Instant,
@@ -18,7 +17,7 @@ public data class NetworkSnapshot internal constructor(
     public val numOfActiveFlows: Int,
     public val totThroughputPerc: Double,
     public val avrgThroughputPerc: Double,
-    public val totEnergyConsumpt: Watts
+    public val totEnergyConsumpt: W
 ) {
     public fun fmt(flags: Int = ALL): String {
         val colWidth = 25
@@ -67,16 +66,13 @@ public data class NetworkSnapshot internal constructor(
                 block()
         }
 
-        private var stop = false
         public fun NetworkController.snapshot(): NetworkSnapshot {
-            if (stop) exitProcess(0)
             val network = this.network
 
             runBlocking { network.awaitStability() }
 
             if (network.flowsById.values.let { fs -> fs.sumOf { it.throughput } / fs.sumOf { it.demand } } < 1.0) {
                 network.flowsById.values.filterNot { it.demand == .0 }.forEach { print("[${it.demand} -> ${it.throughput}], ") }
-                if (network.flowsById.values.filterNot { it.demand == .0 }.size > 2) stop = true
             }
 
             return NetworkSnapshot(
