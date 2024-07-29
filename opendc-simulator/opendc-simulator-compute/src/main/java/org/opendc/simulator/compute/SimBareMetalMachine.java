@@ -27,6 +27,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
 import org.opendc.simulator.compute.model.ProcessingUnit;
@@ -34,15 +36,18 @@ import org.opendc.simulator.compute.workload.SimWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.InPort;
 import org.opendc.simulator.flow2.Inlet;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A simulated bare-metal machine that is able to run a single workload.
  *
  * <p>
  * A {@link SimBareMetalMachine} is a stateful object, and you should be careful when operating this object concurrently. For
- * example, the class expects only a single concurrent call to {@link #startWorkload(SimWorkload, Map, Consumer)} )}.
+ * example, the class expects only a single concurrent call to {@link #startWorkload(SimWorkload, Map, Consumer)}.
  */
 public final class SimBareMetalMachine extends SimAbstractMachine {
+     private final @Nullable NetworkInterface netIface;
+
     /**
      * The {@link FlowGraph} in which the simulation takes places.
      */
@@ -69,9 +74,14 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
      * @param model The machine model to simulate.
      * @param psuFactory The {@link SimPsuFactory} to construct the power supply of the machine.
      */
-    private SimBareMetalMachine(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory) {
+    private SimBareMetalMachine(FlowGraph graph,
+                                MachineModel model,
+                                SimPsuFactory psuFactory,
+                                @Nullable NetworkInterface netIface
+    ) {
         super(model);
 
+        this.netIface = netIface;
         this.graph = graph;
         this.psu = psuFactory.newPsu(this, graph);
 
@@ -99,6 +109,8 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
         }
     }
 
+     @Override public @Nullable NetworkInterface getNetworkInterface() { return netIface; }
+
     /**
      * Create a {@link SimBareMetalMachine} instance.
      *
@@ -107,8 +119,12 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
      * @param psuFactory The {@link SimPsuFactory} to construct the power supply of the machine.
      */
     public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory) {
-        return new SimBareMetalMachine(graph, model, psuFactory);
+        return new SimBareMetalMachine(graph, model, psuFactory, /* networkInterface */ null);
     }
+    public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory, NetworkInterface netIface) {
+        return new SimBareMetalMachine(graph, model, psuFactory, netIface);
+    }
+
 
     /**
      * Create a {@link SimBareMetalMachine} instance with a no-op PSU.
@@ -117,7 +133,10 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
      * @param model The machine model to simulate.
      */
     public static SimBareMetalMachine create(FlowGraph graph, MachineModel model) {
-        return new SimBareMetalMachine(graph, model, SimPsuFactories.noop());
+        return new SimBareMetalMachine(graph, model, SimPsuFactories.noop(), /* networkInterface */ null);
+    }
+    public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, NetworkInterface netIface) {
+        return new SimBareMetalMachine(graph, model, SimPsuFactories.noop(), netIface);
     }
 
     /**
@@ -208,6 +227,10 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
         private final List<NetworkAdapter> net;
         private final List<StorageDevice> disk;
 
+        // Each context has its own network sub interface, so that
+        // on shutdown all network flows started in this context are terminated
+        private final NetworkInterface netIface;
+
         private Context(
                 SimBareMetalMachine machine,
                 SimWorkload workload,
@@ -220,7 +243,11 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
             this.memory = machine.memory;
             this.net = machine.net;
             this.disk = machine.disk;
+            this.netIface = machine.getNetworkSubInterface(/* owner */ this.toString());
         }
+
+        @Override
+        public @Nullable NetworkInterface getNetworkInterface() { return netIface; }
 
         @Override
         public FlowGraph getGraph() {

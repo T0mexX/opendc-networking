@@ -1,0 +1,22 @@
+[{
+    "id": 0,
+    "name": "unnamed-simulation-fbc0",
+    "topologies": [
+        {
+            "pathToFile": "resources/env/single.json"
+        }
+    ],
+    "workloads": [
+        {
+            "pathToFile": "resources/bitbrains-small",
+            "type": "ComputeWorkload"
+        }
+    ],
+    "allocationPolicies": [
+        {
+            "policyType": "Mem"
+        }
+    ],
+    "outputFolder": "output/unnamed-simulation-fbc0",
+    "runs": 5
+}]

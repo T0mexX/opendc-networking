@@ -1,0 +1,22 @@
+[{
+    "id": 0,
+    "name": "unnamed-simulation-ac49",
+    "topologies": [
+        {
+            "pathToFile": "resources/env/single.json"
+        }
+    ],
+    "workloads": [
+        {
+            "pathToFile": "resources/bitbrains-small",
+            "type": "ComputeWorkload"
+        }
+    ],
+    "allocationPolicies": [
+        {
+            "policyType": "Mem"
+        }
+    ],
+    "outputFolder": "output/unnamed-simulation-ac49",
+    "runs": 5
+}]

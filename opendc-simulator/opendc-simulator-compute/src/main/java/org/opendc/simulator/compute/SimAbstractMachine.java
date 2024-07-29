@@ -146,9 +146,9 @@ public abstract class SimAbstractMachine implements SimMachine {
 
             graph.disconnect(getMemory().getInput());
 
-            for (SimNetworkInterface ifx : getNetworkInterfaces()) {
-                ((NetworkAdapter) ifx).disconnect();
-            }
+            // If network interface defined, terminate all
+            // flows that were started through this interface
+            if (getNetworkInterface() != null) getNetworkInterface().close();
 
             for (SimStorageInterface storage : getStorageInterfaces()) {
                 StorageDevice impl = (StorageDevice) storage;
@@ -291,15 +291,15 @@ public abstract class SimAbstractMachine implements SimMachine {
             return model.getBandwidth();
         }
 
-        @Override
-        protected Outlet getOutlet() {
-            return tx.getOutput();
-        }
-
-        @Override
-        protected Inlet getInlet() {
-            return rx.getInput();
-        }
+//        @Override
+//        protected Outlet getOutlet() {
+//            return tx.getOutput();
+//        }
+//
+//        @Override
+//        protected Inlet getInlet() {
+//            return rx.getInput();
+//        }
 
         @Override
         public String toString() {

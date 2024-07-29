@@ -48,7 +48,6 @@ import org.opendc.simulator.compute.workload.SimWorkloads
 import org.opendc.simulator.flow2.FlowEngine
 import org.opendc.simulator.flow2.source.SimpleFlowSource
 import org.opendc.simulator.kotlin.runSimulation
-import org.opendc.simulator.network.SimNetworkSink
 import org.opendc.simulator.power.SimPowerSource
 import java.util.concurrent.ThreadLocalRandom
 
@@ -269,7 +268,7 @@ class SimMachineTest {
                 )
 
             val adapter = (machine.peripherals[0] as SimNetworkAdapter)
-            adapter.connect(SimNetworkSink(graph, adapter.bandwidth.toFloat()))
+//            adapter.connect(SimNetworkSink(graph, adapter.bandwidth.toFloat()))
 
             machine.runWorkload(
                 object : SimWorkload {

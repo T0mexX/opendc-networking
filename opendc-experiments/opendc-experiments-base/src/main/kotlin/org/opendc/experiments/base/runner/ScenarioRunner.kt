@@ -31,13 +31,20 @@ import org.opendc.compute.service.ComputeService
 import org.opendc.compute.service.scheduler.createComputeScheduler
 import org.opendc.compute.simulator.provisioner.Provisioner
 import org.opendc.compute.simulator.provisioner.registerComputeMonitor
+import org.opendc.compute.simulator.provisioner.setUpNetwork
 import org.opendc.compute.simulator.provisioner.setupComputeService
 import org.opendc.compute.simulator.provisioner.setupHosts
 import org.opendc.compute.telemetry.export.parquet.ParquetComputeMonitor
 import org.opendc.compute.topology.clusterTopology
+import org.opendc.compute.topology.fromPath
+import org.opendc.compute.topology.specs.HostSpec
+import org.opendc.compute.topology.specs.TopologySpec
+import org.opendc.compute.topology.toHostSpecs
 import org.opendc.compute.workload.ComputeWorkloadLoader
 import org.opendc.experiments.base.scenario.Scenario
 import org.opendc.simulator.kotlin.runSimulation
+import org.opendc.simulator.network.api.NetworkController
+import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
 import java.io.File
 import java.time.Duration
 import java.util.Random
@@ -115,13 +122,20 @@ public fun runScenario(
         val serviceDomain = "compute.opendc.org"
         Provisioner(dispatcher, seed).use { provisioner ->
 
-            val topology = clusterTopology(scenario.topologySpec.pathToFile, Random(seed))
+//            val topology = clusterTopology(scenario.topologySpec.pathToFile, Random(seed))
+            val topologySpecs: TopologySpec = TopologySpec.fromPath(scenario.topologySpec.pathToFile)
+            val hostsSpecs: List<HostSpec> = topologySpecs.toHostSpecs(random = Random(seed))
+            val networkController: NetworkController? = topologySpecs.networkController
+            networkController?.setInstantSource(timeSource)
+            dispatcher
+
             provisioner.runSteps(
                 setupComputeService(
                     serviceDomain,
                     { createComputeScheduler(scenario.allocationPolicySpec.policyType, Random(it.seeder.nextLong())) },
                 ),
-                setupHosts(serviceDomain, topology, optimize = true),
+                setupHosts(serviceDomain, hostsSpecs, optimize = true, networkController = networkController),
+                setUpNetwork(networkController = networkController),
             )
 
             val workloadLoader = ComputeWorkloadLoader(File(scenario.workloadSpec.pathToFile))
@@ -133,6 +147,8 @@ public fun runScenario(
 
             val service = provisioner.registry.resolve(serviceDomain, ComputeService::class.java)!!
             service.replay(timeSource, vms, failureModelSpec = scenario.failureModelSpec, seed = seed)
+
+            println(networkController?.snapshot()?.fmt())
         }
     }
 

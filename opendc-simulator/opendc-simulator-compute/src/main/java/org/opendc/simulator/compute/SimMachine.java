@@ -25,14 +25,23 @@ package org.opendc.simulator.compute;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
 import org.opendc.simulator.compute.workload.SimWorkload;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A generic machine that is able to execute {@link SimWorkload} objects.
  */
 public interface SimMachine {
+    @Nullable NetworkInterface getNetworkInterface();
+    default @Nullable NetworkInterface getNetworkSubInterface(String owner) {
+        final @Nullable NetworkInterface machineNetIface = getNetworkInterface();
+        return machineNetIface == null ? null : machineNetIface.getSubInterface(owner);
+    }
+
     /**
      * Return the model of the machine containing its specifications.
      */

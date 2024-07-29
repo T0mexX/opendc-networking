@@ -23,6 +23,8 @@
 package org.opendc.compute.topology.specs
 
 import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.api.NetworkController
+import org.opendc.simulator.network.api.NodeId
 
 /**
  * Definition of a Topology modeled in the simulation.
@@ -32,8 +34,15 @@ import kotlinx.serialization.Serializable
 @Serializable
 public data class TopologySpec(
     val clusters: List<ClusterSpec>,
+    private val networkSpecsPath: String? = null,
     val schemaVersion: Int = 1,
-)
+) {
+    val networkController: NetworkController? by lazy {
+        networkSpecsPath?.let { NetworkController.fromPath(it) }
+    }
+}
+
+
 
 /**
  * Definition of a compute cluster modeled in the simulation.
@@ -66,7 +75,9 @@ public data class HostJSONSpec(
     val memory: MemorySpec,
     val powerModel: PowerModelSpec = PowerModelSpec("linear", 350.0, 400.0, 200.0),
     val count: Int = 1,
+    val nodeIds: List<NodeId> = emptyList(),
 )
+
 
 /**
  * Definition of a compute CPU modeled in the simulation.

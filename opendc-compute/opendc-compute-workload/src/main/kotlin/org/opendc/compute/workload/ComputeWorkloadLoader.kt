@@ -39,6 +39,8 @@ import org.opendc.trace.conv.resourceMemCapacity
 import org.opendc.trace.conv.resourceStartTime
 import org.opendc.trace.conv.resourceStateCpuUsage
 import org.opendc.trace.conv.resourceStateDuration
+import org.opendc.trace.conv.resourceStateNetRx
+import org.opendc.trace.conv.resourceStateNetTx
 import org.opendc.trace.conv.resourceStateTimestamp
 import org.opendc.trace.conv.resourceStopTime
 import java.io.File
@@ -76,6 +78,8 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
         val durationCol = reader.resolve(resourceStateDuration)
         val coresCol = reader.resolve(resourceCpuCount)
         val usageCol = reader.resolve(resourceStateCpuUsage)
+        val netTxCol = reader.resolve(resourceStateNetTx).let { if (it < 0) null else it }
+        val netRxCol = reader.resolve(resourceStateNetRx).let { if (it < 0) null else it }
 
         val fragments = mutableMapOf<String, Builder>()
 
@@ -86,9 +90,11 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
                 val durationMs = reader.getDuration(durationCol)!!
                 val cores = reader.getInt(coresCol)
                 val cpuUsage = reader.getDouble(usageCol)
+                val netTx = netTxCol?.let { reader.getDouble(netTxCol) * 8 /* KBps to Kbps */ }
+                val netRx = netRxCol?.let { reader.getDouble(netRxCol) * 8 /* KBps to Kbps */ }
 
                 val builder = fragments.computeIfAbsent(id) { Builder() }
-                builder.add(time, durationMs, cpuUsage, cores)
+                builder.add(time, durationMs, cpuUsage, cores, netTxKbps = netTx, netRxKbps = netRx)
             }
 
             fragments
@@ -258,6 +264,8 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
             duration: Duration,
             usage: Double,
             cores: Int,
+            netTxKbps: Double?,
+            netRxKbps: Double?
         ) {
             val startTimeMs = (deadline - duration).toEpochMilli()
             totalLoad += (usage * duration.toMillis()) / 1000.0 // avg MHz * duration = MFLOPs
@@ -267,7 +275,12 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
                 builder.add(startTimeMs, 0.0, cores)
             }
 
-            builder.add(deadline.toEpochMilli(), usage, cores)
+            // If networking values are defined in fragment.
+            if (netTxKbps != null && netRxKbps != null)
+                builder.add(deadline.toEpochMilli(), usage, cores, netTxKbps, netRxKbps)
+            else
+                builder.add(deadline.toEpochMilli(), usage, cores)
+
             previousDeadline = deadline.toEpochMilli()
         }
 

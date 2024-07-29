@@ -28,6 +28,7 @@ import org.opendc.compute.topology.specs.HostSpec
 import org.opendc.simulator.compute.SimBareMetalMachine
 import org.opendc.simulator.compute.kernel.SimHypervisor
 import org.opendc.simulator.flow2.FlowEngine
+import org.opendc.simulator.network.api.NetworkController
 import java.util.SplittableRandom
 
 /**
@@ -41,18 +42,19 @@ public class HostsProvisioningStep internal constructor(
     private val serviceDomain: String,
     private val specs: List<HostSpec>,
     private val optimize: Boolean,
+    private val networkController: NetworkController? = null
 ) : ProvisioningStep {
     override fun apply(ctx: ProvisioningContext): AutoCloseable {
         val service =
             requireNotNull(
                 ctx.registry.resolve(serviceDomain, ComputeService::class.java),
             ) { "Compute service $serviceDomain does not exist" }
-        val engine = FlowEngine.create(ctx.dispatcher)
+        val engine = FlowEngine.create(ctx.dispatcher, networkController)
         val graph = engine.newGraph()
         val hosts = mutableSetOf<SimHost>()
 
         for (spec in specs) {
-            val machine = SimBareMetalMachine.create(graph, spec.model, spec.psuFactory)
+            val machine = SimBareMetalMachine.create(graph, spec.model, spec.psuFactory, spec.netIface)
             val hypervisor = SimHypervisor.create(spec.multiplexerFactory, SplittableRandom(ctx.seeder.nextLong()))
 
             val host =
