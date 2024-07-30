@@ -1,7 +1,10 @@
 package org.opendc.simulator.network.units
 
+import kotlinx.serialization.Serializable
 
-internal interface Unit<T: Unit<T>> {
+
+@Serializable
+internal sealed interface Unit<T: Unit<T>> {
     val value: Double
 
     operator fun plus(other: T): T = new(value + other.value)
@@ -19,3 +22,4 @@ internal interface Unit<T: Unit<T>> {
         operator fun Energy<*>.times(time: Time<*>): Power<*> = KWatts(whValue() * time.hoursValue())
     }
 }
+

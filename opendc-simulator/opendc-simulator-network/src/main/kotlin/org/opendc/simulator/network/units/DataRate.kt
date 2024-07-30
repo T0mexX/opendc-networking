@@ -1,7 +1,9 @@
 package org.opendc.simulator.network.units
 
+import kotlinx.serialization.Serializable
 
-internal interface DataRate<T: Unit<T>>: Unit<T> {
+@Serializable
+internal sealed interface DataRate<T: Unit<T>>: Unit<T> {
     fun kbpsValue(): Double
     fun kBpsValue(): Double = kbpsValue() / 8
     fun mbpsValue(): Double = kbpsValue() / 1024
@@ -18,35 +20,42 @@ internal interface DataRate<T: Unit<T>>: Unit<T> {
 }
 
 @JvmInline
+@Serializable
 internal value class Kbps(override val value: Double): DataRate<Kbps> {
     override fun kbpsValue(): Double = value
     override fun new(value: Double): Kbps = Kbps(value)
 }
+
 @JvmInline
+@Serializable
 internal value class KBps(override val value: Double): DataRate<KBps> {
     override fun kbpsValue(): Double = value * 8
     override fun new(value: Double): KBps = KBps(value)
 }
 
 @JvmInline
+@Serializable
 internal value class Mbps(override val value: Double): DataRate<Mbps> {
     override fun kbpsValue(): Double = value * 1024
     override fun new(value: Double): Mbps = Mbps(value)
 }
 
 @JvmInline
+@Serializable
 internal value class MBps(override val value: Double): DataRate<MBps> {
     override fun kbpsValue(): Double = value * 8 * 1024
     override fun new(value: Double): MBps = MBps(value)
 }
 
 @JvmInline
+@Serializable
 internal value class Gbps(override val value: Double): DataRate<Gbps> {
     override fun kbpsValue(): Double = value * 1024 * 1024
     override fun new(value: Double): Gbps = Gbps(value)
 }
 
 @JvmInline
+@Serializable
 internal value class GBps(override val value: Double): DataRate<GBps> {
     override fun kbpsValue(): Double = value * 8 * 1024 * 1024
     override fun new(value: Double): GBps = GBps(value)
