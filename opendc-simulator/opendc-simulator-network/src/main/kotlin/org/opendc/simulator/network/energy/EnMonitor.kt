@@ -1,7 +1,7 @@
 package org.opendc.simulator.network.energy
 
+import org.opendc.simulator.network.units.Watts
 import org.opendc.simulator.network.utils.OnChangeHandler
-import org.opendc.simulator.network.utils.W
 import kotlin.properties.Delegates
 
 /**
@@ -17,12 +17,12 @@ internal class EnMonitor<T: EnergyConsumer<T>>(
     /**
      * Callback functions of the observers of the [currConsumpt] field.
      */
-    private val obs: MutableList<OnChangeHandler<EnMonitor<T>, W>> = mutableListOf()
+    private val obs: MutableList<OnChangeHandler<EnMonitor<T>, Watts>> = mutableListOf()
 
     /**
      * The current energy consumption of the [monitored] network component.
      */
-    private var currConsumpt: W by Delegates.observable(.0) { _, oldValue, newValue ->
+    private var currConsumpt: Watts by Delegates.observable(Watts(.0)) { _, oldValue, newValue ->
         obs.forEach { it.handleChange(this, oldValue, newValue) }
     }
 
@@ -30,7 +30,7 @@ internal class EnMonitor<T: EnergyConsumer<T>>(
      * Adds an observer callback function.
      * @param[f]    callback function of the new observer.
      */
-    fun addObserver(f: OnChangeHandler<EnMonitor<T>, W>) { obs.add(f) }
+    fun addObserver(f: OnChangeHandler<EnMonitor<T>, Watts>) { obs.add(f) }
 
     /**
      * Updates the energy consumption of [monitored].

@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
+import org.opendc.simulator.network.units.Energy
 import org.opendc.simulator.network.utils.W
 import org.opendc.simulator.network.utils.ifNanThen
 import java.time.Instant
@@ -17,9 +18,9 @@ public data class NetworkSnapshot internal constructor(
     public val numOfActiveFlows: Int,
     public val totThroughputPerc: Double,
     public val avrgThroughputPerc: Double,
-    public val totEnergyConsumpt: W
+    public val totEnergyConsumpt: Energy<*>
 ) {
-    @OptIn(ExperimentalStdlibApi::class)
+
     public fun fmt(flags: Int = ALL): String {
         val colWidth = 25
 

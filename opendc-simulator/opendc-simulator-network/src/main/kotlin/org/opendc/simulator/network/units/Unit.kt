@@ -4,22 +4,18 @@ import kotlinx.serialization.Serializable
 
 
 @Serializable
-internal sealed interface Unit<T: Unit<T>> {
-    val value: Double
+public sealed interface Unit<T: Unit<T>> {
+    public val value: Double
 
-    operator fun plus(other: T): T = new(value + other.value)
-    operator fun minus(other: T): T = new(value - other.value)
-    operator fun div(other: Number): T = new(value / other.toDouble())
-    operator fun times(other: Number): T = new(value * other.toDouble())
-
-    fun new(value: Double): T
-
-    companion object {
-        operator fun Watts.div(time: Time<*>): Wh = Wh(value / time.hoursValue())
-        operator fun KWatts.div(time: Time<*>): KWh = KWh(value / time.hoursValue())
-        operator fun Power<*>.div(time: Time<*>): Energy<*> = KWh(kWattsValue() / time.hoursValue())
-
-        operator fun Energy<*>.times(time: Time<*>): Power<*> = KWatts(whValue() * time.hoursValue())
-    }
+    public operator fun plus(other: T): T = new(value + other.value)
+    public operator fun minus(other: T): T = new(value - other.value)
+    public operator fun div(other: Number): T = new(value / other.toDouble())
+    public operator fun times(other: Number): T = new(value * other.toDouble())
+    public fun new(value: Double): T
 }
 
+public operator fun <P: Power<*>> P.times(time: Time<*>): Energy<*> = KWh(kWattsValue() * time.hoursValue())
+public operator fun <T: Time<*>> T.times(power: Power<*>): Energy<*> = KWh(hoursValue() * power.kWattsValue())
+
+public operator fun Energy<*>.div(time: Time<*>): Power<*> = KWatts(whValue() * time.hoursValue())
+public operator fun <T: Unit<T>, N: Number> N.times(unit: T): T = unit * this

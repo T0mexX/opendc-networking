@@ -2,25 +2,28 @@ package org.opendc.simulator.network.api
 
 import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
-import org.opendc.simulator.network.utils.KWh
+import org.opendc.simulator.network.units.Energy
+import org.opendc.simulator.network.units.KWh
+import org.opendc.simulator.network.units.Ms
+import org.opendc.simulator.network.units.Power
+import org.opendc.simulator.network.units.Watts
+import org.opendc.simulator.network.units.times
 import org.opendc.simulator.network.utils.OnChangeHandler
-import org.opendc.simulator.network.utils.W
-import org.opendc.simulator.network.utils.Wh
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.ms
-import java.time.Duration
 
 public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyConsumer<*>>) {
     private companion object { private val log by logger() }
 
-    public var currentConsumption: W = .0
+    public var currentConsumption: Power<*> = Watts(.0)
         private set
-    public var totalConsumption: KWh = .0
+
+    public var totalConsumption: Energy<*> = KWh(.0)
         private set
 
     private val consumers: Map<NodeId, EnergyConsumer<*>> = consumers.associateBy { it.id }
 
-    private val energyUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, W> { _, oldValue, newValue ->
+    private val energyUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, Watts> { _, oldValue, newValue ->
         currentConsumption += newValue - oldValue
     }
 
@@ -33,18 +36,23 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
         // TODO: change/improve
         return "\n" + """
             | === ENERGY REPORT ===
-            | Current Power Usage: ${currentConsumption} W
-            | Total EnergyConsumed: ${totalConsumption} KWh
+            | Current Power Usage: $currentConsumption
+            | Total EnergyConsumed: $totalConsumption
         """.trimIndent()
     }
 
-    internal fun advanceBy(ms: ms) {
-        fun ms.toHours(): Double = this.toDouble() / 1000 / 60 / 60
 
-        totalConsumption += currentConsumption * ms.toHours() / 1000
+    @Deprecated("use Ms(value) value class instead of ms type alias")
+    internal fun advanceBy(ms: ms) {
+        advanceBy(Ms(ms.toDouble()))
+        fun ms.toHours(): Double = this.toDouble() / 1000 / 60 / 60
+    }
+
+    internal fun advanceBy(ms: Ms) {
+        totalConsumption += currentConsumption * ms
     }
 
     internal fun reset() {
-        totalConsumption = .0
+        totalConsumption = KWh(.0)
     }
 }
