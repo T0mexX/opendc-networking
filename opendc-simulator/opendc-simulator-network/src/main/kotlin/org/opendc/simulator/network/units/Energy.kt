@@ -6,12 +6,15 @@ import kotlinx.serialization.Serializable
 public sealed interface Energy<T>: Unit<T> where T : Unit<T>, T: Energy<T> {
     public fun whValue(): Double
     public fun kWhValue(): Double = whValue() / 1000.0
+
     public fun toWh(): Wh = Wh(whValue())
     public fun toKWh(): KWh = KWh(kWhValue())
 
     public fun <P: Energy<*>> P.convert(): T
-    public operator fun <P: Energy<*>> plus(other: P): Energy<T> = super.plus(other.convert())
 
+    public operator fun <P: Energy<*>> plus(other: P): Energy<T> = super.plus(other.convert())
+    public operator fun <P: Energy<*>> minus(other: P): Energy<T> = super.minus(other.convert())
+    public operator fun <P: Energy<*>> compareTo(other: P): Int = super.compareTo(other.convert())
 }
 
 @JvmInline

@@ -6,12 +6,12 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.units.Ms
 import org.opendc.simulator.network.utils.Kb
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.SuspOnChangeHandler
 import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.utils.roundTo0withEps
 import kotlin.properties.Delegates
 
@@ -119,10 +119,9 @@ public class NetFlow internal constructor(
      * Advances the time for the flow, updating the total data
      * transmitted according to [ms] milliseconds timelapse.
      */
-    internal fun advanceBy(ms: ms) {
-        fun ms.toSeconds(): Double = this.toDouble() / 1000
+    internal fun advanceBy(ms: Ms) {
 
-        totDataTransmitted += throughput * ms.toSeconds()
+        totDataTransmitted += throughput * ms.secValue()
     }
 
     /**

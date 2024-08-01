@@ -7,12 +7,12 @@ import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.trace.preset.BitBrains
 import org.opendc.trace.table.Table
 import org.opendc.trace.table.TableReader
 import org.opendc.trace.table.concatWithName
 import org.opendc.simulator.network.api.simworkloads.NetworkEvent.*
+import org.opendc.simulator.network.units.Ms
 import org.opendc.simulator.network.utils.withErr
 import java.io.File
 import java.time.Duration
@@ -36,11 +36,11 @@ public class SimNetWorkload internal constructor(
 
     public val size: Int = events.size
 
-    public val startInstant: Instant = events.peek()?.deadline?.let { Instant.ofEpochMilli(it) }
-        ?: Instant.ofEpochMilli(ms.MIN_VALUE)
+    public val startInstant: Instant = events.peek()?.deadline?.let { Instant.ofEpochMilli(it.msValue().toLong()) }
+        ?: Instant.ofEpochMilli(Long.MIN_VALUE)
 
-    public val endInstant: Instant = events.last()?.deadline?.let { Instant.ofEpochMilli(it) }
-        ?: Instant.ofEpochMilli(ms.MIN_VALUE)
+    public val endInstant: Instant = events.last()?.deadline?.let { Instant.ofEpochMilli(it.msValue().toLong()) }
+        ?: Instant.ofEpochMilli(Long.MIN_VALUE)
 
 
     init {
@@ -115,10 +115,10 @@ public class SimNetWorkload internal constructor(
     internal fun hasNext(): Boolean =
         events.isNotEmpty()
 
-    internal suspend fun NetworkController.execUntil(until: ms): Long {
+    internal suspend fun NetworkController.execUntil(until: Ms): Long {
         var consumed: Long = 0
 
-        while ((events.peek()?.deadline ?: ms.MAX_VALUE) <= until) {
+        while ((events.peek()?.deadline ?: Ms(Long.MAX_VALUE)) <= until) {
             events.poll()?.let { with(it) { execIfNotPassed() } }
             consumed++
         }
@@ -177,7 +177,7 @@ public class SimNetWorkload internal constructor(
             val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() } )!!
             val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { it * 8 /* KBps to Kbps*/ } )!!
             val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { it * 8 /* KBps to Kbps*/} )!!
-            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP, process = { Instant.ofEpochSecond(it).toEpochMilli() })!!
+            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP_SEC_EPOCH, process = { Ms(Instant.ofEpochSecond(it).toEpochMilli()) })!!
 
             val vmIds = mutableSetOf<Long>()
             val netEvents = mutableListOf<NetworkEvent>()
@@ -185,7 +185,7 @@ public class SimNetWorkload internal constructor(
                 vmIds.add(idRd.currRowValue)
 
                 netEvents.add(
-                    NetworkEvent.FlowUpdate(
+                    FlowUpdate(
                         from = idRd.currRowValue,
                         to = INTERNET_ID,
                         desiredDataRate = netTxRd.currRowValue,
@@ -194,7 +194,7 @@ public class SimNetWorkload internal constructor(
                 )
 
                 netEvents.add(
-                    NetworkEvent.FlowUpdate(
+                    FlowUpdate(
                         from = INTERNET_ID,
                         to = idRd.currRowValue,
                         desiredDataRate = netRxRd.currRowValue,

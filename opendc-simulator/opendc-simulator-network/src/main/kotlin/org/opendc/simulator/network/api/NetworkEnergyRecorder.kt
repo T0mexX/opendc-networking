@@ -10,7 +10,6 @@ import org.opendc.simulator.network.units.Watts
 import org.opendc.simulator.network.units.times
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 
 public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyConsumer<*>>) {
     private companion object { private val log by logger() }
@@ -39,13 +38,6 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
             | Current Power Usage: $currentConsumption
             | Total EnergyConsumed: $totalConsumption
         """.trimIndent()
-    }
-
-
-    @Deprecated("use Ms(value) value class instead of ms type alias")
-    internal fun advanceBy(ms: ms) {
-        advanceBy(Ms(ms.toDouble()))
-        fun ms.toHours(): Double = this.toDouble() / 1000 / 60 / 60
     }
 
     internal fun advanceBy(ms: Ms) {

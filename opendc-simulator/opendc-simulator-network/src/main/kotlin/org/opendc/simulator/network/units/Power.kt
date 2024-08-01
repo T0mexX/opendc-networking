@@ -11,8 +11,10 @@ public sealed interface Power<T>: Unit<T> where T : Unit<T>, T:Power<T>{
 
 
     public fun <P: Power<*>> P.convert(): T
-    public operator fun <P: Power<*>> plus(other: P): Power<T> =
-        super.plus(other.convert())
+
+    public operator fun <P: Power<*>> plus(other: P): Power<T> = super.plus(other.convert())
+    public operator fun <P: Power<*>> minus(other: P): Power<T> = super.minus(other.convert())
+    public operator fun <P: Power<*>> compareTo(other: P): Int = super.compareTo(other.convert())
 }
 
 @JvmInline

@@ -23,12 +23,12 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.units.Ms
 import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.approxLarger
 import org.opendc.simulator.network.utils.errAndNull
@@ -372,10 +372,10 @@ public class NetworkController(
         if (instantSrc.isExternalSource) {
             runBlocking { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
-            if (logSnapshot) log.info("\n" + snapshot().fmt(NetworkSnapshot.ENERGY))
+            if (logSnapshot) log.info("\n" + snapshot().fmt(ENERGY))
 
-            val timeSpan = instantSrc.millis() - lastUpdate.toEpochMilli()
-            if (timeSpan == 0L) return
+            val timeSpan = Ms(instantSrc.millis() - lastUpdate.toEpochMilli())
+            if (timeSpan == Ms(0)) return
             advanceBy(timeSpan, suppressWarn = true)
         } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
     }
@@ -384,16 +384,16 @@ public class NetworkController(
      * Advances the network time by [duration], updating network related statistics.
      */
     public fun advanceBy(duration: Duration) {
-        advanceBy(duration.toMillis())
+        advanceBy(Ms(duration.toMillis()))
     }
 
     /**
      * Advances the network time by [ms] milliseconds, updating network related statistics.
      */
-    public fun advanceBy(ms: ms) { advanceBy(ms, suppressWarn = false) }
-    private fun advanceBy(ms: ms, suppressWarn: Boolean) {
-        if (ms < 0) return log.error("advanceBy received negative time-span parameter($ms), ignoring...")
-        if (ms == 0L) return
+    public fun advanceBy(ms: Ms) { advanceBy(ms, suppressWarn = false) }
+    private fun advanceBy(ms: Ms, suppressWarn: Boolean) {
+        if (ms < Ms(0)) return log.error("advanceBy received negative time-span parameter($ms), ignoring...")
+        if (ms == Ms(0)) return
         runBlocking { network.awaitStability() }
 
         if (instantSrc.isInternalSource)
@@ -430,7 +430,7 @@ public class NetworkController(
                 "be replaced with an internal one to tun the workload.")
             // If time source was external, an internal time source with same timestamp is set.
             // This time stamp is then overwritten if `reset` is `true`.
-            instantSrc = NetworkInstantSrc(internal = instantSrc.instant().toEpochMilli())
+            instantSrc = NetworkInstantSrc(internal = Ms(instantSrc.instant().toEpochMilli()))
         }
 
         if (reset) {

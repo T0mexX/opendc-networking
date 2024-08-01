@@ -20,7 +20,7 @@ internal typealias Kbps = Double
 internal typealias Kb = Double
 internal typealias KBps = Double
 internal typealias KB = Double
-internal typealias ms = Long
+//internal typealias ms = Long
 
 internal fun Double.toLowerDataUnit(): Double = this * 1024
 internal fun Double.toHigherDataUnit(): Double = this / 1024

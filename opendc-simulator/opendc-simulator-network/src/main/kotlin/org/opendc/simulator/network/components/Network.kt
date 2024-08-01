@@ -15,13 +15,13 @@ import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
+import org.opendc.simulator.network.units.Ms
 import org.opendc.simulator.network.utils.NonSerializable
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.utils.withWarn
 
 
@@ -126,7 +126,7 @@ public sealed class Network {
         return sb.toString()
     }
 
-    internal fun advanceBy(ms: ms) {
+    internal fun advanceBy(ms: Ms) {
         flowsById.values.forEach { it.advanceBy(ms) }
     }
 

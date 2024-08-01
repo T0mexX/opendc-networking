@@ -1,14 +1,14 @@
 package org.opendc.simulator.network.api
 
 import org.opendc.simulator.network.api.NetworkController.Companion.log
+import org.opendc.simulator.network.units.Ms
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import java.time.Instant
 import java.time.InstantSource
 
 internal class NetworkInstantSrc(
     private val external: InstantSource? = null,
-    internal: ms = ms.MIN_VALUE
+    internal: Ms = Ms(Long.MIN_VALUE)
 ): InstantSource {
     var internal = internal
         private set
@@ -16,14 +16,14 @@ internal class NetworkInstantSrc(
     val isInternalSource: Boolean = isExternalSource.not()
     override fun instant(): Instant =
         external?.instant()
-            ?:  Instant.ofEpochMilli(internal)
+            ?:  Instant.ofEpochMilli(internal.msValue().toLong())
 
-    fun advanceTime(ms: ms) {
+    fun advanceTime(ms: Ms) {
         external?.let { return log.error("unable to advance internal time, network has external time source") }
         internal += ms
     }
 
-    fun setInternalTime(ms: ms) {
+    fun setInternalTime(ms: Ms) {
         internal = ms
     }
 }
