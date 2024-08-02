@@ -5,14 +5,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.utils.IdDispenser
-import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.NonSerializable
 import kotlin.math.pow
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
-import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.units.Mbps
 import org.opendc.simulator.network.utils.logger
 import java.io.File
 import kotlin.math.min
+
+private typealias SwitchSpecs_ = SwitchSpecs<*>
 
 /**
  * Fat-tree network topology built based on the number of ports of the [SwitchSpecs] passed as parameter.
@@ -21,9 +22,9 @@ import kotlin.math.min
 @Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
 @Serializable(with = NonSerializable::class)
 internal class FatTreeNetwork(
-    coreSpecs: SwitchSpecs,
-    aggrSpecs: SwitchSpecs,
-    torSpecs: SwitchSpecs
+    coreSpecs: SwitchSpecs_,
+    aggrSpecs: SwitchSpecs_,
+    torSpecs: SwitchSpecs_
 ): Network() {
 
     override val nodes: Map<NodeId, Node>
@@ -112,7 +113,7 @@ internal class FatTreeNetwork(
      * @param[aggrSpecs]    specifications of the switches in the *aggregation layer*.
      * @param[torSpecs]     specifications of the switches in the *access layer* (also called Top of Rack switches).
      */
-    inner class FatTreePod(aggrSpecs: SwitchSpecs, torSpecs: SwitchSpecs) {
+    inner class FatTreePod(aggrSpecs: SwitchSpecs_, torSpecs: SwitchSpecs_) {
         /**
          * [HostNode]s that belong to ***this*** pod.
          */
@@ -132,7 +133,7 @@ internal class FatTreeNetwork(
         init {
             val k: Int = min(aggrSpecs.numOfPorts, torSpecs.numOfPorts)
             hostNodes = buildList {
-                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(HostNode(IdDispenser.nextNodeId, 1000.0, 1)) } // TODO: change HostNode building
+                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(HostNode(IdDispenser.nextNodeId, Mbps(1000.0), 1)) } // TODO: change HostNode building
             }
 
             torSwitches = buildList {
@@ -158,7 +159,7 @@ internal class FatTreeNetwork(
         internal fun fromFile(file: File) =
             Specs.fromFile<FatTreeNetwork>(file).build()
 
-        operator fun invoke(allSwitchSpecs: SwitchSpecs): FatTreeNetwork =
+        operator fun invoke(allSwitchSpecs: SwitchSpecs_): FatTreeNetwork =
             FatTreeNetwork(coreSpecs = allSwitchSpecs, aggrSpecs = allSwitchSpecs, torSpecs = allSwitchSpecs)
     }
 
@@ -170,7 +171,7 @@ internal class FatTreeNetwork(
     internal data class FatTreeTopologySpecs(
         val name: String = "Default",
         val switchSpecs: SwitchSpecs? = null,
-        val coreSwitchSpecs: SwitchSpecs? = null,
+        val coreSwitchSpecs: SwitchSpecs_? = null,
         val aggrSwitchSpecs: SwitchSpecs? = null,
         val torSwitchSpecs: SwitchSpecs? = null
     ): Specs<FatTreeNetwork> {

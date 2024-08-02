@@ -1,5 +1,6 @@
 package org.opendc.simulator.network.units
 
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 

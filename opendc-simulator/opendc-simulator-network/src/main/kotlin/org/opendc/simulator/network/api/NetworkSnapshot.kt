@@ -5,7 +5,6 @@ import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.units.Energy
-import org.opendc.simulator.network.utils.W
 import org.opendc.simulator.network.utils.ifNanThen
 import java.time.Instant
 

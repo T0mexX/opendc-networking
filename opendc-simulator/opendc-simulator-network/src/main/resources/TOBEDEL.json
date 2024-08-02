@@ -3,10 +3,9 @@
     "type": "custom-network-topology-specs",
     "nodesSpecs": [
         {
-            "type": "switch-specs",
             "id": 1,
             "numOfPorts": 10,
-            "portSpeed": 1
+            "portSpeed": "1024Kbps"
         },
         {
             "type": "switch-specs",

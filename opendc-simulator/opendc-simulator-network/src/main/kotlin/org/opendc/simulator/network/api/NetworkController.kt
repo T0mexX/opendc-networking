@@ -21,13 +21,13 @@ import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.Ms
 import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.approxLarger
@@ -260,9 +260,9 @@ public class NetworkController(
     public suspend fun startFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId, // TODO: understand how multiple core switches work
-        demand: Kbps = .0,
+        demand: DataRate<*> = DataRate.ZERO,
         name: String = NetFlow.DEFAULT_NAME,
-        throughputOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        throughputOnChangeHandler: ((NetFlow, DataRate<*>, DataRate<*>) -> Unit)? = null,
     ): NetFlow? {
         val mappedTransmitterId: NodeId =   mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
@@ -318,8 +318,8 @@ public class NetworkController(
     public suspend fun startOrUpdateFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId,
-        demand: Kbps = .0,
-        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        demand: DataRate<*> = DataRate.ZERO,
+        dataRateOnChangeHandler: ((NetFlow, DataRate<*>, DataRate<*>) -> Unit)? = null,
     ): NetFlow? {
         val mappedTransmitterId: NodeId = mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)

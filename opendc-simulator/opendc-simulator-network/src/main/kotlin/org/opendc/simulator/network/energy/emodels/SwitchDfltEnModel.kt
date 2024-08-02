@@ -3,11 +3,10 @@ package org.opendc.simulator.network.energy.emodels
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.energy.EnModel
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Mbps
 import org.opendc.simulator.network.units.Watts
-import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.Mbps
 import org.opendc.simulator.network.units.times
-import org.opendc.simulator.network.utils.toHigherDataUnit
 import kotlin.math.log
 import kotlin.math.pow
 
@@ -45,19 +44,18 @@ internal object SwitchDfltEnModel: EnModel<Switch> {
      * Returns static power consumption of a single active port of speed [portSpeed].
      * @param[portSpeed]    speed of the port to compute static energy consumption of.
      */
-    private fun getPortIdlePwr(portSpeed: Kbps): Watts {
-        val portSpeedMbps: Mbps = portSpeed.toHigherDataUnit()
+    private fun getPortIdlePwr(portSpeed: DataRate): Watts {
 
-        return when (portSpeedMbps) {
-            10.0 -> IDLE_PORT_PWR_10Mbps
-            100.0 -> IDLE_PORT_PWR_100Mbps
-            1000.0 -> IDLE_PORT_PWR_1000Mbps
+        return when (portSpeed.toMbps()) {
+            Mbps(10.0) -> IDLE_PORT_PWR_10Mbps
+            Mbps(100.0) -> IDLE_PORT_PWR_100Mbps
+            Mbps(1000.0) -> IDLE_PORT_PWR_1000Mbps
             else -> {
                 /**
                  * Just approximated poorly from the 3 constants.
                  * TODO: change
                  */
-                Watts(4.0.pow(log(portSpeedMbps, 10.0) - 1) * (3.0 / 48.0))
+                Watts(4.0.pow(log(portSpeed.mBpsValue(), 10.0) - 1) * (3.0 / 48.0))
             }
         }
     }

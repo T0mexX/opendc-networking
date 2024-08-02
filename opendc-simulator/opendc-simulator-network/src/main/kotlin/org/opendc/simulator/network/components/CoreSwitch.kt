@@ -5,14 +5,11 @@ import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
-import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.IdDispenser
-import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.Mbps
-import org.opendc.simulator.network.utils.toLowerDataUnit
 
 /**
  * Switch that also implements [EndPointNode].
@@ -20,7 +17,7 @@ import org.opendc.simulator.network.utils.toLowerDataUnit
  */
 internal class CoreSwitch(
     id: NodeId,
-    portSpeed: Kbps,
+    portSpeed: DataRate<*>,
     numOfPorts: Int,
     fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     portSelectionPolicy: PortSelectionPolicy = StaticECMP,
@@ -42,11 +39,11 @@ internal class CoreSwitch(
      */
     @Serializable
     @SerialName("core-switch-specs")
-    internal data class CoreSwitchSpecs (
+    internal data class CoreSwitchSpecs <T: DataRate<T>> (
         val numOfPorts: Int,
-        val portSpeed: Mbps,
+        val portSpeed: DataRate<T>,
         val id: NodeId? = null
     ): Specs<CoreSwitch> {
-        override fun build(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts + 1)
+        override fun build(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts + 1)
     }
 }

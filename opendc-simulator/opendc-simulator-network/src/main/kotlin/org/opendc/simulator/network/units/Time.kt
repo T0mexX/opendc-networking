@@ -46,3 +46,4 @@ public value class Hours(override val value: Double): Time<Hours> {
     override fun new(value: Double): Hours = Hours(value)
     override fun toString(): String = "$value h"
 }
+

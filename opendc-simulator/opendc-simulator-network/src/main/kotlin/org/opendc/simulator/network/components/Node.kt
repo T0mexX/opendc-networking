@@ -10,7 +10,7 @@ import org.opendc.simulator.network.components.internalstructs.UpdateChl
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.logger
 
@@ -29,7 +29,7 @@ internal interface Node: FlowView {
     /**
      * Port speed in Kbps full duplex.
      */
-    val portSpeed: Kbps
+    val portSpeed: DataRate<*>
 
     /**
      * Ports of ***this*** [Node], full duplex.
@@ -102,15 +102,14 @@ internal interface Node: FlowView {
      * Updates forwarding of all flows transiting through ***this*** node.
      */
     suspend fun updateAllFlows() {
-        updtChl.send(RateUpdt(allTransitingFlowsIds().associateWith { .0 })) // TODO: change
+        updtChl.send(RateUpdt(allTransitingFlowsIds().associateWith { DataRate.ZERO })) // TODO: change
     }
 
+    override fun totIncomingDataRateOf(fId: FlowId): DataRate<*> =
+        flowHandler.outgoingFlows[fId]?.demand ?: DataRate.ZERO
 
-    override fun totIncomingDataRateOf(fId: FlowId): Kbps =
-        flowHandler.outgoingFlows[fId]?.demand ?: .0
-
-    override fun totOutgoingDataRateOf(fId: FlowId): Kbps =
-        flowHandler.outgoingFlows[fId]?.totRateOut ?: .0
+    override fun totOutgoingDataRateOf(fId: FlowId): DataRate<*> =
+        flowHandler.outgoingFlows[fId]?.totRateOut ?: DataRate.ZERO
 
     override fun allTransitingFlowsIds(): Collection<FlowId> =
         with(flowHandler) {
