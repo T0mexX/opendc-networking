@@ -1,22 +1,28 @@
 package org.opendc.simulator.network.utils
 
 
-internal class PatternMatching(private val value: String) {
+internal class PatternMatching<T>(private val value: String) {
     private var handled = false
+    private var _result: T? = null
+    internal val result: T get() = _result ?: throw RuntimeException("no match")
 
-    operator fun Regex.invoke(block: MatchResult.() -> Unit) {
+    operator fun Regex.invoke(block: MatchResult.() -> T) {
         if (handled) return
-        matchEntire(value)?.block()?.also { handled = true }
+        _result = matchEntire(value)?.block()?.also { handled = true }
     }
 
-    fun otherwise(block: () -> Unit) {
+    fun otherwise(block: () -> T) {
         if (handled) return
-        block()
+        _result = block()
     }
 }
 
 
-internal fun whenMatch(
+internal fun <T> whenMatch(
     value: String,
-    block: PatternMatching.() -> Unit
-) = PatternMatching(value).block()
+    block: PatternMatching<T>.() -> Unit
+): T {
+    val pm = PatternMatching<T>(value)
+    pm.block()
+    return pm.result
+}

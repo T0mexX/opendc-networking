@@ -4,7 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
-import org.opendc.simulator.network.utils.W
+import org.opendc.simulator.network.units.Energy
 import org.opendc.simulator.network.utils.ifNanThen
 import java.time.Instant
 
@@ -17,9 +17,8 @@ public data class NetworkSnapshot internal constructor(
     public val numOfActiveFlows: Int,
     public val totThroughputPerc: Double,
     public val avrgThroughputPerc: Double,
-    public val totEnergyConsumpt: W
+    public val totEnergyConsumpt: Energy
 ) {
-    @OptIn(ExperimentalStdlibApi::class)
     public fun fmt(flags: Int = ALL): String {
         val colWidth = 25
 
@@ -44,7 +43,7 @@ public data class NetworkSnapshot internal constructor(
             flags.withFlagSet(FLOWS) { append(numOfActiveFlows.toString().padEnd(colWidth)) }
             flags.withFlagSet(TOT_THROUGHPUT) { append(String.format("%.5f", totThroughputPerc).padEnd(colWidth)) }
             flags.withFlagSet(AVRG_THROUGHPUT) { append(String.format("%.5f", avrgThroughputPerc).padEnd(colWidth)) }
-            flags.withFlagSet(ENERGY) { append(String.format("%.5f", totEnergyConsumpt).padEnd(colWidth)) }
+            flags.withFlagSet(ENERGY) { append(String.format("%.5f", totEnergyConsumpt.toKWh()).padEnd(colWidth)) }
         }
 
         return firstLine + secondLine
@@ -71,19 +70,15 @@ public data class NetworkSnapshot internal constructor(
 
             runBlocking { network.awaitStability() }
 
-//            if (network.flowsById.values.let { fs -> fs.sumOf { it.throughput } / fs.sumOf { it.demand } } < 1.0) {
-//                network.flowsById.values.filterNot { it.demand == .0 }.forEach { print("[${it.demand} -> ${it.throughput}], ") }
-//            }
-
             return NetworkSnapshot(
                 instant = this.currentInstant,
                 numOfNodes = network.nodes.size,
                 numOfHostNodes = network.getNodesById<HostNode>().size,
                 assignedHostNodes = this.claimedHostIds.size,
                 numOfCoreSwitches = network.getNodesById<CoreSwitch>().size,
-                numOfActiveFlows = network.flowsById.values.filterNot { it.demand == .0 }.size,
-                totThroughputPerc = network.flowsById.values.let { fs -> fs.sumOf { it.throughput } / fs.sumOf { it.demand } },
-                avrgThroughputPerc = network.flowsById.values.filterNot { it.demand == .0 }.let { fs -> fs.sumOf { (it.throughput / it.demand) ifNanThen .0 } / fs.size },
+                numOfActiveFlows = network.flowsById.values.filterNot { it.demand.isZero() }.size,
+                totThroughputPerc = network.flowsById.values.let { fs -> fs.sumOf { it.throughput.toKbps() } / fs.sumOf { it.demand.toKbps() } },
+                avrgThroughputPerc = network.flowsById.values.filterNot { it.demand.isZero() }.let { fs -> fs.sumOf { (it.throughput / it.demand) ifNanThen .0 } / fs.size },
                 totEnergyConsumpt = this.energyRecorder.totalConsumption
             )
         }

@@ -3,6 +3,7 @@ package org.opendc.simulator.network.policies.fairness
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.flow.tracker.TrackerMode
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 
 internal interface FairnessPolicy {
@@ -18,7 +19,7 @@ internal interface FairnessPolicy {
      */
     fun FlowHandler.execRateReductions(updt: RateUpdt) {
         updt.forEach { fId, deltaRate ->
-            if (deltaRate < 0) outgoingFlows[fId]?.tryUpdtRate()
+            if (deltaRate < DataRate.ZERO) outgoingFlows[fId]?.tryUpdtRate()
         }
     }
 

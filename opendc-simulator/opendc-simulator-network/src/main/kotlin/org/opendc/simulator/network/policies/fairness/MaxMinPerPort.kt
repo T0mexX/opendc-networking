@@ -2,17 +2,14 @@ package org.opendc.simulator.network.policies.fairness
 
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowHandler
-import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.flow.tracker.AllByDemand
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.approxLarger
 import org.opendc.simulator.network.utils.approxLargerOrEqual
 import org.opendc.simulator.network.utils.isSorted
 import kotlin.math.min
-import kotlin.system.exitProcess
 
 internal object MaxMinPerPort: FairnessPolicy {
     override fun FlowHandler.applyPolicy(updt: RateUpdt) {
@@ -43,14 +40,14 @@ internal object MaxMinPerPort: FairnessPolicy {
         // Max-min for each port multiple ports.
         flows.forEachIndexed { idx, outFlow ->
             val targetPorts: Collection<Port> = outFlow.outRatesByPort.keys
-            val flowDmPerPort: Kbps = outFlow.demand / targetPorts.size
+            val flowDmPerPort: DataRate = outFlow.demand / targetPorts.size
 
             targetPorts.forEach { port ->
                 val remFlowsForThisPort: Int = remainingFlowsPerPort[port]!!
-                val availableShare: Kbps = port.availableTxBW() / remFlowsForThisPort
-                val targetRate: Kbps = min(availableShare, flowDmPerPort)
+                val availableShare: DataRate = port.availableTxBW() / remFlowsForThisPort
+                val targetRate: DataRate = availableShare min flowDmPerPort
 
-                val newRate: Kbps = outFlow.tryUpdtPortRate(port, targetRate)
+                val newRate: DataRate = outFlow.tryUpdtPortRate(port, targetRate)
                 check(newRate approx targetRate) { "MaxMin policy error" }
 
                 remainingFlowsPerPort[port] = remFlowsForThisPort - 1
@@ -66,13 +63,13 @@ internal object MaxMinPerPort: FairnessPolicy {
     }
 }
 
-private fun Port.availableTxBW(): Kbps =
-    sendLink?.availableBW ?: .0
+private fun Port.availableTxBW(): DataRate =
+    sendLink?.availableBW ?: DataRate.ZERO
 
 
 private fun FlowHandler.resetAll() {
     outgoingFlows.values.forEach {
-        check(it.tryUpdtRate(.0) == .0) {"${it.id}"}
+        check(it.tryUpdtRate(DataRate.ZERO).isZero()) {"${it.id}"}
     }
 }
 
@@ -84,11 +81,11 @@ private fun FlowHandler.verify() {
     flows.forEach { it.verify() }
 
     ports.forEach { p ->
-        var prevOut: Kbps = .0
+        var prevOut: DataRate = DataRate.ZERO
 
         flows.forEach { f ->
             if (f.passesThrough(p)) {
-                val currOut: Kbps = p.outgoingRateOf(f.id)
+                val currOut: DataRate = p.outgoingRateOf(f.id)
 
                 check(currOut approxLargerOrEqual  prevOut)
                 { "MaxMin policy error "}

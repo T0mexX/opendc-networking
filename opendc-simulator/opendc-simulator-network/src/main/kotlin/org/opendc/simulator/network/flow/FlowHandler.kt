@@ -6,7 +6,7 @@ import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.tracker.FlowTracker
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.roundTo0withEps
 
@@ -28,8 +28,8 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * The current total available bandwidth on the switch,
      * as the sum of the available bw of the connected active ports.
      */
-    val availableBW: Kbps get() = ports.sumOf { it.sendLink?.availableBW ?: .0 }
-    val totalNodeBW: Kbps get() = ports.sumOf { it.sendLink?.maxPort2PortBW ?: .0 }
+    val availableBW: DataRate
+        get() = DataRate.ofKbps(ports.sumOf { it.sendLink?.availableBW?.toKbps() ?: .0 })
 
     /**
      * [NetFlow]s whose sender is the node to which this flow handler belongs.
@@ -86,7 +86,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
         newFlow.withDemandOnChangeHandler { _, old, new ->
             if (old == new) return@withDemandOnChangeHandler
 
-            if (new < 0) log.warn("unable to change generated flow with id '${newFlow.id}' " +
+            if (new < DataRate.ZERO) log.warn("unable to change generated flow with id '${newFlow.id}' " +
                 "data-rate to $new, data-rate should be positive. Falling back to 0")
 
             updtChl.send(  RateUpdt(newFlow.id, (new - old))  )
@@ -120,12 +120,12 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      */
     suspend fun Node.updtFlows(updt: RateUpdt) {
         updt.forEach { (fId, dr) ->
-            val deltaRate = dr.roundTo0withEps()
-            if (deltaRate == .0) return@forEach
+            val deltaRate = dr.roundedTo0WithEps()
+            if (deltaRate.isZero()) return@forEach
 
             // if this node is the destination
             receivingFlows[fId]?.let {
-                it.throughput = (it.throughput + deltaRate).roundTo0withEps()
+                it.throughput = (it.throughput + deltaRate).roundedTo0WithEps()
                 return@forEach
             }
             // else
@@ -139,11 +139,11 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
                 it.demand += deltaRate
 
                 // TODO: solve bug, in some cases (125 vms bitbrains, 8ports per node) fails
-                check(it.demand >= .0)
+                check(it.demand >= DataRate.ZERO)
                 { "solve bug, in some cases (125 vms bitbrains, 8ports per node 1000Mbps) fails" }
 
                 // if demand is 0 the entry is removed
-                if (it.demand.roundTo0withEps() == .0) {
+                if (it.demand.roundedTo0WithEps().isZero()) {
                     _outgoingFlows.remove(it.id)
                     flowTracker.remove(it)
                 }

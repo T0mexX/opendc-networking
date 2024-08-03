@@ -2,25 +2,24 @@ package org.opendc.simulator.network.api
 
 import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
-import org.opendc.simulator.network.utils.KWh
+import org.opendc.simulator.network.units.Energy
+import org.opendc.simulator.network.units.Power
+import org.opendc.simulator.network.units.Time
+import org.opendc.simulator.network.units.times
 import org.opendc.simulator.network.utils.OnChangeHandler
-import org.opendc.simulator.network.utils.W
-import org.opendc.simulator.network.utils.Wh
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
-import java.time.Duration
 
 public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyConsumer<*>>) {
     private companion object { private val log by logger() }
 
-    public var currentConsumption: W = .0
+    public var currentConsumption: Power = Power.ZERO
         private set
-    public var totalConsumption: KWh = .0
+    public var totalConsumption: Energy = Energy.ZERO
         private set
 
     private val consumers: Map<NodeId, EnergyConsumer<*>> = consumers.associateBy { it.id }
 
-    private val energyUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, W> { _, oldValue, newValue ->
+    private val energyUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, Power> { _, oldValue, newValue ->
         currentConsumption += newValue - oldValue
     }
 
@@ -33,18 +32,20 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
         // TODO: change/improve
         return "\n" + """
             | === ENERGY REPORT ===
-            | Current Power Usage: ${currentConsumption} W
-            | Total EnergyConsumed: ${totalConsumption} KWh
+            | Current Power Usage: $currentConsumption
+            | Total EnergyConsumed: $totalConsumption
         """.trimIndent()
     }
 
-    internal fun advanceBy(ms: ms) {
-        fun ms.toHours(): Double = this.toDouble() / 1000 / 60 / 60
+//    internal fun advanceBy(ms: ms) {
+//        advanceBy(ms = Time.ofMillis(ms))
+//    }
 
-        totalConsumption += currentConsumption * ms.toHours() / 1000
+    internal fun advanceBy(ms: Time) {
+        totalConsumption += currentConsumption * ms
     }
 
     internal fun reset() {
-        totalConsumption = .0
+        totalConsumption = Energy.ZERO
     }
 }

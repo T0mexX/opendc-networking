@@ -7,21 +7,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.policies.forwarding.StaticECMP
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.NonSerializable
 import org.opendc.simulator.network.utils.Result.*
-import org.opendc.simulator.network.utils.Result
-import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.utils.withWarn
 
 
@@ -74,7 +71,7 @@ public sealed class Network {
         if (flow.name != NetFlow.DEFAULT_NAME && flow.name in flowsByName)
             return null
 
-        if (flow.demand < 0)
+        if (flow.demand < DataRate.ZERO)
             return log.errAndNull("Unable to start flow, data rate should be >= 0.")
 
         val sender: EndPointNode = endPointNodes[flow.transmitterId]
@@ -126,8 +123,8 @@ public sealed class Network {
         return sb.toString()
     }
 
-    internal fun advanceBy(ms: ms) {
-        flowsById.values.forEach { it.advanceBy(ms) }
+    internal fun advanceBy(time: Time) {
+        flowsById.values.forEach { it.advanceBy(time) }
     }
 
     internal suspend fun awaitStability() {

@@ -2,6 +2,8 @@ package org.opendc.simulator.network.units
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
@@ -13,8 +15,12 @@ import org.opendc.simulator.network.utils.InternalUse
 import org.opendc.simulator.network.utils.tryThis
 import org.opendc.simulator.network.utils.whenMatch
 
-@Serializable
-@JvmInline public value class DataRate private constructor(override val value: Double): Unit<DataRate> {
+@Serializable(with = DataRateSerializer::class)
+@JvmInline
+public value class DataRate private constructor(
+    override val value: Double
+): Unit<DataRate> {
+
     @InternalUse
     override fun new(value: Double): DataRate = DataRate(value)
 
@@ -38,18 +44,20 @@ import org.opendc.simulator.network.utils.whenMatch
         }
     }
 
+    public operator fun times(time: Time): Data = Data.ofKB(toKBps() * time.toSec())
+
     public companion object {
-        public val ZERO: DataRate = DataRate(.0)
-        public fun ofKbps(kbps: Double): DataRate = DataRate(kbps)
-        public fun ofKBps(kBps: Double): DataRate = DataRate(kBps * 8)
-        public fun ofMbps(mbps: Double): DataRate = DataRate(mbps * 1024)
-        public fun ofMBps(mBps: Double): DataRate = DataRate(mBps * 1024 * 8)
-        public fun ofGbps(gbps: Double): DataRate = DataRate(gbps * 1024 * 1024)
-        public fun ofGBps(gBps: Double): DataRate = DataRate(gBps * 8 * 1024 * 1024)
+        @JvmStatic public val ZERO: DataRate = DataRate(.0)
+        @JvmStatic public fun ofKbps(kbps: Double): DataRate = DataRate(kbps)
+        @JvmStatic public fun ofKBps(kBps: Double): DataRate = DataRate(kBps * 8)
+        @JvmStatic public fun ofMbps(mbps: Double): DataRate = DataRate(mbps * 1024)
+        @JvmStatic public fun ofMBps(mBps: Double): DataRate = DataRate(mBps * 1024 * 8)
+        @JvmStatic public fun ofGbps(gbps: Double): DataRate = DataRate(gbps * 1024 * 1024)
+        @JvmStatic public fun ofGBps(gBps: Double): DataRate = DataRate(gBps * 8 * 1024 * 1024)
     }
 }
 
-private object DataRateSerializer: OnlyString<DataRate>(
+internal object DataRateSerializer: OnlyString<DataRate>(
     object: KSerializer<DataRate> {
         val kbpsReg = Regex("\\s*([\\de.-]+)\\s*(?:Kbps|kbps)\\s*")
         val kBpsReg = Regex("\\s*([\\de.-]+)\\s*(?:KBps|kBps)\\s*")
@@ -58,7 +66,8 @@ private object DataRateSerializer: OnlyString<DataRate>(
         val gbpsReg = Regex("\\s*([\\de.-]+)\\s*(?:Gbps|gbps)\\s*")
         val gBpsReg = Regex("\\s*([\\de.-]+)\\s*(?:GBps|gBps)\\s*")
 
-        override val descriptor: SerialDescriptor = TODO()
+        override val descriptor: SerialDescriptor =
+            PrimitiveSerialDescriptor("data-rate", PrimitiveKind.STRING)
         override fun deserialize(decoder: Decoder): DataRate {
             val json = Json
             val strField = decoder.decodeString()

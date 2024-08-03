@@ -17,10 +17,12 @@ public value class Energy private constructor(
         if (value >= 1000.0) "${toKWh()} KWh"
         else "${toWh()} Wh"
 
-    public companion object {
-        public val ZERO: Energy = Energy(.0)
+    public operator fun div(time: Time): Power = Power.ofWatts(toWh() / time.toHours())
 
-        public fun ofWh(wh: Number): Energy = Energy(wh.toDouble())
-        public fun ofKWh(kWh: Number): Energy = Energy(kWh.toDouble() * 1000.0)
+    public companion object {
+        @JvmStatic public val ZERO: Energy = Energy(.0)
+
+        @JvmStatic public fun ofWh(wh: Number): Energy = Energy(wh.toDouble())
+        @JvmStatic public fun ofKWh(kWh: Number): Energy = Energy(kWh.toDouble() * 1000.0)
     }
 }

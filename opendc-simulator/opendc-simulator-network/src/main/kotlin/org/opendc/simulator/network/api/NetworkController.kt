@@ -8,11 +8,6 @@ import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.AVRG_THROUGHPUT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.ENERGY
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.FLOWS
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.INSTANT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.TOT_THROUGHPUT
 import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
@@ -21,14 +16,14 @@ import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.approxLarger
 import org.opendc.simulator.network.utils.errAndNull
@@ -38,7 +33,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
-import kotlin.system.exitProcess
 
 /**
  * Interface through which control the network (from external modules).
@@ -76,10 +70,7 @@ public class NetworkController(
          */
         @OptIn(ExperimentalSerializationApi::class)
         public fun fromPath(path: String, instantSource: InstantSource? = null): NetworkController =
-            fromFile(File(path))
-
-        private var bo : Long = 0
-        private var nano: Long = 0
+            fromFile(File(path), instantSource)
     }
 
     /**
@@ -260,9 +251,9 @@ public class NetworkController(
     public suspend fun startFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId, // TODO: understand how multiple core switches work
-        demand: Kbps = .0,
+        demand: DataRate = DataRate.ZERO,
         name: String = NetFlow.DEFAULT_NAME,
-        throughputOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        throughputOnChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null,
     ): NetFlow? {
         val mappedTransmitterId: NodeId =   mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
@@ -318,8 +309,8 @@ public class NetworkController(
     public suspend fun startOrUpdateFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId,
-        demand: Kbps = .0,
-        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        demand: DataRate = DataRate.ZERO,
+        dataRateOnChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null,
     ): NetFlow? {
         val mappedTransmitterId: NodeId = mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
@@ -374,8 +365,8 @@ public class NetworkController(
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
             if (logSnapshot) log.info("\n" + snapshot().fmt(NetworkSnapshot.ENERGY))
 
-            val timeSpan = instantSrc.millis() - lastUpdate.toEpochMilli()
-            if (timeSpan == 0L) return
+            val timeSpan = Time.ofMillis(instantSrc.millis()- lastUpdate.toEpochMilli())
+            if (timeSpan == Time.ZERO) return
             advanceBy(timeSpan, suppressWarn = true)
         } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
     }
@@ -384,26 +375,26 @@ public class NetworkController(
      * Advances the network time by [duration], updating network related statistics.
      */
     public fun advanceBy(duration: Duration) {
-        advanceBy(duration.toMillis())
+        advanceBy(Time.ofDuration(duration))
     }
 
     /**
-     * Advances the network time by [ms] milliseconds, updating network related statistics.
+     * Advances the network time by [time] milliseconds, updating network related statistics.
      */
-    public fun advanceBy(ms: ms) { advanceBy(ms, suppressWarn = false) }
-    private fun advanceBy(ms: ms, suppressWarn: Boolean) {
-        if (ms < 0) return log.error("advanceBy received negative time-span parameter($ms), ignoring...")
-        if (ms == 0L) return
+    public fun advanceBy(time: Time) { advanceBy(time, suppressWarn = false) }
+    private fun advanceBy(time: Time, suppressWarn: Boolean) {
+        if (time < Time.ZERO) return log.error("advanceBy received negative time-span parameter($time), ignoring...")
+        if (time == Time.ZERO) return
         runBlocking { network.awaitStability() }
 
         if (instantSrc.isInternalSource)
-            instantSrc.advanceTime(ms)
+            instantSrc.advanceTime(time)
         else  if (!suppressWarn)
             log.warn("advancing time directly while instant source is set, this can cause ambiguity. " +
                 "You can synchronize the network with the instant source with 'sync()'")
 
-        network.advanceBy(ms)
-        energyRecorder.advanceBy(ms)
+        network.advanceBy(time)
+        energyRecorder.advanceBy(time)
         lastUpdate = instantSrc.instant()
     }
 
@@ -430,7 +421,7 @@ public class NetworkController(
                 "be replaced with an internal one to tun the workload.")
             // If time source was external, an internal time source with same timestamp is set.
             // This time stamp is then overwritten if `reset` is `true`.
-            instantSrc = NetworkInstantSrc(internal = instantSrc.instant().toEpochMilli())
+            instantSrc = NetworkInstantSrc(internal = Time.ofMillis(instantSrc.instant().toEpochMilli()))
         }
 
         if (reset) {

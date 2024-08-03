@@ -2,6 +2,7 @@ package org.opendc.simulator.network.units
 
 import org.opendc.simulator.network.utils.InternalUse
 import java.time.Duration
+import java.time.Instant
 
 @JvmInline
 public value class Time private constructor(
@@ -16,16 +17,23 @@ public value class Time private constructor(
     public fun toSec(): Double = value / 1000.0
     public fun toMin(): Double = toSec() / 60
     public fun toHours(): Double = toMin() / 60
+    public fun toInstantFromEpoch(): Instant = Instant.ofEpochMilli(value.toLong())
 
     override fun toString(): String =
         Duration.ofMillis(value.toLong()).toString()
 
-    public companion object {
-        public val ZERO: Time = Time(.0)
+    public operator fun times(power: Power): Energy = Energy.ofWh(toHours() * power.toWatts())
 
-        public fun ofMillis(ms: Number): Time = Time(ms.toDouble())
-        public fun ofSec(sec: Number): Time = Time(sec.toDouble() * 1000.0)
-        public fun ofMin(min: Number): Time = Time(min.toDouble() * 60 * 1000.0)
-        public fun ofHours(hours: Number): Time = Time(hours.toDouble() * 60 * 60 * 1000.0)
+    public operator fun times(dataRate: DataRate): Data = Data.ofKB(toSec() * dataRate.toKBps())
+
+    public companion object {
+        @JvmStatic public val ZERO: Time = Time(.0)
+
+        @JvmStatic public fun ofMillis(ms: Number): Time = Time(ms.toDouble())
+        @JvmStatic public fun ofSec(sec: Number): Time = Time(sec.toDouble() * 1000.0)
+        @JvmStatic public fun ofMin(min: Number): Time = Time(min.toDouble() * 60 * 1000.0)
+        @JvmStatic public fun ofHours(hours: Number): Time = Time(hours.toDouble() * 60 * 60 * 1000.0)
+        @JvmStatic public fun ofDuration(dur: Duration): Time = Time.ofMillis(dur.toMillis())
+        @JvmStatic public fun ofInstantFromEpoch(instant: Instant): Time = Time.ofMillis(instant.toEpochMilli())
     }
 }

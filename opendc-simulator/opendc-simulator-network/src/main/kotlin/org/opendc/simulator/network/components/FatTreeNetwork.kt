@@ -10,6 +10,7 @@ import org.opendc.simulator.network.utils.NonSerializable
 import kotlin.math.pow
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
 import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 import java.io.File
 import kotlin.math.min
@@ -132,7 +133,7 @@ internal class FatTreeNetwork(
         init {
             val k: Int = min(aggrSpecs.numOfPorts, torSpecs.numOfPorts)
             hostNodes = buildList {
-                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(HostNode(IdDispenser.nextNodeId, 1000.0, 1)) } // TODO: change HostNode building
+                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(HostNode(IdDispenser.nextNodeId, DataRate.ofMbps(1.0), 1)) } // TODO: change HostNode building
             }
 
             torSwitches = buildList {

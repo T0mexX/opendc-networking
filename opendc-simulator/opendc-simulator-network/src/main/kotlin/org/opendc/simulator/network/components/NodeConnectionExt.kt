@@ -4,13 +4,13 @@ import org.opendc.simulator.network.components.internalstructs.RoutingVect
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.port.connect
 import org.opendc.simulator.network.components.internalstructs.port.disconnect
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 
 private val log by Unit.logger("NodeConnectionExt")
 
-internal suspend fun Node.connect(other: Node, duplex: Boolean = true, linkBW: Kbps? = null) {
+internal suspend fun Node.connect(other: Node, duplex: Boolean = true, linkBW: DataRate? = null) {
     updtChl.whileUpdtProcessingLocked {
         if (other.id in portToNode.keys)
             return@whileUpdtProcessingLocked log.warn("unable to connect $this to $other, nodes already connected")

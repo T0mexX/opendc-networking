@@ -2,7 +2,7 @@ package org.opendc.simulator.network.components
 
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -51,11 +51,11 @@ internal interface EndPointNode: Node {
     }
 
 
-    override fun totIncomingDataRateOf(fId: FlowId): Kbps =
+    override fun totIncomingDataRateOf(fId: FlowId): DataRate =
         with(flowHandler) {
-            if (fId in generatedFlows) .0
+            if (fId in generatedFlows) DataRate.ZERO
             else receivingFlows[fId]?.throughput
-                ?: outgoingFlows[fId]?.demand
-                ?: .0
+                ?: let { outgoingFlows[fId]?.demand }
+                ?: DataRate.ZERO
         }
 }

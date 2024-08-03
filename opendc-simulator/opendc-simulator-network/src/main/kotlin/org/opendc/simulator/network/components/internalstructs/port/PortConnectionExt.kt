@@ -3,27 +3,26 @@ package org.opendc.simulator.network.components.internalstructs.port
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.components.link.SimplexLink
 import org.opendc.simulator.network.flow.RateUpdt.Companion.toRateUpdt
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
-import kotlin.math.min
 
 
 private val log by Unit.logger("PortConnectionExt")
 
 
-internal suspend fun Port.connect(other: Port, duplex: Boolean = true, linkBW: Kbps? = null) =
+internal suspend fun Port.connect(other: Port, duplex: Boolean = true, linkBW: DataRate? = null) =
     this.connect(other = other, duplex = duplex, linkBW = linkBW, notifyOther = true)
 
 private suspend fun Port.connect(
     other: Port,
     duplex: Boolean,
-    linkBW: Kbps?,
+    linkBW: DataRate?,
     notifyOther: Boolean
 ) {
     require(this.sendLink == null)
     { "unable to connect ports $this and $other. $this is already connected" }
 
-    val computedLinkBW: Kbps = linkBW ?: (min(this.maxSpeed, other.maxSpeed))
+    val computedLinkBW: DataRate = linkBW ?: (this.maxSpeed min other.maxSpeed)
 
     val thisToOther = SimplexLink(senderP = this, receiverP = other, linkBW = computedLinkBW)
     this.sendLink = thisToOther

@@ -23,6 +23,7 @@ import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
+import org.opendc.simulator.network.units.DataRate
 import java.io.File
 
 @OptIn(ExperimentalSerializationApi::class, ExperimentalKotest::class)
@@ -83,7 +84,7 @@ class CustomNetworkTest: FunSpec({
             Arb.int(1..10)
         ) { numOfNodes, numOfLinks ->
             val nodes: List<Node> = buildList {
-                (0L..<numOfNodes).forEach { id ->  add(Switch(id = id, numOfPorts = numOfNodes, portSpeed = .0)) }
+                (0L..<numOfNodes).forEach { id ->  add(Switch(id = id, numOfPorts = numOfNodes, portSpeed = DataRate.ZERO)) }
             }
             val links: List<Pair<NodeId, NodeId>> = buildList {
                 val arbNodeId = Arb.long(0L..<numOfNodes)

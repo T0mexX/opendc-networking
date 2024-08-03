@@ -7,7 +7,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -27,9 +26,7 @@ import org.opendc.simulator.network.components.connect
 import org.opendc.simulator.network.components.disconnect
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.opendc.simulator.network.utils.IdDispenser
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.Result
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.whenMatch
@@ -50,6 +47,7 @@ private fun Logger.unableToParseId(str: String) {
     this.error("unable to parse id $str")
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 private class NetworkPlayground: CliktCommand() {
 
     companion object { val log by logger() }
@@ -132,7 +130,7 @@ private enum class Cmd {
                     it
                 } ?: return@cmdJob cancelAfter { log.error("unable to parse id") }
 
-                val portSpeed: Kbps = groups[3].toDoubleOrNull()
+                val portSpeed: DataRate = json.decodeFromString(groups[3])
                     ?: return@cmdJob cancelAfter { log.error("unable to parse port speed") }
                 val numOfPorts: Int = groups[4].toIntOrNull()
                     ?: return@cmdJob cancelAfter { log.error("unable to parse number of ports") }
@@ -182,7 +180,7 @@ private enum class Cmd {
                 val groups: List<String> = result.groupValues
                 val senderId: NodeId = groups[1].toLongOrNull() ?: return@cmdJob cancelAfter { log.unableToParseId(groups[1]) }
                 val destId: NodeId = groups[2].toLongOrNull() ?: return@cmdJob cancelAfter { log.unableToParseId(groups[2]) }
-                val dataRate: Double = groups[3].toDoubleOrNull()
+                val dataRate: DataRate = json.decodeFromString(groups[3])
                     ?: return@cmdJob cancelAfter { log.error("unable to parse data-rate '${groups[3]}'") }
 
                 val newFLow = NetFlow(
@@ -267,8 +265,8 @@ private enum class Cmd {
                         flow.id.toString().padEnd(5) +
                             flow.transmitterId.toString().padEnd(10) +
                             flow.destinationId.toString().padEnd(10) +
-                            String.format("%.3f", flow.demand).padEnd(20) +
-                            String.format("%.3f", flow.throughput).padEnd(20)
+                            String.format("%.3f", flow.demand.toKbps()).padEnd(20) +
+                            String.format("%.3f", flow.throughput.toKbps()).padEnd(20)
                     )
                 }
             }
@@ -304,6 +302,10 @@ private enum class Cmd {
         context: CoroutineContext = EmptyCoroutineContext,
         block: suspend CoroutineScope.() -> Unit
     ): Job = this.launch(context + CoroutineName(this@Cmd.name), block = block)
+
+    companion object {
+        val json = Json
+    }
 }
 
 
