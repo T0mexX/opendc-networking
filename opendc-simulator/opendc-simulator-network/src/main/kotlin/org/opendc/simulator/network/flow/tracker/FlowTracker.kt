@@ -85,7 +85,7 @@ internal class FlowTracker(
      * should be added (or its order updated) in the sortedSet.
      */
     fun OutFlow.handlePropChange(fieldChanger: () -> Unit) {
-        fun OutFlow.isNew(): Boolean = demand == .0 && totRateOut == .0
+        fun OutFlow.isNew(): Boolean = demand.isZero() && totRateOut.isZero()
 
         treesByMode.forEach { (mode, tree) ->
             with(mode) {

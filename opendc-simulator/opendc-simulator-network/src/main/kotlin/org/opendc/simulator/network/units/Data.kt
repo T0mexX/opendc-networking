@@ -30,11 +30,11 @@ public value class Data private constructor(
 
 
     public companion object {
-        public val ZERO: Data = Data(.0)
+        @JvmStatic public val ZERO: Data = Data(.0)
 
-        public fun ofBytes(bytes: Number): Data = Data(bytes.toDouble() / 1024)
-        public fun ofKB(kB: Number): Data = Data(kB.toDouble())
-        public fun ofMB(mB: Number): Data = Data(mB.toDouble() * 1024)
-        public fun ofGB(gB: Number): Data = Data(gB.toDouble() * 1024 * 1024)
+        @JvmStatic public fun ofBytes(bytes: Number): Data = Data(bytes.toDouble() / 1024)
+        @JvmStatic public fun ofKB(kB: Number): Data = Data(kB.toDouble())
+        @JvmStatic public fun ofMB(mB: Number): Data = Data(mB.toDouble() * 1024)
+        @JvmStatic public fun ofGB(gB: Number): Data = Data(gB.toDouble() * 1024 * 1024)
     }
 }

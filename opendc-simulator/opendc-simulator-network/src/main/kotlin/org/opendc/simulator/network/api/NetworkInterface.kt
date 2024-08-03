@@ -7,7 +7,8 @@ import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Internet
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.Data
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 
 
@@ -70,9 +71,9 @@ public class NetworkInterface internal constructor(
     @JvmSynthetic
     public suspend fun startFlowSus(
         destinationId: NodeId = INTERNET_ID,
-        demand: Kbps = .0,
+        demand: DataRate = DataRate.ZERO,
         name: String? = null,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow? {
         val newFlow: NetFlow? = netController.startFlow(
             transmitterId = this.nodeId,
@@ -91,13 +92,14 @@ public class NetworkInterface internal constructor(
 
     /**
      * Non suspending overload for java interoperability.
+     * JvmOverloads annotation not allowed with *value-class* arguments.
      */
-    @JvmOverloads
     public fun startFlow(
         destinationId: NodeId = INTERNET_ID,
-        demand: Kbps = .0,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        demand: DataRate = DataRate.ZERO,
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow? = runBlocking { startFlowSus(destinationId = destinationId, demand = demand, throughputChangeHandler = throughputChangeHandler) }
+    @JvmOverloads public fun startFlow(destinationId: NodeId = INTERNET_ID, throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null): NetFlow? = runBlocking { startFlowSus(destinationId = destinationId, throughputChangeHandler = throughputChangeHandler) }
 
     /**
      * Stops the flow with id [id] if it exists, and it belongs to this node.
@@ -133,8 +135,8 @@ public class NetworkInterface internal constructor(
      */
     @JvmSynthetic
     public suspend fun fromInternetSus(
-        demand: Kbps = .0,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        demand: DataRate = DataRate.ZERO,
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow {
         val newFlow: NetFlow = netController.internetNetworkInterface.startFlowSus(
             destinationId = this.nodeId,
@@ -149,12 +151,15 @@ public class NetworkInterface internal constructor(
 
     /**
      * Non suspending overload fot java interoperability.
+     * JvmOverloads annotation not allowed with *value-class* arguments.
      */
-    @JvmOverloads
     public fun fromInternet(
-        demand: Kbps = .0,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        demand: DataRate = DataRate.ZERO,
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow = runBlocking { fromInternetSus(demand = demand, throughputChangeHandler = throughputChangeHandler) }
+    public fun fromInternet(): NetFlow = runBlocking { fromInternetSus() }
+    public fun fromInternet(demand: DataRate): NetFlow = runBlocking { fromInternetSus(demand = demand) }
+    public fun fromInternet(throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)?): NetFlow = runBlocking { fromInternetSus(throughputChangeHandler = throughputChangeHandler) }
 
 
     override fun close() {

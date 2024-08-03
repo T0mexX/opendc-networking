@@ -4,6 +4,6 @@
     "type": "fat-tree-specs",
     "switchSpecs": {
         "numOfPorts": 4,
-        "portSpeed": 1000
+        "portSpeed": "1000 Kbps"
     }
 }

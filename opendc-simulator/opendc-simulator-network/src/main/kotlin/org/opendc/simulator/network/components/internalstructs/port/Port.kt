@@ -5,12 +5,12 @@ import org.opendc.simulator.network.components.internalstructs.UpdateChl
 import org.opendc.simulator.network.components.link.ReceiveLink
 import org.opendc.simulator.network.components.link.SendLink
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 
 internal interface Port {
 
-    val maxSpeed: Kbps
+    val maxSpeed: DataRate
     val owner: Node
 
     var sendLink: SendLink?
@@ -22,24 +22,24 @@ internal interface Port {
      * `true` if this port is connected in any direction to another port, `false` otherwise.
      */
     val isConnected: Boolean
-    val incomingRatesById: Map<FlowId, Kbps>
-    val outgoingRatesById: Map<FlowId, Kbps>
-    val maxPortToPortBW: Kbps
+    val incomingRatesById: Map<FlowId, DataRate>
+    val outgoingRatesById: Map<FlowId, DataRate>
+    val maxPortToPortBW: DataRate
     val nodeUpdtChl: UpdateChl
     val isActive: Boolean
     val util: Double
-    val currSpeed: Kbps
+    val currSpeed: DataRate
     val otherEndPort: Port?
     val otherEndNode: Node?
 
 
     suspend fun notifyReceiver()
-    fun incomingRateOf(fId: FlowId): Kbps
-    fun outgoingRateOf(fId: FlowId): Kbps
+    fun incomingRateOf(fId: FlowId): DataRate
+    fun outgoingRateOf(fId: FlowId): DataRate
 
     /**
      * Tries to update the flow corresponding to [fId] to the requested [targetRate].
      * @return  the actual data rate achieved for the flow.
      */
-    fun tryUpdtRateOf(fId: FlowId, targetRate: Kbps): Kbps
+    fun tryUpdtRateOf(fId: FlowId, targetRate: DataRate): DataRate
 }

@@ -12,6 +12,7 @@ import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.components.connect
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.trace.preset.BitBrains
 import java.io.File
 import java.time.Duration
@@ -23,7 +24,7 @@ private fun bitBrainsSim() {
 //    val opt = wl.optimize()
 //    val wl2: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..250)
 
-    val net = FatTreeNetwork(allSwitchSpecs = Switch.SwitchSpecs(portSpeed = 1.0, numOfPorts = 8))
+    val net = FatTreeNetwork(allSwitchSpecs = Switch.SwitchSpecs(portSpeed = DataRate.ofMbps(1.0), numOfPorts = 8))
 //    println(net.allNodesToString())
 
     wl.execOn(net)

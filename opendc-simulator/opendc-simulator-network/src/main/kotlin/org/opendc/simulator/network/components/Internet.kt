@@ -11,7 +11,7 @@ import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 
 internal class Internet(
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP
@@ -26,7 +26,7 @@ internal class Internet(
 
     private fun addPort() { ports.add(PortImpl(maxSpeed = portSpeed, owner = this)) }
 
-    override val portSpeed: Kbps = Kbps.MAX_VALUE
+    override val portSpeed: DataRate = DataRate.ofKbps(Double.MAX_VALUE)
     override val ports = mutableListOf<Port>()
         get() {
             if (portToNode.size == field.size)

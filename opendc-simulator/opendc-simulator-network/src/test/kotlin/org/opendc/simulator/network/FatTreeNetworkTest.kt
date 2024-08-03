@@ -13,6 +13,7 @@ import org.opendc.simulator.network.components.FatTreeNetwork.FatTreeTopologySpe
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
+import org.opendc.simulator.network.units.DataRate
 import java.io.File
 import kotlin.math.pow
 
@@ -36,9 +37,9 @@ class FatTreeNetworkTest: FunSpec({
 
     context("build fat-tree from specs") {
         withData(
-            SwitchSpecs(numOfPorts = 4, portSpeed = .0),
-            SwitchSpecs(numOfPorts = 6, portSpeed = .0),
-            SwitchSpecs(numOfPorts = 8, portSpeed = .0),
+            SwitchSpecs(numOfPorts = 4, portSpeed = DataRate.ZERO),
+            SwitchSpecs(numOfPorts = 6, portSpeed = DataRate.ZERO),
+            SwitchSpecs(numOfPorts = 8, portSpeed = DataRate.ZERO),
 //            SwitchSpecs(numOfPorts = 10, portSpeed = .0)
         ) { switchSpecs ->
             val k: Int = switchSpecs.numOfPorts
@@ -48,7 +49,7 @@ class FatTreeNetworkTest: FunSpec({
             fatTree.torSwitches.size shouldBeExactly k * k / 2
             fatTree.aggregationSwitches.size shouldBeExactly k * k / 2
             fatTree.coreSwitches.size shouldBeExactly k * k / 4
-            fatTree.endPointNodes.size shouldBeExactly (k * k * k) / 4 + k * k / 4
+            fatTree.endPointNodes.size shouldBeExactly (k * k * k) / 4 + k * k / 4 + 1 // INTERNET_ID
         }
     }
 })
