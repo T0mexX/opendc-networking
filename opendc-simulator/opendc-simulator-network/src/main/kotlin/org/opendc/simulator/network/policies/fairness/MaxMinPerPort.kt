@@ -7,10 +7,7 @@ import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.flow.tracker.AllByDemand
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.ifNullZero
-import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.approxLargerOrEqual
 import org.opendc.simulator.network.utils.isSorted
-import kotlin.math.min
 
 internal object MaxMinPerPort: FairnessPolicy {
     override fun FlowHandler.applyPolicy(updt: RateUpdt) {
@@ -22,7 +19,7 @@ internal object MaxMinPerPort: FairnessPolicy {
             }
 
         // All flows sorted by demand.
-        val flows: List<OutFlow> = flowTracker[AllByDemand]
+        val flows: List<OutFlow> = nodeFlowTracker[AllByDemand]
         if (FairnessPolicy.VERIFY) check(flows.isSorted { a, b -> a.demand.compareTo(b.demand) })
 
         // Each port of the node associated with the number of flows
@@ -77,7 +74,7 @@ private fun FlowHandler.resetAll() {
 private fun FlowHandler.verify() {
     fun OutFlow.passesThrough(port: Port): Boolean = port in outRatesByPort.keys
 
-    val flows: List<OutFlow> = flowTracker[AllByDemand]
+    val flows: List<OutFlow> = nodeFlowTracker[AllByDemand]
 
     flows.forEach { it.verify() }
 

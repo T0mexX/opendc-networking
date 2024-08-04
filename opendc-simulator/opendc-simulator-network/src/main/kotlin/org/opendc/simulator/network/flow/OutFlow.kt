@@ -2,11 +2,9 @@ package org.opendc.simulator.network.flow
 
 import org.jetbrains.annotations.TestOnly
 import org.opendc.simulator.network.components.internalstructs.port.Port
-import org.opendc.simulator.network.flow.tracker.FlowTracker
+import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
 import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.roundTo0withEps
 import org.opendc.simulator.network.utils.withWarn
 
 /**
@@ -14,7 +12,7 @@ import org.opendc.simulator.network.utils.withWarn
  */
 internal class OutFlow(
     val id: FlowId,
-    private val flowTracker: FlowTracker
+    private val nodeFlowTracker: NodeFlowTracker
 ): Comparable<OutFlow> {
     /**
      * The sum of the outgoing data rate for flow with [id] on all ports.
@@ -23,7 +21,7 @@ internal class OutFlow(
         private set(value) {
             @Suppress("NAME_SHADOWING")
             val value = value.roundedTo0WithEps()
-            with(flowTracker) { handlePropChange { field = value } }
+            with(nodeFlowTracker) { handlePropChange { field = value } }
         }
     val totRateOut: DataRate get() = _totRateOut
 
@@ -40,7 +38,7 @@ internal class OutFlow(
                 tryUpdtRate(DataRate.ZERO)
             }
 
-            with (flowTracker) { handlePropChange { field = value } }
+            with (nodeFlowTracker) { handlePropChange { field = value } }
         }
 
     /**

@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import org.opendc.simulator.network.components.FatTreeNetwork
 import org.opendc.simulator.network.components.FatTreeNetwork.FatTreeTopologySpecs
+import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
@@ -43,7 +44,7 @@ class FatTreeNetworkTest: FunSpec({
 //            SwitchSpecs(numOfPorts = 10, portSpeed = .0)
         ) { switchSpecs ->
             val k: Int = switchSpecs.numOfPorts
-            val fatTree: FatTreeNetwork = FatTreeTopologySpecs(switchSpecs = switchSpecs).build()
+            val fatTree: FatTreeNetwork = FatTreeTopologySpecs(switchSpecs = switchSpecs, hostNodeSpecs = HostNode.HostNodeSpecs(numOfPorts = 1, portSpeed = DataRate.ofGBps(1.0))).build()
             fatTree.pods.size shouldBeExactly k
             fatTree.leafs.size shouldBeExactly (k / 2).toDouble().pow(2).toInt() * k
             fatTree.torSwitches.size shouldBeExactly k * k / 2

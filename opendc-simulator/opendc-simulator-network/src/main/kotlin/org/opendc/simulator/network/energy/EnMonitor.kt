@@ -8,7 +8,6 @@ import kotlin.properties.Delegates
  * Monitors the energy consumption of [monitored] of type `T`.
  * @param[monitored]    network component monitored by ***this***.
  * @param[enModel]      energy model to use to compute current energy consumption for [monitored] network component.
- * TODO: maybe store records of energy changes, this can be done on network level or both component level and network.
  */
 internal class EnMonitor<T: EnergyConsumer<T>>(
     private val monitored: T,
