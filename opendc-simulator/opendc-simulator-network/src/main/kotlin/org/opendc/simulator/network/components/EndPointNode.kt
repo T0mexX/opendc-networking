@@ -3,6 +3,7 @@ package org.opendc.simulator.network.components
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -56,6 +57,6 @@ internal interface EndPointNode: Node {
             if (fId in generatedFlows) DataRate.ZERO
             else receivingFlows[fId]?.throughput
                 ?: let { outgoingFlows[fId]?.demand }
-                ?: DataRate.ZERO
+                    .ifNullZero()
         }
 }

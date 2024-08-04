@@ -23,6 +23,7 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 
 class FlowHandlerTest: FunSpec({
 
@@ -54,7 +55,7 @@ class FlowHandlerTest: FunSpec({
                             ).next()
                         )
                     }.next()
-                    rateTracker.compute(fId) { _, oldRate -> (oldRate?: DataRate.ZERO) + deltaRate }
+                    rateTracker.compute(fId) { _, oldRate -> (oldRate.ifNullZero()) + deltaRate }
                     add(Pair(fId, deltaRate))
                 }
             }

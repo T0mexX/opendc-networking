@@ -178,7 +178,7 @@ public class SimNetWorkload internal constructor(
             val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() } )!!
             val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { DataRate.ofKBps(it) } )!!
             val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { DataRate.ofKBps(it) } )!!
-            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP_SEC_EPOCH, process = { Time.ofSec(it) })!!
+            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP, process = { Time.ofSec(it) })!!
 
             val vmIds = mutableSetOf<Long>()
             val netEvents = mutableListOf<NetworkEvent>()
