@@ -16,5 +16,9 @@
     "torSwitchSpecs": {
         "numOfPorts": 4,
         "portSpeed": 500
+    },
+    "hostNodeSpecs": {
+        "numOfPorts": 1,
+        "portSpeed": "1Gbps"
     }
 }

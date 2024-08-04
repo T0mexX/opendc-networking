@@ -3,12 +3,11 @@ package org.opendc.simulator.network.flow
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
-import org.opendc.simulator.network.flow.tracker.FlowTracker
+import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.roundTo0withEps
 
 /**
  * Handles all incoming and outgoing flows of the node this handler belongs to,
@@ -60,7 +59,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Keeps track of those flows whose demand is not satisfied,
      * maintaining a collection of these flows ordered by output rate.
      */
-    val flowTracker = FlowTracker(allOutgoingFlows = _outgoingFlows)
+    val nodeFlowTracker = NodeFlowTracker(allOutgoingFlows = _outgoingFlows)
 
     /**
      * Adds [newFlow] in the [generatedFlows] table. Additionally, it queues the [RateUpdt]
@@ -131,7 +130,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
             // else
             _outgoingFlows.getOrPut(fId) {
                 // if flow is new
-                val newFlow = OutFlow(id = fId, flowTracker = flowTracker)
+                val newFlow = OutFlow(id = fId, nodeFlowTracker = nodeFlowTracker)
                 val outputPorts = with(this.portSelectionPolicy) { selectPorts(fId) }
                 newFlow.setOutPorts(outputPorts)
                 newFlow
@@ -143,7 +142,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
                 // if demand is 0 the entry is removed
                 if (it.demand.roundedTo0WithEps().isZero()) {
                     _outgoingFlows.remove(it.id)
-                    flowTracker.remove(it)
+                    nodeFlowTracker.remove(it)
                 }
             }
         }

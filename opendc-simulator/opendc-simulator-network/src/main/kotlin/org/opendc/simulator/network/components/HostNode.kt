@@ -45,8 +45,8 @@ internal class HostNode(
 
     @Serializable
     @SerialName("host-node-specs")
-    internal data class HostNodeSpec(
-        val id: NodeId?,
+    internal data class HostNodeSpecs(
+        val id: NodeId? = null,
         val portSpeed: DataRate,
         val numOfPorts: Int = 1
     ): Specs<HostNode> {

@@ -4,13 +4,10 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.utils.IdDispenser
-import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.NonSerializable
 import kotlin.math.pow
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
-import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.components.HostNode.HostNodeSpecs
 import org.opendc.simulator.network.utils.logger
 import java.io.File
 import kotlin.math.min
@@ -24,8 +21,12 @@ import kotlin.math.min
 internal class FatTreeNetwork(
     coreSpecs: SwitchSpecs,
     aggrSpecs: SwitchSpecs,
-    torSpecs: SwitchSpecs
+    torSpecs: SwitchSpecs,
+    hostNodeSpecs: HostNodeSpecs
 ): Network() {
+
+    constructor(allSwitchSpecs: SwitchSpecs, hostNodeSpecs: HostNodeSpecs):
+        this(allSwitchSpecs, allSwitchSpecs, allSwitchSpecs, hostNodeSpecs)
 
     override val nodes: Map<NodeId, Node>
     override val endPointNodes: Map<NodeId, EndPointNode>
@@ -75,7 +76,7 @@ internal class FatTreeNetwork(
         val coreSpecs = coreSpecs.copy(numOfPorts = coreSpecs.numOfPorts + 1)
 
         log.info("building fat-tree with k=$k")
-        pods = buildList { repeat(k) { add(FatTreePod(aggrSpecs, torSpecs)) } }
+        pods = buildList { repeat(k) { add(FatTreePod(aggrSpecs, torSpecs, hostNodeSpecs)) } }
 
         val coreSwitchesChunked = buildList {
             repeat(k * k / 4) { add(coreSpecs.buildCoreSwitchFromSpecs()) }
@@ -113,7 +114,11 @@ internal class FatTreeNetwork(
      * @param[aggrSpecs]    specifications of the switches in the *aggregation layer*.
      * @param[torSpecs]     specifications of the switches in the *access layer* (also called Top of Rack switches).
      */
-    inner class FatTreePod(aggrSpecs: SwitchSpecs, torSpecs: SwitchSpecs) {
+    inner class FatTreePod(
+        aggrSpecs: SwitchSpecs,
+        torSpecs: SwitchSpecs,
+        hostNodeSpecs: HostNodeSpecs
+    ) {
         /**
          * [HostNode]s that belong to ***this*** pod.
          */
@@ -133,7 +138,7 @@ internal class FatTreeNetwork(
         init {
             val k: Int = min(aggrSpecs.numOfPorts, torSpecs.numOfPorts)
             hostNodes = buildList {
-                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(HostNode(IdDispenser.nextNodeId, DataRate.ofMbps(1.0), 1)) } // TODO: change HostNode building
+                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(hostNodeSpecs.build()) }
             }
 
             torSwitches = buildList {
@@ -158,9 +163,6 @@ internal class FatTreeNetwork(
 
         internal fun fromFile(file: File) =
             Specs.fromFile<FatTreeNetwork>(file).build()
-
-        operator fun invoke(allSwitchSpecs: SwitchSpecs): FatTreeNetwork =
-            FatTreeNetwork(coreSpecs = allSwitchSpecs, aggrSpecs = allSwitchSpecs, torSpecs = allSwitchSpecs)
     }
 
 
@@ -173,7 +175,8 @@ internal class FatTreeNetwork(
         val switchSpecs: SwitchSpecs? = null,
         val coreSwitchSpecs: SwitchSpecs? = null,
         val aggrSwitchSpecs: SwitchSpecs? = null,
-        val torSwitchSpecs: SwitchSpecs? = null
+        val torSwitchSpecs: SwitchSpecs? = null,
+        val hostNodeSpecs: HostNodeSpecs,
     ): Specs<FatTreeNetwork> {
         /**
          * Returns a [FatTreeNetwork] if the specs are valid, throws error otherwise.
@@ -185,6 +188,7 @@ internal class FatTreeNetwork(
                 coreSpecs = coreSwitchSpecs ?: run { switchSpecs ?: throw error },
                 aggrSpecs = aggrSwitchSpecs ?: run { switchSpecs ?: throw error },
                 torSpecs = torSwitchSpecs ?: run { switchSpecs ?: throw error },
+                hostNodeSpecs = hostNodeSpecs
             )
         }
     }

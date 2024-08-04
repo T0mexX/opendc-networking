@@ -5,7 +5,6 @@ import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.units.Energy
 import org.opendc.simulator.network.units.Power
 import org.opendc.simulator.network.units.Time
-import org.opendc.simulator.network.units.times
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.logger
 
@@ -19,27 +18,22 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
 
     private val consumers: Map<NodeId, EnergyConsumer<*>> = consumers.associateBy { it.id }
 
-    private val energyUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, Power> { _, oldValue, newValue ->
+    private val powerUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, Power> { _, oldValue, newValue ->
         currentConsumption += newValue - oldValue
     }
 
     init {
-        consumers.forEach { it.enMonitor.addObserver(energyUseOnChangeHandler) }
+        consumers.forEach { it.enMonitor.addObserver(powerUseOnChangeHandler) }
         consumers.forEach { it.enMonitor.update() }
     }
 
     internal fun getFmtReport(): String {
-        // TODO: change/improve
         return "\n" + """
             | === ENERGY REPORT ===
             | Current Power Usage: $currentConsumption
             | Total EnergyConsumed: $totalConsumption
         """.trimIndent()
     }
-
-//    internal fun advanceBy(ms: ms) {
-//        advanceBy(ms = Time.ofMillis(ms))
-//    }
 
     internal fun advanceBy(ms: Time) {
         totalConsumption += currentConsumption * ms
