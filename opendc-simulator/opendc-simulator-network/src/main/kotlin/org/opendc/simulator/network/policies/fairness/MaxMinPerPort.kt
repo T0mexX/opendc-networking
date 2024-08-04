@@ -6,6 +6,7 @@ import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.flow.tracker.AllByDemand
 import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.utils.approx
 import org.opendc.simulator.network.utils.approxLargerOrEqual
 import org.opendc.simulator.network.utils.isSorted
@@ -64,7 +65,7 @@ internal object MaxMinPerPort: FairnessPolicy {
 }
 
 private fun Port.availableTxBW(): DataRate =
-    sendLink?.availableBW ?: DataRate.ZERO
+    sendLink?.availableBW.ifNullZero()
 
 
 private fun FlowHandler.resetAll() {

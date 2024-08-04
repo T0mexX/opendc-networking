@@ -6,6 +6,7 @@ import org.opendc.simulator.network.components.link.ReceiveLink
 import org.opendc.simulator.network.components.link.SendLink
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.withErr
 import kotlin.math.max
@@ -60,7 +61,7 @@ internal class PortImpl(
     override val outgoingRatesById: Map<FlowId, DataRate> get() =
         sendLink?.outgoingRatesById ?: emptyMap()
 
-    override val maxPortToPortBW: DataRate get() =  sendLink?.maxPort2PortBW ?: DataRate.ZERO
+    override val maxPortToPortBW: DataRate get() =  sendLink?.maxPort2PortBW.ifNullZero()
 
     override val nodeUpdtChl: UpdateChl = owner.updtChl
 
@@ -71,7 +72,7 @@ internal class PortImpl(
      */
     override val isActive: Boolean
         get() = (
-            (sendLink?.usedBW ?: DataRate.ZERO) + (receiveLink?.usedBW ?: DataRate.ZERO)
+            sendLink?.usedBW.ifNullZero() + receiveLink?.usedBW.ifNullZero()
             ) > DataRate.ZERO
 
     /**
@@ -82,7 +83,7 @@ internal class PortImpl(
      */
     override val util: Double
         get() = (
-            (sendLink?.usedBW ?: DataRate.ZERO) + (receiveLink?.usedBW ?: DataRate.ZERO)
+            sendLink?.usedBW.ifNullZero() + receiveLink?.usedBW.ifNullZero()
             ) / (maxSpeed * 2)
 
     /**
@@ -115,10 +116,10 @@ internal class PortImpl(
         get() = sendLink?.oppositeOf(this)?.owner ?: receiveLink?.oppositeOf(this)?.owner
 
     override fun incomingRateOf(fId: FlowId): DataRate =
-        receiveLink?.incomingRateOf(fId) ?: DataRate.ZERO
+        receiveLink?.incomingRateOf(fId).ifNullZero()
 
     override fun outgoingRateOf(fId: FlowId): DataRate =
-        sendLink?.outgoingRateOf(fId) ?: DataRate.ZERO
+        sendLink?.outgoingRateOf(fId).ifNullZero()
 
     override fun tryUpdtRateOf(fId: FlowId, targetRate: DataRate): DataRate =
         with(sendLink) {

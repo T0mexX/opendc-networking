@@ -8,6 +8,11 @@ import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
+import org.opendc.simulator.network.api.NetworkSnapshot.Companion.AVRG_THROUGHPUT
+import org.opendc.simulator.network.api.NetworkSnapshot.Companion.ENERGY
+import org.opendc.simulator.network.api.NetworkSnapshot.Companion.FLOWS
+import org.opendc.simulator.network.api.NetworkSnapshot.Companion.INSTANT
+import org.opendc.simulator.network.api.NetworkSnapshot.Companion.TOT_THROUGHPUT
 import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
@@ -452,7 +457,7 @@ public class NetworkController(
                     // included (with all events with that deadline).
                     pb.stepBy(execUntil(nextDeadline))
                     network.awaitStability()
-//                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
+                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
                 }
             }
             pb.refresh()

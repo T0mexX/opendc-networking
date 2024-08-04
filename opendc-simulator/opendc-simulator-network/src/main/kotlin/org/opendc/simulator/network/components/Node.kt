@@ -11,6 +11,7 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.logger
 
@@ -107,10 +108,10 @@ internal interface Node: FlowView {
 
 
     override fun totIncomingDataRateOf(fId: FlowId): DataRate =
-        flowHandler.outgoingFlows[fId]?.demand ?: DataRate.ZERO
+        flowHandler.outgoingFlows[fId]?.demand.ifNullZero()
 
     override fun totOutgoingDataRateOf(fId: FlowId): DataRate =
-        flowHandler.outgoingFlows[fId]?.totRateOut ?: DataRate.ZERO
+        flowHandler.outgoingFlows[fId]?.totRateOut.ifNullZero()
 
     override fun allTransitingFlowsIds(): Collection<FlowId> =
         with(flowHandler) {

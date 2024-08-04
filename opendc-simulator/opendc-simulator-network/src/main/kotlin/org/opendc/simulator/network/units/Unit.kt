@@ -3,7 +3,6 @@
 package org.opendc.simulator.network.units
 
 import kotlinx.serialization.Serializable
-import org.jetbrains.annotations.Range
 import org.opendc.simulator.network.utils.InternalUse
 import org.opendc.simulator.network.utils.approx
 import kotlin.math.abs
@@ -76,4 +75,18 @@ public fun <T: Unit<T>> minOf(vararg units: T): T = units.minBy { it.value }
 
 public fun <T: Unit<T>> max(a: T, b: T): T = if (a.value > b.value) a else b
 public fun <T: Unit<T>> maxOf(vararg units: T): T = units.maxBy { it.value }
+
+public inline fun <reified T: Unit<T>> T?.ifNullZero(): T =
+    this ?: new<T>(.0)
+
+@InternalUse
+public inline fun <reified T: Unit<T>> new(value: Double): T =
+    when(T::class) {
+        DataRate::class -> DataRate.ofKbps(value) as T
+        Time::class -> Time.ofMillis(value) as T
+        Energy::class -> Energy.ofWh(value) as T
+        Power::class -> Power.ofWatts(value) as T
+        Data::class -> Data.ofKB(value) as T
+        else -> throw RuntimeException("unit not included in static constructor switch")
+    }
 

@@ -4,6 +4,7 @@ import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.RateUpdt.Companion.toRateUpdt
 import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.units.minOf
 import org.opendc.simulator.network.utils.roundTo0withEps
 import kotlin.math.min
@@ -36,44 +37,43 @@ internal class SimplexLink(
     }
 
     override fun Port.updtFlowRate(fId: FlowId, rqstRate: DataRate): DataRate =
-//         synchronized(_rateById) {
-              _rateById.compute(fId) { _, oldRate ->
-                  if (this !== senderP) throw RuntimeException()
+        _rateById.compute(fId) { _, oldRate ->
+            if (this !== senderP) throw RuntimeException()
 
-                 val wouldBeDeltaBW: DataRate = rqstRate - (oldRate ?: DataRate.ZERO)
-                 val wouldBeUsedBW = usedBW + wouldBeDeltaBW
+            val wouldBeDeltaBW: DataRate = rqstRate - (oldRate.ifNullZero())
+            val wouldBeUsedBW = usedBW + wouldBeDeltaBW
 
-                 // handles case max bandwidth is reached,
-                 // reducing the bandwidth increase to the maximum available
-                 val newRate: DataRate =
-                     if (wouldBeUsedBW > maxPort2PortBW)
-                         (rqstRate - (wouldBeUsedBW - maxPort2PortBW)).roundedTo0WithEps()
-                     else rqstRate
+            // handles case max bandwidth is reached,
+            // reducing the bandwidth increase to the maximum available
+            val newRate: DataRate =
+                if (wouldBeUsedBW > maxPort2PortBW)
+                    (rqstRate - (wouldBeUsedBW - maxPort2PortBW)).roundedTo0WithEps()
+                else rqstRate
 
-                 val deltaBw = (newRate - (oldRate ?: DataRate.ZERO)).roundedTo0WithEps()
+            val deltaBw = (newRate - oldRate.ifNullZero()).roundedTo0WithEps()
+            if (deltaBw.isZero()) return@compute oldRate.ifNullZero()
 
-                 // Updates the current link bandwidth usage
-                 usedBW += deltaBw
+            // Updates the current link bandwidth usage
+            usedBW += deltaBw
 
-                 if (deltaBw != DataRate.ZERO)
-                     currLinkUpdate.compute(fId) { _, oldDelta ->
-                         val newFlowDelta = (deltaBw + (oldDelta ?: DataRate.ZERO)).roundedTo0WithEps()
-                         if (newFlowDelta == DataRate.ZERO) null
-                         else newFlowDelta
-                     }
+            if (deltaBw != DataRate.ZERO)
+                currLinkUpdate.compute(fId) { _, oldDelta ->
+                    val newFlowDelta = (deltaBw + (oldDelta.ifNullZero())).roundedTo0WithEps()
+                    if (newFlowDelta.isZero()) null
+                    else newFlowDelta
+                }
 
-                 return@compute newRate
-             }!!
-//         }
+            return@compute newRate
+        }!!
 
     // Only called by sender which has the SendLink interface.
     override fun outgoingRateOf(fId: FlowId): DataRate =
-        _rateById[fId] ?: DataRate.ZERO
+        _rateById[fId].ifNullZero()
 
 
     // Only called by receiver which has the ReceiveLink interface.
     override fun incomingRateOf(fId: FlowId): DataRate =
-        _rateById[fId] ?: DataRate.ZERO
+        _rateById[fId].ifNullZero()
 
     /**
      * Returns the [Port] on the opposite side of the [SimplexLink].
