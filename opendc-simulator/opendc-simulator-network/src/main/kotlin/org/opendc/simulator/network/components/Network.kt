@@ -16,7 +16,6 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.NonSerializable
-import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.withWarn
@@ -59,7 +58,11 @@ public sealed class Network {
     internal val isRunning: Boolean
         get() = runnerJob?.isActive ?: false
 
+    private val onNodeAdded = mutableListOf<(Network, Node) -> Unit>()
+    internal fun onNodeAdded(callback: (Network, Node) -> Unit) { onNodeAdded.add(callback) }
 
+    private val onNodeRemoved = mutableListOf<(Network, Node) -> Unit>()
+    internal fun onNodeRemoved(callback: (Network, Node) -> Unit) { onNodeRemoved.add(callback) }
 
     /**
      * Starts a [NetFlow] if the flow can be established.

@@ -1,5 +1,6 @@
 package org.opendc.simulator.network.api
 
+import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.energy.EnMonitor
 import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.units.Energy
@@ -8,7 +9,7 @@ import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.logger
 
-public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyConsumer<*>>) {
+public class NetworkEnergyRecorder internal constructor(network: Network) {
     private companion object { private val log by logger() }
 
     public var currentConsumption: Power = Power.ZERO
@@ -16,15 +17,33 @@ public class NetworkEnergyRecorder internal constructor(consumers: List<EnergyCo
     public var totalConsumption: Energy = Energy.ZERO
         private set
 
-    private val consumers: Map<NodeId, EnergyConsumer<*>> = consumers.associateBy { it.id }
+    private val consumers: MutableMap<NodeId, EnergyConsumer<*>> =
+        network.nodes.values.filterIsInstance<EnergyConsumer<*>>().associateBy { it.id }.toMutableMap()
 
     private val powerUseOnChangeHandler = OnChangeHandler<EnMonitor<*>, Power> { _, oldValue, newValue ->
         currentConsumption += newValue - oldValue
     }
 
     init {
-        consumers.forEach { it.enMonitor.addObserver(powerUseOnChangeHandler) }
-        consumers.forEach { it.enMonitor.update() }
+        consumers.values.forEach { it.enMonitor.addObserver(powerUseOnChangeHandler) }
+        consumers.values.forEach { it.enMonitor.update() }
+
+        network.onNodeAdded { _, node ->
+            (node as? EnergyConsumer<*>)?.let { newConsumer ->
+                newConsumer.enMonitor.addObserver(powerUseOnChangeHandler)
+                consumers.compute(newConsumer.id) { _, oldConsumer ->
+                    // If new consumer replaces an old one log warning msg
+                    oldConsumer?.let { if (oldConsumer !== newConsumer) log.warn("energy consumer $oldConsumer is being replaced by $newConsumer which has the same id") }
+                    newConsumer
+                }
+            }
+        }
+        network.onNodeRemoved { _, node ->
+            (node as? EnergyConsumer<*>)?.let {
+                consumers.remove(it.id)
+                    ?: log.warn("energy consumer was removed from the network $network, but it was not tracked by the energy recorder")
+            }
+        }
     }
 
     internal fun getFmtReport(): String {
