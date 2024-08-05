@@ -24,6 +24,9 @@ internal class StabilityValidator {
     private var invalidCount: Int = 0
     private var countLock = Mutex()
 
+    private var shouldBeStable: Boolean = false
+    private val shouldBeStableLock: Mutex = Mutex()
+
     /**
      * Suspend method that suspends until the network reached a stable state.
      */
@@ -42,6 +45,18 @@ internal class StabilityValidator {
     }
 
     /**
+     * @throws IllegalStateException
+     */
+    internal suspend fun <T> shouldBeStableWhile(block: () -> T) =
+        shouldBeStableLock.withLock {
+            shouldBeStable = true
+            val res = block()
+            shouldBeStable = false
+
+            res
+        }
+
+    /**
      * Instances of this class can invalidate their state,
      * and consequently, the state of the network.
      */
@@ -58,6 +73,8 @@ internal class StabilityValidator {
          */
         suspend fun invalidate() {
             if (isValid.not()) return
+            check(shouldBeStable.not())
+
             countLock.withLock {
                 invalidCount++
                 if (invalidCount == 1)
