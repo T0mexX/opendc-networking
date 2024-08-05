@@ -8,7 +8,13 @@ import kotlinx.coroutines.sync.withLock
  * can invalidate its own state and consequently the
  * state of the network (if undergoing some update, connection, etc.).
  *
+ * If the network is stable, then all its nodes are
+ * suspended waiting for data rate updates.
+ *
  * One can wait for the network to be stable with [awaitStability].
+ *
+ * One can check that a certain block of code is executed while
+ * the network is stable with [checkIsStableWhile]
  */
 internal class StabilityValidator {
 
@@ -24,8 +30,34 @@ internal class StabilityValidator {
     private var invalidCount: Int = 0
     private var countLock = Mutex()
 
+    /**
+     * This property is used to check at runtime that a
+     * certain block of code is executed while the network is stable,
+     * using [checkIsStableWhile].
+     *
+     * While this property is `true`, any attempt to invalidate the network
+     * stability throws an [IllegalStateException]
+     *
+     * @see[checkIsStableWhile]
+     */
     private var shouldBeStable: Boolean = false
+
+    /**
+     * Number of block that are currently being executed in the [checkIsStableWhile] method.
+     */
+    private var shouldBeStableCounter: Int = 0
     private val shouldBeStableLock: Mutex = Mutex()
+
+    private suspend fun shouldBeStableCounterInc() =
+        shouldBeStableLock.withLock {
+            shouldBeStableCounter++
+            if (shouldBeStableCounter == 1) shouldBeStable = false
+        }
+    private suspend fun shouldBeStableCounterDec() =
+        shouldBeStableLock.withLock {
+            shouldBeStableCounter--
+            if (shouldBeStableCounter == 0) shouldBeStable = false
+        }
 
     /**
      * Suspend method that suspends until the network reached a stable state.
@@ -45,16 +77,27 @@ internal class StabilityValidator {
     }
 
     /**
+     * Checks that the network remains stable while [block] is executed.
+     * If network is invalidated while block is being executed an
+     * [IllegalStateException] is thrown.
+     *
      * @throws IllegalStateException
      */
-    internal suspend fun <T> shouldBeStableWhile(block: () -> T) =
-        shouldBeStableLock.withLock {
-            shouldBeStable = true
-            val res = block()
-            shouldBeStable = false
+    internal suspend fun <T> checkIsStableWhile(block: () -> T): T {
+        // If network not stable throw error
+        check(stabilityLock.tryLock().not())
+        {"block of code that needs to be executed while network is stable was invoked while network unstable"}
 
-            res
-        }
+        // While counter is non-zero if network is invalidated, then exception is thrown.
+        shouldBeStableCounterInc()
+        stabilityLock.unlock()
+
+        val res = block()
+        shouldBeStableCounterDec()
+
+        return res
+    }
+
 
     /**
      * Instances of this class can invalidate their state,
@@ -65,7 +108,7 @@ internal class StabilityValidator {
          * Keeps track of the last state of this invalidator.
          * [invalidate] and [validate] are assumed to be used synchronously.
          */
-        internal var isValid = true
+        private var isValid = true
 
         /**
          * Invalidates the state of this instance if not already invalidated.
@@ -73,6 +116,8 @@ internal class StabilityValidator {
          */
         suspend fun invalidate() {
             if (isValid.not()) return
+
+            // If a block is being executed in the [checkIsStableWhile] function then throws exception
             check(shouldBeStable.not())
 
             countLock.withLock {
