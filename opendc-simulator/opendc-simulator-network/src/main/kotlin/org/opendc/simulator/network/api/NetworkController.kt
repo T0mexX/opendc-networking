@@ -131,7 +131,7 @@ public class NetworkController(
      * @see[NetworkEnergyRecorder]
      */
     public val energyRecorder: NetworkEnergyRecorder =
-        NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
+        NetworkEnergyRecorder(network)
 
     /**
      * The 'network interface' of the INTERNET abstract node.

@@ -82,7 +82,7 @@ private class NetworkPlayground: CliktCommand() {
             network = CustomNetwork()
         }
 
-        energyRecorder = NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
+        energyRecorder = NetworkEnergyRecorder(network)
         env = PlaygroundEnv(network = network, energyRecorder = energyRecorder)
     }
 
