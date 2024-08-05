@@ -1,7 +1,8 @@
-package org.opendc.simulator.network.components
+package org.opendc.simulator.network.components.stability
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Tracks the network stability. Each instance of [Invalidator]
@@ -16,7 +17,7 @@ import kotlinx.coroutines.sync.withLock
  * One can check that a certain block of code is executed while
  * the network is stable with [checkIsStableWhile]
  */
-internal class StabilityValidator {
+internal class NetworkStabilityValidator: NetworkStabilityChecker() {
 
     /**
      * Locked when the network is not stable.
@@ -76,14 +77,7 @@ internal class StabilityValidator {
         stabilityLock = Mutex()
     }
 
-    /**
-     * Checks that the network remains stable while [block] is executed.
-     * If network is invalidated while block is being executed an
-     * [IllegalStateException] is thrown.
-     *
-     * @throws IllegalStateException
-     */
-    internal suspend fun <T> checkIsStableWhile(block: () -> T): T {
+    override suspend fun <T> checkIsStableWhile(block: suspend () -> T): T {
         // If network not stable throw error
         check(stabilityLock.tryLock().not())
         {"block of code that needs to be executed while network is stable was invoked while network unstable"}
@@ -98,6 +92,12 @@ internal class StabilityValidator {
         return res
     }
 
+    override fun isStable(): Boolean =
+        stabilityLock.tryLock().let {
+            if (it.not()) return@let false
+            stabilityLock.unlock()
+            true
+        }
 
     /**
      * Instances of this class can invalidate their state,
@@ -119,11 +119,12 @@ internal class StabilityValidator {
 
             // If a block is being executed in the [checkIsStableWhile] function then throws exception
             check(shouldBeStable.not())
+            {"attempted to invalidate network stability while a stability required block is being executed"}
 
             countLock.withLock {
                 invalidCount++
                 if (invalidCount == 1)
-                    stabilityLock.lock(this@StabilityValidator)
+                    stabilityLock.lock(this@NetworkStabilityValidator)
             }
             isValid = isValid.not()
         }
@@ -137,7 +138,7 @@ internal class StabilityValidator {
             countLock.withLock {
                 invalidCount--
                 if (invalidCount == 0)
-                    stabilityLock.unlock(this@StabilityValidator)
+                    stabilityLock.unlock(this@NetworkStabilityValidator)
             }
             isValid = isValid.not()
         }
