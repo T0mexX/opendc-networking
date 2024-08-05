@@ -38,7 +38,7 @@ internal interface EndPointNode: Node {
      * @param[f]  the [NetFlow] to store the reference of.
      */
     fun addReceivingEtoEFlow(f: NetFlow) {
-        flowHandler.receivingFlows[f.id] = f
+        flowHandler.consumedFlows[f.id] = f
     }
 
     /**
@@ -47,7 +47,7 @@ internal interface EndPointNode: Node {
      * @param[flowId]   id of the end-to-end flow whose reference is to be removed.
      */
     fun rmReceivingEtoEFlow(flowId: FlowId) {
-        flowHandler.receivingFlows.remove(flowId)
+        flowHandler.consumedFlows.remove(flowId)
             ?: log.error("unable to remove end-to-end receiving flow, flow not present")
     }
 
@@ -55,7 +55,7 @@ internal interface EndPointNode: Node {
     override fun totIncomingDataRateOf(fId: FlowId): DataRate =
         with(flowHandler) {
             if (fId in generatedFlows) DataRate.ZERO
-            else receivingFlows[fId]?.throughput
+            else consumedFlows[fId]?.throughput
                 ?: let { outgoingFlows[fId]?.demand }
                     .ifNullZero()
         }

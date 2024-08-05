@@ -21,9 +21,10 @@ internal class EnMonitor<T: EnergyConsumer<T>>(
     /**
      * The current energy consumption of the [monitored] network component.
      */
-    private var currConsumpt: Power by Delegates.observable(Power.ZERO) { _, oldValue, newValue ->
+    var currConsumpt: Power by Delegates.observable(Power.ZERO) { _, oldValue, newValue ->
         obs.forEach { it.handleChange(this, oldValue, newValue) }
     }
+    private set
 
     /**
      * Adds an observer callback function.
