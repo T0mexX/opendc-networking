@@ -60,3 +60,11 @@ internal object UnsatisfiedByRateOut: TrackerMode {
     override fun OutFlow.shouldBeTracked(): Boolean =
         demand.approxLarger(totRateOut)
 }
+
+internal object AllByUnsatisfaction: TrackerMode {
+    override fun OutFlow.compare(other: OutFlow): Int =
+        (this.totRateOut / this.demand).compareTo(other.totRateOut / other.demand)
+
+    override fun OutFlow.shouldBeTracked(): Boolean =
+        true
+}

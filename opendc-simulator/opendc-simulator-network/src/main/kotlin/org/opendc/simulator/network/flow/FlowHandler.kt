@@ -43,7 +43,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Needs to be kept updated by owner [Node]. If the node is not an
      * [EndPointNode] this property shall be ignored.
      */
-    val receivingFlows = mutableMapOf<FlowId, NetFlow>()
+    val consumedFlows = mutableMapOf<FlowId, NetFlow>()
 
     /**
      * Keeps track of all outgoing flows in the form of [OutFlow]s.
@@ -123,7 +123,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
             if (deltaRate.isZero()) return@forEach
 
             // if this node is the destination
-            receivingFlows[fId]?.let {
+            consumedFlows[fId]?.let {
                 it.throughput = (it.throughput + deltaRate).roundedTo0WithEps()
                 return@forEach
             }

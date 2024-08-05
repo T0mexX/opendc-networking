@@ -20,7 +20,7 @@ import kotlin.system.measureNanoTime
 
 private fun bitBrainsSim() {
     val bitBrains = BitBrains.fromFolderWithVmTables(File("resources/traces/bitbrains"))
-    val wl: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..80)
+    val wl: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..4)
 //    val opt = wl.optimize()
 //    val wl2: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..250)
 
