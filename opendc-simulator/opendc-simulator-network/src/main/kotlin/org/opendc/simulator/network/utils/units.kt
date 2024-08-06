@@ -26,7 +26,7 @@ internal fun Double.toHigherDataUnit(): Double = this / 1024
 
 
 
-internal fun Double.roundTo0withEps(err: Double = 0.00001): Double =
+internal fun Double.roundTo0withErr(err: Double = 0.00001): Double =
     if (this in (-err..err)) .0
     else this
 
@@ -38,6 +38,10 @@ internal fun Double.approx(other: Double, epsilon: Double = dfltEpsilon): Boolea
 
 internal infix fun Double.approx(other: Double): Boolean =
     approx(other, epsilon = dfltEpsilon)
+
+internal fun Double.roundToIfInRange(to: Double, err: Double = 1e-5) =
+    if (this in (to - err)..(to + err)) to
+    else this
 
 
 
@@ -58,5 +62,7 @@ internal inline infix fun <T> Double.ifNaN(block: () -> Double): Double =
     if (this.isNaN()) block()
     else this
 
+internal fun Double.fractionToPerc(valueFormatter: String): String =
+    "${String.format(valueFormatter, (this * 100).ifNanThen(.0))}%"
 
 

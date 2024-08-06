@@ -7,6 +7,7 @@ import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
+import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
@@ -72,7 +73,7 @@ internal interface Node: FlowView {
 
 //    val flowRates: MutableMap<FlowId, Kbps>
 
-    suspend fun run(invalidator: StabilityValidator.Invalidator? = null) {
+    suspend fun run(invalidator: NetworkStabilityValidator.Invalidator? = null) {
         invalidator?.let { updtChl.withInvalidator(invalidator) }
         updtChl.clear()
 
