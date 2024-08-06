@@ -3,6 +3,7 @@ package org.opendc.simulator.network.components
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
@@ -10,7 +11,6 @@ import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.IdDispenser
-import org.opendc.simulator.network.utils.toLowerDataUnit
 
 /**
  * Switch that also implements [EndPointNode].
@@ -29,7 +29,7 @@ internal class CoreSwitch(
         enMonitor.update()
     }
 
-    override suspend fun run(invalidator: StabilityValidator.Invalidator?) {
+    override suspend fun run(invalidator: NetworkStabilityValidator.Invalidator?) {
         return super<EndPointNode>.run(invalidator)
     }
 

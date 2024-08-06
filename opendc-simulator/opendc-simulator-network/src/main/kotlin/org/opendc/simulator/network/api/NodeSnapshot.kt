@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.energy.EnergyConsumer
+import org.opendc.simulator.network.export.Exportable
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.tracker.AllByUnsatisfaction
@@ -52,7 +53,7 @@ public class NodeSnapshot internal constructor(
     public val totEnConsumed: Energy,
     public val currNodeTputAllFlows: DataRate,
     public val currNodeTputPercAllFlows: Double,
-) {
+): Exportable<NodeSnapshot> {
     public val nodeId: NodeId = node.id
 
     public fun fmt(flags: Int = ALL): String {

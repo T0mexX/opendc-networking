@@ -57,4 +57,7 @@ internal class Internet(
         // calls extension function
         connect(other, duplex = true)
     }
+
+    override fun toString(): String =
+        "[INTERNET_NODE]"
 }

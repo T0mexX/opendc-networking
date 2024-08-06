@@ -6,13 +6,14 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.components.stability.NetworkStabilityChecker
+import org.opendc.simulator.network.components.stability.NetworkStabilityChecker.Key.getNetStabilityChecker
 import org.opendc.simulator.network.units.Data
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.SuspOnChangeHandler
-import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.roundTo0withEps
+import kotlin.coroutines.coroutineContext
 
 /**
  * Represents an end-to-end flow, meaning the flow from one [EndPointNode] to another.
@@ -83,6 +84,9 @@ public class NetFlow internal constructor(
 
     /**
      * The end-to-end throughput of the flow.
+     *
+     * This property should be updated only by the receiver node
+     * coroutine job, hence synchronized update should be guaranteed.
      */
     public var throughput: DataRate = DataRate.ZERO
         internal set(new) = runBlocking { throughputMutex.withLock {
@@ -118,8 +122,10 @@ public class NetFlow internal constructor(
      * Advances the time for the flow, updating the total data
      * transmitted according to [time] milliseconds timelapse.
      */
-    internal fun advanceBy(time: Time) {
-        totDataTransmitted += throughput * time
+    internal suspend fun advanceBy(time: Time) {
+        coroutineContext.getNetStabilityChecker().checkIsStableWhile {
+            totDataTransmitted += throughput * time
+        }
     }
 
     /**

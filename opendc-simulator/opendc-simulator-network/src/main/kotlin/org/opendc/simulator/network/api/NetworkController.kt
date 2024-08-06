@@ -18,7 +18,6 @@ import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
-import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.logger
@@ -27,10 +26,9 @@ import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.api.NodeSnapshot.Companion.snapshot
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.Time
-import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.approxLarger
 import org.opendc.simulator.network.utils.errAndNull
 import org.slf4j.Logger
 import java.io.File
@@ -372,7 +370,7 @@ public class NetworkController(
 
             val timeSpan = Time.ofMillis(instantSrc.millis()- lastUpdate.toEpochMilli())
             if (timeSpan == Time.ZERO) return
-            advanceBy(timeSpan, suppressWarn = true)
+            runBlocking { advanceBy(timeSpan, suppressWarn = true) }
         } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
     }
 
@@ -380,17 +378,17 @@ public class NetworkController(
      * Advances the network time by [duration], updating network related statistics.
      */
     public fun advanceBy(duration: Duration) {
-        advanceBy(Time.ofDuration(duration))
+        runBlocking { advanceBy(Time.ofDuration(duration)) }
     }
 
     /**
      * Advances the network time by [time] milliseconds, updating network related statistics.
      */
-    public fun advanceBy(time: Time) { advanceBy(time, suppressWarn = false) }
-    private fun advanceBy(time: Time, suppressWarn: Boolean) {
+    public suspend fun advanceBy(time: Time) { advanceBy(time, suppressWarn = false) }
+    private suspend fun advanceBy(time: Time, suppressWarn: Boolean) {
         if (time < Time.ZERO) return log.error("advanceBy received negative time-span parameter($time), ignoring...")
         if (time == Time.ZERO) return
-        runBlocking { network.awaitStability() }
+        network.awaitStability()
 
         if (instantSrc.isInternalSource)
             instantSrc.advanceTime(time)
@@ -441,7 +439,7 @@ public class NetworkController(
 
         if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
 
-        runBlocking {
+        runBlocking (network.validator) {
             val pb: ProgressBar = ProgressBarBuilder()
                 .setInitialMax(netWorkload.size.toLong())
                 .setStyle(ProgressBarStyle.ASCII)
@@ -450,6 +448,7 @@ public class NetworkController(
             delay(1000)
 
             with (netWorkload) {
+                println(NodeSnapshot.fmtHdr())
                 while (hasNext()) {
                     val nextDeadline = peek().deadline
 
@@ -457,7 +456,12 @@ public class NetworkController(
                     // included (with all events with that deadline).
                     pb.stepBy(execUntil(nextDeadline))
                     network.awaitStability()
-                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
+
+                    
+//                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
+//                    network.nodes.values.forEach {
+//                        if (it.id != INTERNET_ID) println(it.snapshot(currentInstant, withStableNetwork = network).fmt())
+//                    }
                 }
             }
             pb.refresh()

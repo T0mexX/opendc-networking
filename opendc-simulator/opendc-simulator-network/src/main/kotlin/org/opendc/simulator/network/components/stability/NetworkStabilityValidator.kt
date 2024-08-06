@@ -79,7 +79,7 @@ internal class NetworkStabilityValidator: NetworkStabilityChecker() {
 
     override suspend fun <T> checkIsStableWhile(block: suspend () -> T): T {
         // If network not stable throw error
-        check(stabilityLock.tryLock().not())
+        check(stabilityLock.tryLock())
         {"block of code that needs to be executed while network is stable was invoked while network unstable"}
 
         // While counter is non-zero if network is invalidated, then exception is thrown.

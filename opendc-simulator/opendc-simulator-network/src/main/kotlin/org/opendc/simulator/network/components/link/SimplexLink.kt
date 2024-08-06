@@ -6,8 +6,6 @@ import org.opendc.simulator.network.flow.RateUpdt.Companion.toRateUpdt
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.units.minOf
-import org.opendc.simulator.network.utils.roundTo0withEps
-import kotlin.math.min
 
 internal class SimplexLink(
     private val senderP: Port,

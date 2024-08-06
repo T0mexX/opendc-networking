@@ -44,6 +44,18 @@ public value class DataRate private constructor(
         }
     }
 
+    public fun fmtValue(valueFormatter: String): String {
+        val `100Kbps` = 100.0
+        val `100Mbps` = 1024.0 * 100.0
+
+        return when (value) {
+            in (Double.MIN_VALUE..`100Kbps`) -> "${String.format(valueFormatter, toKbps())} Kbps"
+            in (`100Kbps`.. `100Mbps`) -> "${String.format(valueFormatter, toMbps())} Mbps"
+            else -> "${String.format(valueFormatter, toGbps())} Gbps"
+        }
+    }
+
+
     public operator fun times(time: Time): Data = Data.ofKB(toKBps() * time.toSec())
 
     public companion object {

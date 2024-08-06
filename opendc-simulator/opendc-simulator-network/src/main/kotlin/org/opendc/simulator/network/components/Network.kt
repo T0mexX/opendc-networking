@@ -11,6 +11,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.components.stability.NetworkStabilityChecker
+import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.units.DataRate
@@ -28,9 +30,14 @@ import org.opendc.simulator.network.utils.withWarn
 public sealed class Network {
 
 
-    internal val validator: StabilityValidator = StabilityValidator()
+    internal val validator: NetworkStabilityValidator = NetworkStabilityValidator()
 
-    private val networkScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val networkScope =
+        CoroutineScope(
+            Dispatchers.Default +
+                SupervisorJob() +
+                (validator as NetworkStabilityChecker)
+        )
 
     /**
      * Maps [NodeId]s to their corresponding [Node]s, which are part of the [Network]
@@ -126,7 +133,7 @@ public sealed class Network {
         return sb.toString()
     }
 
-    internal fun advanceBy(time: Time) {
+    internal suspend fun advanceBy(time: Time) {
         flowsById.values.forEach { it.advanceBy(time) }
     }
 
