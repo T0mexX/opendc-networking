@@ -2,12 +2,16 @@ package org.opendc.simulator.network.api
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshotOf
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Internet
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.units.Data
+import org.opendc.simulator.network.flow.OutFlow
+import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
+import org.opendc.simulator.network.flow.tracker.TrackerMode
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 
@@ -23,7 +27,7 @@ public typealias NodeId = Long
  */
 public class NetworkInterface internal constructor(
     private val node: EndPointNode,
-    private val netController: NetworkController,
+    internal val netController: NetworkController,
     public var owner: String = "unknown"
 ): AutoCloseable {
 
@@ -34,8 +38,11 @@ public class NetworkInterface internal constructor(
 
 
     private val subInterfaces = mutableListOf<NetworkInterface>()
-    private val flowsById = mutableMapOf<FlowId, NetFlow>()
+    internal val flowsById = mutableMapOf<FlowId, NetFlow>()
     private val flowsByName = mutableMapOf<String, NetFlow>()
+    private val genFromInternet = mutableMapOf<FlowId, NetFlow>()
+
+    public fun nodeSnapshot(): NodeSnapshot = netController.snapshotOf(node.id)!!
 
 
     @JvmOverloads
@@ -108,6 +115,8 @@ public class NetworkInterface internal constructor(
     public suspend fun stopFlowSus(id: FlowId) {
         flowsById.remove(id)?.let {
             netController.stopFlow(id)
+        } ?: genFromInternet.remove(id)?.let {
+            netController.internetNetworkInterface.stopFlowSus(id)
         } ?: log.error(
             "network interface with owner '$owner' tried to stop flow which does not own"
         )
@@ -144,7 +153,7 @@ public class NetworkInterface internal constructor(
             throughputChangeHandler = throughputChangeHandler,
         )!!
 
-        flowsById[newFlow.id] = newFlow
+        genFromInternet[newFlow.id] = newFlow
 
         return newFlow
     }
@@ -162,6 +171,7 @@ public class NetworkInterface internal constructor(
     public fun fromInternet(throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)?): NetFlow = runBlocking { fromInternetSus(throughputChangeHandler = throughputChangeHandler) }
 
 
+
     override fun close() {
         subInterfaces.forEach { it.close() }
         runBlocking {
@@ -173,5 +183,10 @@ public class NetworkInterface internal constructor(
 
     public companion object {
         internal val log by logger()
+
+        private fun NetFlow.belongsTo(netIface: NetworkInterface): Boolean =
+            id in netIface.flowsById || netIface.subInterfaces.any { belongsTo(it) }
     }
 }
+
+

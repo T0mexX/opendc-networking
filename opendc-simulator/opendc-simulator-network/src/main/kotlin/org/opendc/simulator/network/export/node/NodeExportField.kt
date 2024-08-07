@@ -10,7 +10,7 @@
 //import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.INT64
 //import org.apache.parquet.schema.Type
 //import org.apache.parquet.schema.Types
-//import org.opendc.simulator.network.api.NodeSnapshot
+//import org.opendc.simulator.network.api.snapshots.NodeSnapshot
 //
 //public abstract class NodeExportField {
 //    internal abstract val fld: Type
@@ -123,7 +123,7 @@
 //                addDouble(snapshot.maxPortSpeed.toMbps())
 //            }
 //        }
-//        public val ALL: Set<NodeExportField> = setOf(
+//        public val ALL_NET_FIELDS: Set<NodeExportField> = setOf(
 //            NODE_ID, TIMESTAMP, NAME, FLOWS_IN, FLOWS_OUT, GEN_FLOWS,
 //            CONS_FLOWS, MIN_F_TPUT, MAX_F_TPUT, AVRG_F_TPUT, TPUT, TPUT_PERC,
 //            CURR_PWR_USE, AVRG_PWR_USE, EN_CONSUMPT, MAX_PORT_SPEED

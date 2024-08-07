@@ -19,7 +19,12 @@ public value class Time private constructor(
     public fun toHours(): Double = toMin() / 60
     public fun toInstantFromEpoch(): Instant = Instant.ofEpochMilli(value.toLong())
 
-    override fun toString(): String =
+    override fun toString(): String = fmtValue()
+
+    /**
+     * No ops.
+     */
+    override fun fmtValue(fmt: String): String =
         Duration.ofMillis(value.toLong()).toString()
 
     public operator fun times(power: Power): Energy = Energy.ofWh(toHours() * power.toWatts())

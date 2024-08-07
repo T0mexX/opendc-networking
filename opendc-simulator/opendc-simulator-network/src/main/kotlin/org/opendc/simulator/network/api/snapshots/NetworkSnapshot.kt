@@ -1,7 +1,9 @@
-package org.opendc.simulator.network.api
+package org.opendc.simulator.network.api.snapshots
 
 import kotlinx.coroutines.runBlocking
-import org.opendc.simulator.network.api.NodeSnapshot.Companion.HDR
+import org.opendc.simulator.network.api.NetworkController
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.HDR
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.HDR
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
@@ -9,6 +11,8 @@ import org.opendc.simulator.network.export.Exportable
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.Energy
 import org.opendc.simulator.network.units.Power
+import org.opendc.simulator.network.utils.Flag
+import org.opendc.simulator.network.utils.Flags
 import org.opendc.simulator.network.utils.ratioToPerc
 import org.opendc.simulator.network.utils.ifNanThen
 import java.time.Instant
@@ -30,7 +34,7 @@ import java.time.Instant
  * @property[totEnConsumed]             The energy consumed from the instant the network was started until the instant the snapshot was taken.
  *
  */
-public data class NetworkSnapshot internal constructor(
+public class NetworkSnapshot private constructor(
     public val instant: Instant,
     public val numNodes: Int,
     public val numHostNodes: Int,
@@ -43,7 +47,9 @@ public data class NetworkSnapshot internal constructor(
     public val currPwrUse: Power,
     public val avrgPwrUseOverTime: Power,
     public val totEnConsumed: Energy
-): Exportable<NetworkSnapshot> {
+): Snapshot<NetworkSnapshot>(), Exportable<NetworkSnapshot> {
+
+    override val dfltColWidth: Int = 27
 
     /**
      * @param[flags]    flags representing which property
@@ -51,7 +57,7 @@ public data class NetworkSnapshot internal constructor(
      * @return          the formatted string representing the snapshot information,
      * as either 1 or 2 lines with a column for each property.
      */
-    public fun fmt(flags: Int = ALL): String {
+    override fun fmt(flags: Flags<NetworkSnapshot>): String {
 
         val headersLine = flags.ifSet(HDR, dflt = "") { fmtHdr(flags) }
 
@@ -73,89 +79,99 @@ public data class NetworkSnapshot internal constructor(
         return headersLine + secondLine
     }
 
+    /**
+     * @return formatted [String] line containing all the headers
+     * of the fields associated with the flags [flags]. The [HDR] flags is ignored.
+     */
+    override fun fmtHdr(flags: Flags<NetworkSnapshot>): String =
+        buildString {
+            append("| ")
+            flags.ifSet(INSTANT) { appendPad("instant", pad = 30) }
+            flags.ifSet(NODES) { appendPad("nodes") }
+            flags.ifSet(HOST_NODES) { appendPad("hosts (assigned)") }
+            flags.ifSet(CORE_SWITCHES) { appendPad("core switches") }
+            flags.ifSet(FLOWS) { appendPad("active flows") }
+            flags.ifSet(TOT_TPUT) { appendPad("tot throughput") }
+            flags.ifSet(TOT_TPUT_PERC) { appendPad("tot throughput %") }
+            flags.ifSet(AVRG_TPUT_PERC) { appendPad("avrg throughput %") }
+            flags.ifSet(CURR_PWR_USE) { appendPad("curr pwr use") }
+            flags.ifSet(AVRG_PWR_USE) { appendPad("avrg pwr over time") }
+            flags.ifSet(EN_CONSUMED) { appendPad("energy consumed") }
+            appendLine()
+        }
+
     override fun toString(): String = "[NetworkSnapshot: timestamp=$instant]"
 
     public companion object {
-        private const val COL_WIDTH = 27
 
         /**
          * The [Instant] the [NodeSnapshot] was taken.
          */
-        public const val INSTANT: Int = 1
+        public val INSTANT: Flag<NetworkSnapshot> = Flag(1)
 
         /**
          * The number of nodes in the network at the instant the snapshot was taken.
          */
-        public const val NODES: Int = 1 shl 1
+        public val NODES: Flag<NetworkSnapshot> = Flag(1 shl 1)
 
         /**
          * The number of host nodes in the network at the instant the snapshot was taken.
          */
-        public const val HOST_NODES: Int = 1 shl 2
+        public val HOST_NODES: Flag<NetworkSnapshot> = Flag(1 shl 2)
 
         /**
          * The number of core switches in the network at the instant the snapshot was taken.
          */
-        public const val CORE_SWITCHES: Int = 1 shl 3
+        public val CORE_SWITCHES: Flag<NetworkSnapshot> = Flag(1 shl 3)
 
         /**
          * The number of flows transiting through the network at the instant the snapshot is taken.
          */
-        public const val FLOWS: Int = 1 shl 4
+        public val FLOWS: Flag<NetworkSnapshot> = Flag(1 shl 4)
 
         /**
          * The total data-rate transiting through the network at the instant the snapshot was taken.
          */
-        public const val TOT_TPUT: Int = 1 shl 5
+        public val TOT_TPUT: Flag<NetworkSnapshot> = Flag(1 shl 5)
 
         /**
          * The total throughput percentage of all the flows transiting through
          * the network as the sum of their throughput divided by the sum of their demand.
          */
-        public const val TOT_TPUT_PERC: Int = 1 shl 6
+        public val TOT_TPUT_PERC: Flag<NetworkSnapshot> = Flag(1 shl 6)
 
         /**
          * The average throughput percentage of all the flows transiting through
          * the network at the instant the snapshot was taken.
          */
-        public const val AVRG_TPUT_PERC: Int = 1 shl 7
+        public val AVRG_TPUT_PERC: Flag<NetworkSnapshot> = Flag(1 shl 7)
 
         /**
          * The power usage at the instant the snapshot was taken.
          */
-        public const val CURR_PWR_USE: Int = 1 shl 8
+        public val CURR_PWR_USE: Flag<NetworkSnapshot> = Flag(1 shl 8)
 
         /**
          * The average power usage of the network, from the instant the node
          * was started until the instant the snapshot was taken.
          */
-        public const val AVRG_PWR_USE: Int = 1 shl 9
+        public val AVRG_PWR_USE: Flag<NetworkSnapshot> = Flag(1 shl 9)
 
         /**
          * The energy consumed from the instant the network was
          * started until the instant the snapshot was taken.
          */
-        public const val EN_CONSUMED: Int = 1 shl 10
+        public val EN_CONSUMED: Flag<NetworkSnapshot> = Flag(1 shl 10)
 
         /**
          * Flag that adds a line to the formatted snapshot string with the fields headers.
          */
-        public const val HDR: Int = 1 shl 11
-
-        /**
-         * "Flag" that includes all the other flags.
-         */
-        public const val ALL: Int = -1
+        public val HDR: Flag<NetworkSnapshot> = Flag(1 shl 11)
 
         /**
          * "Flag" that includes all the other flags except [HDR].
          */
-        public const val ALL_NO_HDR: Int = ALL and HDR.inv()
-
-        private inline fun <T> Int.ifSet(flag: Int, dflt: T? = null, block: () -> T): T? =
-            if (this and flag != 0)
-                block()
-            else dflt
+        public val ALL_NO_HDR: Flags<NetworkSnapshot> = Flags.all<NetworkSnapshot>() - HDR
 
         public fun NetworkController.snapshot(): NetworkSnapshot {
             val network = this.network
@@ -171,40 +187,12 @@ public data class NetworkSnapshot internal constructor(
                 numActiveFlows = network.flowsById.values.filterNot { it.demand.isZero() }.size,
                 totTput = DataRate.ofKbps(network.flowsById.values.sumOf { it.throughput.toKbps() }),
                 totTputPerc = network.flowsById.values.let { fs -> fs.sumOf { it.throughput.toKbps() } / fs.sumOf { it.demand.toKbps() } },
-                avrgTputPerc = network.flowsById.values.filterNot { it.demand.isZero() }.let { fs -> fs.sumOf { (it.throughput / it.demand) ifNanThen .0 } / fs.size },
+                avrgTputPerc = network.flowsById.values.filterNot { it.demand.isZero() }
+                    .let { fs -> fs.sumOf { (it.throughput / it.demand) ifNanThen .0 } / fs.size },
                 currPwrUse = energyRecorder.currPwrUsage,
                 avrgPwrUseOverTime = energyRecorder.avrgPwrUsage,
                 totEnConsumed = energyRecorder.totalConsumption
             )
-        }
-
-        /**
-         * @return formatted [String] line containing all the headers
-         * of the fields associated with the flags [flags]. The [HDR] flag is ignored.
-         */
-        public fun fmtHdr(flags: Int = NodeSnapshot.ALL): String =
-            buildString {
-                append("| ")
-                flags.ifSet(INSTANT) { appendPad("instant", pad = 30) }
-                flags.ifSet(NODES) { appendPad("nodes") }
-                flags.ifSet(HOST_NODES) { appendPad("hosts (assigned)") }
-                flags.ifSet(CORE_SWITCHES) { appendPad("core switches") }
-                flags.ifSet(FLOWS) { appendPad("active flows") }
-                flags.ifSet(TOT_TPUT) { appendPad("tot throughput") }
-                flags.ifSet(TOT_TPUT_PERC) { appendPad("tot throughput %") }
-                flags.ifSet(AVRG_TPUT_PERC) { appendPad("avrg throughput %") }
-                flags.ifSet(CURR_PWR_USE) { appendPad("curr pwr use") }
-                flags.ifSet(AVRG_PWR_USE) { appendPad("avrg pwr over time") }
-                flags.ifSet(EN_CONSUMED) { appendPad("energy consumed") }
-                appendLine()
-            }
-
-
-        private fun StringBuilder.appendPad(obj: Any?, pad: Int = COL_WIDTH) {
-            append(obj.toString().padEnd(pad))
-        }
-        private fun StringBuilder.appendPad(str: String, pad: Int = COL_WIDTH) {
-            append(str.padEnd(pad))
         }
     }
 }

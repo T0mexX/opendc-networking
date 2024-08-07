@@ -33,25 +33,16 @@ public value class DataRate private constructor(
     public fun toGBps(): Double = value / 1024 / 1024 / 8
 
 
-    override fun toString(): String {
+    override fun toString(): String = fmtValue()
+
+    public override fun fmtValue(fmt: String): String {
         val `100Kbps` = 100.0
         val `100Mbps` = 1024.0 * 100.0
 
         return when (value) {
-            in (Double.MIN_VALUE..`100Kbps`) -> "${toKbps()} Kbps"
-            in (`100Kbps`.. `100Mbps`) -> "${toMbps()} Kbps"
-            else -> "${toGbps()} Gbps"
-        }
-    }
-
-    public fun fmtValue(valueFormatter: String): String {
-        val `100Kbps` = 100.0
-        val `100Mbps` = 1024.0 * 100.0
-
-        return when (value) {
-            in (Double.MIN_VALUE..`100Kbps`) -> "${String.format(valueFormatter, toKbps())} Kbps"
-            in (`100Kbps`.. `100Mbps`) -> "${String.format(valueFormatter, toMbps())} Mbps"
-            else -> "${String.format(valueFormatter, toGbps())} Gbps"
+            in (Double.MIN_VALUE..`100Kbps`) -> "${String.format(fmt, toKbps())} Kbps"
+            in (`100Kbps`.. `100Mbps`) -> "${String.format(fmt, toMbps())} Mbps"
+            else -> "${String.format(fmt, toGbps())} Gbps"
         }
     }
 

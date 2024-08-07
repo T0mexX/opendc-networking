@@ -5,7 +5,7 @@
 //import org.apache.parquet.io.api.RecordConsumer
 //import org.apache.parquet.schema.MessageType
 //import org.apache.parquet.schema.Types
-//import org.opendc.simulator.network.api.NodeSnapshot
+//import org.opendc.simulator.network.api.snapshots.NodeSnapshot
 //import org.opendc.trace.util.parquet.ParquetDataWriter
 //import java.io.File
 //
@@ -14,7 +14,7 @@
 //    vararg fields: NodeExportField = arrayOf()
 //): ParquetDataWriter<NodeSnapshot>(
 //    path = file,
-//    writeSupport = nodeWriteSuppFor(if (fields.isEmpty()) NodeExportField.ALL else fields.toSet())
+//    writeSupport = nodeWriteSuppFor(if (fields.isEmpty()) NodeExportField.ALL_NET_FIELDS else fields.toSet())
 //)
 //
 //private fun nodeWriteSuppFor(fields: Set<NodeExportField>): WriteSupport<NodeSnapshot> =

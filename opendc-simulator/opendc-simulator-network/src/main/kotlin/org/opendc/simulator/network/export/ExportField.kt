@@ -2,6 +2,7 @@ package org.opendc.simulator.network.export
 
 import org.apache.parquet.io.api.RecordConsumer
 import org.apache.parquet.schema.Type
+import org.opendc.simulator.network.utils.logger
 
 public abstract class ExportField<T: Exportable<T>> {
     internal abstract val fld: Type
@@ -13,4 +14,6 @@ public abstract class ExportField<T: Exportable<T>> {
         addValue(exportable)
         endField(fldName, index)
     }
+
+    private companion object { val log by logger() }
 }

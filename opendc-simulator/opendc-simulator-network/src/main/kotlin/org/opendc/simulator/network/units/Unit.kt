@@ -65,6 +65,8 @@ public sealed interface Unit<T: Unit<T>>: Comparable<T> {
 
     @InternalUse
     public fun new(value: Double): T
+
+    public fun fmtValue(fmt: String = "%f"): String
 }
 
 
