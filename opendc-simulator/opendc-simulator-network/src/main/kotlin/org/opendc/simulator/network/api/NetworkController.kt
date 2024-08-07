@@ -24,6 +24,7 @@ import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.export.Exporter
 import org.opendc.simulator.network.export.network.ALL_NET_FIELDS
 import org.opendc.simulator.network.export.node.ALL_NODE_FIELDS
@@ -459,8 +460,11 @@ public class NetworkController(
                     pb.stepBy(execUntil(nextDeadline))
                     network.awaitStability()
 
+//                    log.info("\n" + snapshot().fmt())
+//                    log.info("\n" + networkSwitch.getNodesById<Switch>().values.first()!!.snapshot(currentInstant).fmt())
+                    log.info("\n" + getNetInterfaceOf(network.endPointNodes.values.first()!!.id)?.snapshot()?.fmt())
                     netExp.write(snapshot())
-                    network.nodes.values.forEach { nodeExp.write(it.snapshot(currentInstant)) }
+                    network.getNodesById<Switch>().values.forEach { nodeExp.write(it.snapshot(currentInstant)) }
                 }
             }
             netExp.close()

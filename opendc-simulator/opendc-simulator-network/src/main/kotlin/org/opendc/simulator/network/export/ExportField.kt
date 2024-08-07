@@ -5,10 +5,11 @@ import org.apache.parquet.schema.Type
 import org.opendc.simulator.network.utils.logger
 
 public abstract class ExportField<T: Exportable<T>> {
-    internal abstract val fld: Type
+    public abstract val fld: Type
     public val fldName: String get() = fld.name
     protected abstract fun RecordConsumer.addValue(exportable: T)
 
+    @PublishedApi
     internal fun RecordConsumer.writeField(exportable: T, index: Int) {
         startField(fldName, index)
         addValue(exportable)

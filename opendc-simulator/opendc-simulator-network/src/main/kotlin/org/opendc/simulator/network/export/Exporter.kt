@@ -1,33 +1,33 @@
 package org.opendc.simulator.network.export
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.parquet.hadoop.ParquetWriter
 import org.apache.parquet.hadoop.api.WriteSupport
 import org.apache.parquet.io.api.RecordConsumer
 import org.apache.parquet.schema.MessageType
-import org.apache.parquet.schema.PrimitiveType
 import org.apache.parquet.schema.Types
-import org.opendc.trace.util.parquet.LocalParquetWriter
 import org.opendc.trace.util.parquet.ParquetDataWriter
 import java.io.File
 
 
-internal class Exporter<T: Exportable<T>>(
+public class Exporter<T: Exportable<T>> @PublishedApi internal constructor(
     outputFile: File,
-    fields: Collection<ExportField<T>> = emptySet()
+    writeSupp: WriteSupport<T>
 ): ParquetDataWriter<T>(
     path = outputFile,
-    writeSupport = writeSuppFor(fields.toSet())
+    writeSupport = writeSupp
 ) {
-    constructor(outputFile: File, vararg fields: ExportField<T> = emptyArray())
-        : this(outputFile = outputFile, fields = fields.toSet())
-    constructor(outputPath: String, vararg fields: ExportField<T> = emptyArray())
-        : this(outputFile = File(outputPath), fields = fields.toSet())
-    constructor(outputPath: String, fields: Set<ExportField<T>> = emptySet())
-        : this(outputFile = File(outputPath), fields = fields.toSet())
+    public companion object {
+        public inline operator fun <reified T: Exportable<T>> invoke(outputFile: File, vararg fields: ExportField<T> = emptyArray()): Exporter<T> =
+            Exporter(outputFile = outputFile, writeSupp = writeSuppFor(fields.toSet()))
+
+
+        public inline operator fun <reified T: Exportable<T>> invoke(outputFile: File, fields: Set<ExportField<T>> = emptySet()): Exporter<T> =
+            Exporter(outputFile = outputFile, writeSupp = writeSuppFor(fields.toSet()))
+    }
 }
 
-private fun <T: Exportable<T>> writeSuppFor(fields: Set<ExportField<T>>): WriteSupport<T> =
+@PublishedApi
+internal inline fun <reified T: Exportable<T>> writeSuppFor(fields: Set<ExportField<T>>): WriteSupport<T> =
     object: WriteSupport<T>() {
         private lateinit var cons: RecordConsumer
 
@@ -35,12 +35,7 @@ private fun <T: Exportable<T>> writeSuppFor(fields: Set<ExportField<T>>): WriteS
             Types
                 .buildMessage()
                 .addFields(*fields.map { it.fld }.toTypedArray())
-                .named("bo")
-
-//        init {
-//            println(schema)
-//            println(Types.buildMessage().addFields(Types.required(PrimitiveType.PrimitiveTypeName.INT64).named("ciao")).named("bo"))
-//        }
+                .named("${T::class.simpleName}_schema")
 
         override fun init(configuration: Configuration): WriteContext =
             WriteContext(schema, emptyMap())
