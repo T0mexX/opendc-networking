@@ -56,7 +56,7 @@ public val GEN_FLOWS: ExportField<NodeSnapshot> = object : ExportField<NodeSnaps
 public val CONS_FLOWS: ExportField<NodeSnapshot> = object : ExportField<NodeSnapshot>() {
     override val fld: Type = Types.required(INT32).named("g_num_flows_being_consumed")
     override fun RecordConsumer.addValue(exportable: NodeSnapshot) {
-        addInteger(exportable.numConsumedFlows)
+        addInteger(exportable.numConsumingFlows)
     }
 }
 public val MIN_F_TPUT: ExportField<NodeSnapshot> = object : ExportField<NodeSnapshot>() {

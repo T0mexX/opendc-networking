@@ -51,7 +51,7 @@ public value class DataRate private constructor(
 
     public companion object {
         @JvmStatic public val ZERO: DataRate = DataRate(.0)
-        @JvmStatic public fun ofKbps(kbps: Double): DataRate = DataRate(kbps)
+        @JvmStatic @JvmName("ofKbps") public fun ofKbps(kbps: Double): DataRate = DataRate(kbps)
         @JvmStatic public fun ofKBps(kBps: Double): DataRate = DataRate(kBps * 8)
         @JvmStatic public fun ofMbps(mbps: Double): DataRate = DataRate(mbps * 1024)
         @JvmStatic public fun ofMBps(mBps: Double): DataRate = DataRate(mBps * 1024 * 8)

@@ -1,8 +1,6 @@
 package org.opendc.compute.simulator.provisioner
 
 import org.opendc.simulator.network.api.NetworkController
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.ALL
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
 
 public class NetworkProvisioningStep(
     private val netController: NetworkController?

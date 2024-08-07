@@ -66,7 +66,7 @@
 //        public val CONS_FLOWS: NodeExportField = object : NodeExportField() {
 //            override val fld: Type = Types.required(INT32).named("num_flows_being_consumed")
 //            override fun RecordConsumer.addValue(snapshot: NodeSnapshot) {
-//                addInteger(snapshot.numConsumedFlows)
+//                addInteger(snapshot.numConsumingFlows)
 //            }
 //        }
 //        public val MIN_F_TPUT: NodeExportField = object : NodeExportField() {

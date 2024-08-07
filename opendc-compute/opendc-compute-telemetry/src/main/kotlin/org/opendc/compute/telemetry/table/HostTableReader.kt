@@ -22,6 +22,9 @@
 
 package org.opendc.compute.telemetry.table
 
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Energy
+import org.opendc.simulator.network.units.Power
 import java.time.Instant
 
 /**
@@ -146,4 +149,5 @@ public interface HostTableReader {
      * The [Instant] at which the host booted.
      */
     public val bootTimeAbsolute: Instant?
+
 }

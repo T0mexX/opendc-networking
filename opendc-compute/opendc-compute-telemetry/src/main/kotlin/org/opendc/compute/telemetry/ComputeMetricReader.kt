@@ -354,12 +354,15 @@ public class ComputeMetricReader(
             get() = _bootTimeAbsolute
         private var _bootTimeAbsolute: Instant? = null
 
+
+
         /**
          * Record the next cycle.
          */
         fun record(now: Instant) {
             val hostCpuStats = _host.getCpuStats()
             val hostSysStats = _host.getSystemStats()
+            val hostNetStats = _host.getNetworkStats()
 
             _timestamp = now
             _timestampAbsolute = now + startTime

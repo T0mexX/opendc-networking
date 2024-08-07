@@ -1,0 +1,9 @@
+- MaxMin (per port vs general)
+- general implementation
+- network stability validation
+- playground
+- integration with compute workload
+- schema with networking 
+- deserialization/json
+- trace-api
+- kotest

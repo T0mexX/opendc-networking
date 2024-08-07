@@ -16,7 +16,7 @@ public class NetIfaceSnapshot private constructor(
 //    public val numIncomingFlows: Int,
 //    public val numOutgoingFlows: Int,
     public val numGeneratedFlows: Int,
-//    public val numConsumedFlows: Int,
+//    public val numConsumingFlows: Int,
     public val currMinFlowTputPerc: Double?,
     public val currMaxFlowTputPerc: Double?,
     public val currAvrgFlowTputPerc: Double,
@@ -44,7 +44,7 @@ public class NetIfaceSnapshot private constructor(
 //            flags.ifSet(NUM_FLOWS_IN) { appendPad(numIncomingFlows) }
 //            flags.ifSet(NUM_FLOWS_OUT) { appendPad(numOutgoingFlows) }
             flags.ifSet(NUM_GEN_FLOWS) { appendPad(numGeneratedFlows) }
-//            flags.ifSet(NUM_CONS_FLOWS) { appendPad(numConsumedFlows) }
+//            flags.ifSet(NUM_CONS_FLOWS) { appendPad(numConsumingFlows) }
             flags.ifSet(MIN_TPUT_PERC) { appendPad(currMinFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
             flags.ifSet(MAX_TPUT_PERC) { appendPad(currMaxFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
             flags.ifSet(AVRG_TPUT_PERC) { appendPad(if (numGeneratedFlows == 0) "NA" else currAvrgFlowTputPerc.ratioToPerc("%.2f")) }

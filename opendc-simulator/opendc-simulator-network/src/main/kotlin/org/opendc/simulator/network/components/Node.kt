@@ -116,7 +116,7 @@ internal interface Node: FlowView {
 
     override fun allTransitingFlowsIds(): Collection<FlowId> =
         with(flowHandler) {
-            outgoingFlows.keys + consumedFlows.keys
+            outgoingFlows.keys + consumingFlows.keys
         }
 
 

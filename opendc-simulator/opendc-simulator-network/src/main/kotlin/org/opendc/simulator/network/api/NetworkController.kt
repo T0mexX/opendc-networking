@@ -366,11 +366,11 @@ public class NetworkController(
         if (instantSrc.isExternalSource) {
             runBlocking { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
-            if (logSnapshot) log.info("\n" + snapshot().fmt())
+            if (logSnapshot) log.warn("\n" + snapshot().fmt())
 
             val timeSpan = Time.ofMillis(instantSrc.millis()- lastUpdate.toEpochMilli())
             if (timeSpan == Time.ZERO) return
-            runBlocking { advanceBy(timeSpan, suppressWarn = true) }
+            runBlocking(network.validator) { advanceBy(timeSpan, suppressWarn = true) }
         } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
     }
 

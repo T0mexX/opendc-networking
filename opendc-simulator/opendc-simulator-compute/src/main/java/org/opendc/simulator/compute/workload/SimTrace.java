@@ -36,6 +36,7 @@ import org.opendc.simulator.flow2.OutPort;
 import org.opendc.simulator.network.api.NetworkController;
 import org.opendc.simulator.network.api.NetworkInterface;
 import org.opendc.simulator.network.flow.NetFlow;
+import org.opendc.simulator.network.units.DataRate;
 
 /**
  * A workload trace that describes the resource utilization over time in a collection of {@link SimTraceFragment}s.
@@ -442,8 +443,8 @@ public final class SimTrace {
             }
 
             // If transmit and receive flows (to / from internet) are defined then update.
-            if (txFlow != null) txFlow.setDemand(Objects.requireNonNull(netTxKbpsCol)[index]);
-            if (rxFlow != null) rxFlow.setDemand(Objects.requireNonNull(netRxKbpsCol)[index]);
+            if (txFlow != null) txFlow.setDemand(DataRate.ofKbps(Objects.requireNonNull(netTxKbpsCol)[index]));
+            if (rxFlow != null) rxFlow.setDemand(DataRate.ofKbps(Objects.requireNonNull(netRxKbpsCol)[index]));
 
             this.output.push((float) this.cpuUsages[this.index]);
             return deadline + this.workloadOffset;
@@ -590,8 +591,8 @@ public final class SimTrace {
             }
 
             // If transmit and receive flows (to / from internet) are defined then update.
-            if (txFlow != null) txFlow.setDemand(Objects.requireNonNull(netTxKbpsCol)[index]);
-            if (rxFlow != null) rxFlow.setDemand(Objects.requireNonNull(netRxKbpsCol)[index]);
+            if (txFlow != null) txFlow.setDemand(DataRate.ofKbps(Objects.requireNonNull(netTxKbpsCol)[index]));
+            if (rxFlow != null) rxFlow.setDemand(DataRate.ofKbps(Objects.requireNonNull(netRxKbpsCol)[index]));
 
             return deadline + offset;
         }

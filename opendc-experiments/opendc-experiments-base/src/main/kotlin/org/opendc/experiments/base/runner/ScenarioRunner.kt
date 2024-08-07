@@ -44,7 +44,6 @@ import org.opendc.compute.workload.ComputeWorkloadLoader
 import org.opendc.experiments.base.scenario.Scenario
 import org.opendc.simulator.kotlin.runSimulation
 import org.opendc.simulator.network.api.NetworkController
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
 import java.io.File
 import java.time.Duration
 import java.util.Random

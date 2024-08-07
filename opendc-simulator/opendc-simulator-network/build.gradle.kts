@@ -50,7 +50,6 @@ dependencies {
     implementation(projects.opendcTrace.opendcTraceParquet)
 
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
-    testImplementation("io.kotest:kotest-property:$version")
     testImplementation("io.kotest:kotest-framework-datatest:$kotestDataTestVersion")
     testImplementation("io.kotest:kotest-property:$kotestPropertyTestVersion")
 }

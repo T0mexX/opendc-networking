@@ -80,6 +80,7 @@ public class NetFlow internal constructor(
     /**
      * Non suspending overload for java interoperability.
      */
+    @JvmName("setDemand") // Apparently is needed for methods with value-class parameters.
     public fun setDemand(newDemand: DataRate) { runBlocking { setDemandSus(newDemand) } }
 
     /**

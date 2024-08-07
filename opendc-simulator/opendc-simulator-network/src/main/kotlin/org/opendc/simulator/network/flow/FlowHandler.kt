@@ -1,6 +1,7 @@
 package org.opendc.simulator.network.flow
 
 import org.opendc.simulator.network.components.EndPointNode
+import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
@@ -43,7 +44,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Needs to be kept updated by owner [Node]. If the node is not an
      * [EndPointNode] this property shall be ignored.
      */
-    val consumedFlows = mutableMapOf<FlowId, NetFlow>()
+    val consumingFlows = mutableMapOf<FlowId, NetFlow>()
 
     /**
      * Keeps track of all outgoing flows in the form of [OutFlow]s.
@@ -123,7 +124,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
             if (deltaRate.isZero()) return@forEach
 
             // if this node is the destination
-            consumedFlows[fId]?.let {
+            consumingFlows[fId]?.let {
                 it.throughput = (it.throughput + deltaRate).roundedTo0WithEps()
                 return@forEach
             }
@@ -136,8 +137,8 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
                 newFlow
             }.let {
                 it.demand += deltaRate
-
-                check(it.demand >= DataRate.ZERO)
+                if (id == INTERNET_ID && it.id == 10L) println("HERE")
+                check(it.demand >= DataRate.ZERO) {"(node $id, flow ${it.id}) ${it.demand}, consuming=$consumingFlows"}
 
                 // if demand is 0 the entry is removed
                 if (it.demand.roundedTo0WithEps().isZero()) {

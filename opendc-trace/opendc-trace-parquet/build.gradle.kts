@@ -28,6 +28,8 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.kotlin.logging)
+
     // This configuration is necessary for a slim dependency on Apache Parquet
     api(libs.parquet) {
         exclude(group = "org.apache.hadoop")
