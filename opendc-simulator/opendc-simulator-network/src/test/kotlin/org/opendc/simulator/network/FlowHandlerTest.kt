@@ -6,6 +6,7 @@ import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.doubles.shouldBeGreaterThanOrEqual
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
+import io.kotest.property.arbitrary.arbitrary
 import io.kotest.property.arbitrary.bind
 import io.kotest.property.arbitrary.double
 import io.kotest.property.arbitrary.int
@@ -21,8 +22,8 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.RateUpdt
-import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 
 class FlowHandlerTest: FunSpec({
 
@@ -34,7 +35,7 @@ class FlowHandlerTest: FunSpec({
      * hundreds ot thousands of entries. This redundancy needs to remain consistent.
      */
     context("OutFlow rateByPort and totRateOut consistency with Link rates") {
-        data class TestData(val flowUpdts: List<Pair<FlowId, Kbps>>, val numOfFlows: Int, val numOfInBetweenSwitches: Int)
+        data class TestData(val flowUpdts: List<Pair<FlowId, DataRate>>, val numOfFlows: Int, val numOfInBetweenSwitches: Int)
 
         val testDataGenerator: Arb<TestData> = Arb.bind(
             Arb.int(2..50),
@@ -42,13 +43,19 @@ class FlowHandlerTest: FunSpec({
             Arb.int(2..10)
         ) { numOfFlows, numOfUpdts, numOfInBetweenSwitches ->
             val arbFlowId = Arb.long(0L..<numOfFlows)
-            val rateTracker: MutableMap<FlowId, Kbps> = (0L..<numOfFlows).associateWith { .0 }.toMutableMap()
+            val rateTracker: MutableMap<FlowId, DataRate> = (0L..<numOfFlows).associateWith { DataRate.ZERO }.toMutableMap()
             val updts = buildList {
                 (1..numOfUpdts).forEach { _ ->
                     val fId = arbFlowId.next()
                     // Ensures rate >= 0.
-                    val deltaRate = Arb.double(  -rateTracker.getOrDefault(fId, .0)..1000.0  ).next()
-                    rateTracker.compute(fId) { _, oldRate -> (oldRate?:.0) + deltaRate }
+                    val deltaRate = arbitrary {
+                        DataRate.ofKbps(
+                            Arb.double(
+                                -rateTracker.getOrDefault(fId, DataRate.ZERO).toKbps()..1000.0
+                            ).next()
+                        )
+                    }.next()
+                    rateTracker.compute(fId) { _, oldRate -> (oldRate.ifNullZero()) + deltaRate }
                     add(Pair(fId, deltaRate))
                 }
             }
@@ -58,11 +65,11 @@ class FlowHandlerTest: FunSpec({
 
         checkAll(iterations = 5, testDataGenerator) { testData ->
             NetFlow.reset()
-            val sender = CoreSwitch(id = -1, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = 10000.0)
-            val receiver = CoreSwitch(id = -2, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = 10000.0)
+            val sender = CoreSwitch(id = -1, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = DataRate.ofKbps(10000.0))
+            val receiver = CoreSwitch(id = -2, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = DataRate.ofKbps(10000.0))
             val inBetweenSwitches = buildList {
                 (0L..<testData.numOfInBetweenSwitches).forEach { id ->
-                    add(Switch(id = id, numOfPorts = 2, portSpeed = 1000.0))
+                    add(Switch(id = id, numOfPorts = 2, portSpeed = DataRate.ofKbps(1000.0)))
                 }
             }
 
@@ -80,21 +87,21 @@ class FlowHandlerTest: FunSpec({
                 context("rate in the OutFlow table should match the rate on the Link") {
                     this@isConsistent?.let {
                         outRatesByPort.forEach { (port, rate) ->
-                            rate shouldBe (port.outgoingRateOf(this@isConsistent.id) plusOrMinus 0.00001)
+                            rate.toKbps() shouldBe (port.outgoingRateOf(this@isConsistent.id).toKbps() plusOrMinus 0.00001)
                         }
-                        totRateOut shouldBe (outRatesByPort.values.sum() plusOrMinus 0.00001)
+                        totRateOut shouldBe (outRatesByPort.values.sumOf { it.toKbps() } plusOrMinus 0.00001)
                     } ?: let {
-                        sender.ports.sumOf { it.outgoingRateOf(id) } shouldBeExactly .0
+                        sender.ports.sumOf { it.outgoingRateOf(id).toKbps() } shouldBeExactly .0
                     }
                 }
 
                 context("none of the port rates for this flow should be negative (might be Link fault)") {
-                    this@isConsistent?.outRatesByPort?.values?.forEach { it shouldBeGreaterThanOrEqual .0 }
+                    this@isConsistent?.outRatesByPort?.values?.forEach { it.toKbps() shouldBeGreaterThanOrEqual .0 }
                 }
 
                 context("total rate out should be equal to the sum of the rates for each port") {
                     this@isConsistent?.let {
-                        totRateOut shouldBe (outRatesByPort.values.sum() plusOrMinus 0.00001)
+                        totRateOut shouldBe (outRatesByPort.values.sumOf { it.toKbps() } plusOrMinus 0.00001)
                     }
                 }
             }

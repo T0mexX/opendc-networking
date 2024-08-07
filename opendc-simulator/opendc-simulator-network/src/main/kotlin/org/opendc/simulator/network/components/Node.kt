@@ -7,10 +7,12 @@ import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
+import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.utils.Result.*
 import org.opendc.simulator.network.utils.logger
 
@@ -29,7 +31,7 @@ internal interface Node: FlowView {
     /**
      * Port speed in Kbps full duplex.
      */
-    val portSpeed: Kbps
+    val portSpeed: DataRate
 
     /**
      * Ports of ***this*** [Node], full duplex.
@@ -71,7 +73,7 @@ internal interface Node: FlowView {
 
 //    val flowRates: MutableMap<FlowId, Kbps>
 
-    suspend fun run(invalidator: StabilityValidator.Invalidator? = null) {
+    suspend fun run(invalidator: NetworkStabilityValidator.Invalidator? = null) {
         invalidator?.let { updtChl.withInvalidator(invalidator) }
         updtChl.clear()
 
@@ -102,19 +104,19 @@ internal interface Node: FlowView {
      * Updates forwarding of all flows transiting through ***this*** node.
      */
     suspend fun updateAllFlows() {
-        updtChl.send(RateUpdt(allTransitingFlowsIds().associateWith { .0 })) // TODO: change
+        updtChl.send(RateUpdt(allTransitingFlowsIds().associateWith { DataRate.ZERO })) // TODO: change
     }
 
 
-    override fun totIncomingDataRateOf(fId: FlowId): Kbps =
-        flowHandler.outgoingFlows[fId]?.demand ?: .0
+    override fun totIncomingDataRateOf(fId: FlowId): DataRate =
+        flowHandler.outgoingFlows[fId]?.demand.ifNullZero()
 
-    override fun totOutgoingDataRateOf(fId: FlowId): Kbps =
-        flowHandler.outgoingFlows[fId]?.totRateOut ?: .0
+    override fun totOutgoingDataRateOf(fId: FlowId): DataRate =
+        flowHandler.outgoingFlows[fId]?.totRateOut.ifNullZero()
 
     override fun allTransitingFlowsIds(): Collection<FlowId> =
         with(flowHandler) {
-            outgoingFlows.keys + receivingFlows.keys
+            outgoingFlows.keys + consumedFlows.keys
         }
 
 

@@ -1,17 +1,19 @@
 package org.opendc.simulator.network.api.simworkloads
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.trace.preset.BitBrains
 import org.opendc.trace.table.Table
 import org.opendc.trace.table.TableReader
 import org.opendc.trace.table.concatWithName
 import org.opendc.simulator.network.api.simworkloads.NetworkEvent.*
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.withErr
 import java.io.File
 import java.time.Duration
@@ -35,11 +37,11 @@ public class SimNetWorkload internal constructor(
 
     public val size: Int = events.size
 
-    public val startInstant: Instant = events.peek()?.deadline?.let { Instant.ofEpochMilli(it) }
-        ?: Instant.ofEpochMilli(ms.MIN_VALUE)
+    public val startInstant: Instant = events.peek()?.deadline?.toInstantFromEpoch()
+        ?: Instant.ofEpochMilli(0L)
 
-    public val endInstant: Instant = events.last()?.deadline?.let { Instant.ofEpochMilli(it) }
-        ?: Instant.ofEpochMilli(ms.MIN_VALUE)
+    public val endInstant: Instant = events.last()?.deadline?.toInstantFromEpoch()
+        ?: Instant.ofEpochMilli(0L)
 
 
     init {
@@ -58,6 +60,7 @@ public class SimNetWorkload internal constructor(
                 | start instant: $startInstant
                 | end instant: $endInstant
                 | duration: ${Duration.ofMillis(endInstant.toEpochMilli() - startInstant.toEpochMilli())}
+                | num of network events: ${events.size}
             """.trimIndent()
         )
     }
@@ -100,9 +103,9 @@ public class SimNetWorkload internal constructor(
             coreIds + hostIds
 
         // warns if any node id present in the workload has not been mapped
-        if (allWorkLoadIds.any { it !in  allMappedIds})
-            log.warn("not all workload ids have been mapped to physical network, " +
-                "some ids were not categorizable as specific node types")
+        if (allWorkLoadIds.any { it !in  allMappedIds && it != INTERNET_ID}) {
+            log.warn("the following workloads node ids were not mapped to network node ids: [INTERNET_ID]")
+        }
     }
 
     internal suspend fun NetworkController.execNext() {
@@ -113,10 +116,10 @@ public class SimNetWorkload internal constructor(
     internal fun hasNext(): Boolean =
         events.isNotEmpty()
 
-    internal suspend fun NetworkController.execUntil(until: ms): Long {
+    internal suspend fun NetworkController.execUntil(until: Time): Long {
         var consumed: Long = 0
 
-        while ((events.peek()?.deadline ?: ms.MAX_VALUE) <= until) {
+        while ((events.peek()?.deadline ?: Time.ofMillis(Long.MAX_VALUE)) <= until) {
             events.poll()?.let { with(it) { execIfNotPassed() } }
             consumed++
         }
@@ -126,6 +129,7 @@ public class SimNetWorkload internal constructor(
 
     internal fun peek(): NetworkEvent = events.peek()
 
+    @OptIn(ExperimentalSerializationApi::class)
     public fun execOn(networkFile: File, withVirtualMapping: Boolean = true) {
         val controller = NetworkController.fromFile(networkFile)
 
@@ -138,8 +142,6 @@ public class SimNetWorkload internal constructor(
         val controller = NetworkController(network)
 
         controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
-
-        println(controller.energyRecorder.getFmtReport())
     }
 
     internal fun optimize(): SimNetWorkload {
@@ -174,9 +176,9 @@ public class SimNetWorkload internal constructor(
             } ?: trace.allVmsTable.getReader()
 
             val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() } )!!
-            val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { it * 8 /* KBps to Kbps*/ } )!!
-            val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { it * 8 /* KBps to Kbps*/} )!!
-            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP)!!
+            val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { DataRate.ofKBps(it) } )!!
+            val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { DataRate.ofKBps(it) } )!!
+            val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP, process = { Time.ofSec(it) })!!
 
             val vmIds = mutableSetOf<Long>()
             val netEvents = mutableListOf<NetworkEvent>()

@@ -8,29 +8,27 @@ import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.AVRG_THROUGHPUT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.ENERGY
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.FLOWS
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.INSTANT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.TOT_THROUGHPUT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
-import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.approxLarger
+import org.opendc.simulator.network.export.Exporter
+import org.opendc.simulator.network.export.network.ALL_NET_FIELDS
+import org.opendc.simulator.network.export.node.ALL_NODE_FIELDS
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.errAndNull
 import org.slf4j.Logger
 import java.io.File
@@ -75,10 +73,7 @@ public class NetworkController(
          */
         @OptIn(ExperimentalSerializationApi::class)
         public fun fromPath(path: String, instantSource: InstantSource? = null): NetworkController =
-            fromFile(File(path))
-
-        private var bo : Long = 0
-        private var nano: Long = 0
+            fromFile(File(path), instantSource)
     }
 
     /**
@@ -134,7 +129,7 @@ public class NetworkController(
      * @see[NetworkEnergyRecorder]
      */
     public val energyRecorder: NetworkEnergyRecorder =
-        NetworkEnergyRecorder(network.nodes.values.filterIsInstance<EnergyConsumer<*>>())
+        NetworkEnergyRecorder(network)
 
     /**
      * The 'network interface' of the INTERNET abstract node.
@@ -259,9 +254,9 @@ public class NetworkController(
     public suspend fun startFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId, // TODO: understand how multiple core switches work
-        demand: Kbps = .0,
+        demand: DataRate = DataRate.ZERO,
         name: String = NetFlow.DEFAULT_NAME,
-        throughputOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        throughputOnChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null,
     ): NetFlow? {
         val mappedTransmitterId: NodeId =   mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
@@ -317,8 +312,8 @@ public class NetworkController(
     public suspend fun startOrUpdateFlow(
         transmitterId: NodeId,
         destinationId: NodeId = internetNetworkInterface.nodeId,
-        demand: Kbps = .0,
-        dataRateOnChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null,
+        demand: DataRate = DataRate.ZERO,
+        dataRateOnChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null,
     ): NetFlow? {
         val mappedTransmitterId: NodeId = mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
@@ -371,11 +366,11 @@ public class NetworkController(
         if (instantSrc.isExternalSource) {
             runBlocking { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
-            if (logSnapshot) log.info(snapshot().fmt(NetworkSnapshot.ENERGY))
+            if (logSnapshot) log.info("\n" + snapshot().fmt())
 
-            val timeSpan = instantSrc.millis() - lastUpdate.toEpochMilli()
-            if (timeSpan == 0L) return
-            advanceBy(timeSpan, suppressWarn = true)
+            val timeSpan = Time.ofMillis(instantSrc.millis()- lastUpdate.toEpochMilli())
+            if (timeSpan == Time.ZERO) return
+            runBlocking { advanceBy(timeSpan, suppressWarn = true) }
         } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
     }
 
@@ -383,26 +378,26 @@ public class NetworkController(
      * Advances the network time by [duration], updating network related statistics.
      */
     public fun advanceBy(duration: Duration) {
-        advanceBy(duration.toMillis())
+        runBlocking { advanceBy(Time.ofDuration(duration)) }
     }
 
     /**
-     * Advances the network time by [ms] milliseconds, updating network related statistics.
+     * Advances the network time by [time] milliseconds, updating network related statistics.
      */
-    public fun advanceBy(ms: ms) { advanceBy(ms, suppressWarn = false) }
-    private fun advanceBy(ms: ms, suppressWarn: Boolean) {
-        if (ms < 0) return log.error("advanceBy received negative time-span parameter($ms), ignoring...")
-        if (ms == 0L) return
-        runBlocking { network.awaitStability() }
+    public suspend fun advanceBy(time: Time) { advanceBy(time, suppressWarn = false) }
+    private suspend fun advanceBy(time: Time, suppressWarn: Boolean) {
+        if (time < Time.ZERO) return log.error("advanceBy received negative time-span parameter($time), ignoring...")
+        if (time == Time.ZERO) return
+        network.awaitStability()
 
         if (instantSrc.isInternalSource)
-            instantSrc.advanceTime(ms)
+            instantSrc.advanceTime(time)
         else  if (!suppressWarn)
             log.warn("advancing time directly while instant source is set, this can cause ambiguity. " +
                 "You can synchronize the network with the instant source with 'sync()'")
 
-        network.advanceBy(ms)
-        energyRecorder.advanceBy(ms)
+        network.advanceBy(time)
+        energyRecorder.advanceBy(time)
         lastUpdate = instantSrc.instant()
     }
 
@@ -429,7 +424,7 @@ public class NetworkController(
                 "be replaced with an internal one to tun the workload.")
             // If time source was external, an internal time source with same timestamp is set.
             // This time stamp is then overwritten if `reset` is `true`.
-            instantSrc = NetworkInstantSrc(internal = instantSrc.instant().toEpochMilli())
+            instantSrc = NetworkInstantSrc(internal = Time.ofMillis(instantSrc.instant().toEpochMilli()))
         }
 
         if (reset) {
@@ -444,7 +439,10 @@ public class NetworkController(
 
         if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
 
-        runBlocking {
+        val netExp = Exporter(File("resources/net-test.parquet"), ALL_NET_FIELDS)
+        val nodeExp = Exporter(File("resources/node-test.parquet"), ALL_NODE_FIELDS)
+
+        runBlocking (network.validator) {
             val pb: ProgressBar = ProgressBarBuilder()
                 .setInitialMax(netWorkload.size.toLong())
                 .setStyle(ProgressBarStyle.ASCII)
@@ -460,10 +458,16 @@ public class NetworkController(
                     // included (with all events with that deadline).
                     pb.stepBy(execUntil(nextDeadline))
                     network.awaitStability()
-                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
+
+                    netExp.write(snapshot())
+                    network.nodes.values.forEach { nodeExp.write(it.snapshot(currentInstant)) }
                 }
             }
+            netExp.close()
+            nodeExp.close()
             pb.refresh()
+            println()
+            log.info(energyRecorder.getFmtReport())
         }
     }
 

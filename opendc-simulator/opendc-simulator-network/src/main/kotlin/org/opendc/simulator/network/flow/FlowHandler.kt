@@ -3,12 +3,11 @@ package org.opendc.simulator.network.flow
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
-import org.opendc.simulator.network.flow.tracker.FlowTracker
+import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.roundTo0withEps
 
 /**
  * Handles all incoming and outgoing flows of the node this handler belongs to,
@@ -28,8 +27,8 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * The current total available bandwidth on the switch,
      * as the sum of the available bw of the connected active ports.
      */
-    val availableBW: Kbps get() = ports.sumOf { it.sendLink?.availableBW ?: .0 }
-    val totalNodeBW: Kbps get() = ports.sumOf { it.sendLink?.maxPort2PortBW ?: .0 }
+    val availableBW: DataRate
+        get() = DataRate.ofKbps(ports.sumOf { it.sendLink?.availableBW?.toKbps() ?: .0 })
 
     /**
      * [NetFlow]s whose sender is the node to which this flow handler belongs.
@@ -44,7 +43,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Needs to be kept updated by owner [Node]. If the node is not an
      * [EndPointNode] this property shall be ignored.
      */
-    val receivingFlows = mutableMapOf<FlowId, NetFlow>()
+    val consumedFlows = mutableMapOf<FlowId, NetFlow>()
 
     /**
      * Keeps track of all outgoing flows in the form of [OutFlow]s.
@@ -60,7 +59,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Keeps track of those flows whose demand is not satisfied,
      * maintaining a collection of these flows ordered by output rate.
      */
-    val flowTracker = FlowTracker(allOutgoingFlows = _outgoingFlows)
+    val nodeFlowTracker = NodeFlowTracker(allOutgoingFlows = _outgoingFlows)
 
     /**
      * Adds [newFlow] in the [generatedFlows] table. Additionally, it queues the [RateUpdt]
@@ -86,7 +85,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
         newFlow.withDemandOnChangeHandler { _, old, new ->
             if (old == new) return@withDemandOnChangeHandler
 
-            if (new < 0) log.warn("unable to change generated flow with id '${newFlow.id}' " +
+            if (new < DataRate.ZERO) log.warn("unable to change generated flow with id '${newFlow.id}' " +
                 "data-rate to $new, data-rate should be positive. Falling back to 0")
 
             updtChl.send(  RateUpdt(newFlow.id, (new - old))  )
@@ -120,31 +119,30 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      */
     suspend fun Node.updtFlows(updt: RateUpdt) {
         updt.forEach { (fId, dr) ->
-            val deltaRate = dr.roundTo0withEps()
-            if (deltaRate == .0) return@forEach
+            val deltaRate = dr.roundedTo0WithEps()
+            if (deltaRate.isZero()) return@forEach
 
             // if this node is the destination
-            receivingFlows[fId]?.let {
-                it.throughput = (it.throughput + deltaRate).roundTo0withEps()
+            consumedFlows[fId]?.let {
+                it.throughput = (it.throughput + deltaRate).roundedTo0WithEps()
                 return@forEach
             }
             // else
             _outgoingFlows.getOrPut(fId) {
                 // if flow is new
-                val newFlow = OutFlow(id = fId, flowTracker = flowTracker)
+                val newFlow = OutFlow(id = fId, nodeFlowTracker = nodeFlowTracker)
                 val outputPorts = with(this.portSelectionPolicy) { selectPorts(fId) }
                 newFlow.setOutPorts(outputPorts)
                 newFlow
             }.let {
                 it.demand += deltaRate
 
-                // TODO: solve bug, in some cases (125 vms bitbrains, 8ports per node) fails
-//                check(it.demand >= .0)
+                check(it.demand >= DataRate.ZERO)
 
                 // if demand is 0 the entry is removed
-                if (it.demand.roundTo0withEps() == .0) {
+                if (it.demand.roundedTo0WithEps().isZero()) {
                     _outgoingFlows.remove(it.id)
-                    flowTracker.remove(it)
+                    nodeFlowTracker.remove(it)
                 }
             }
         }

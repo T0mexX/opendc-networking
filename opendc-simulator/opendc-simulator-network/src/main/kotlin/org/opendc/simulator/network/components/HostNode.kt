@@ -10,13 +10,10 @@ import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
-import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.Mbps
-import org.opendc.simulator.network.utils.toLowerDataUnit
+import org.opendc.simulator.network.units.DataRate
 
 /**
  * Represent an [EndPointNode] cluster with hosts.
@@ -25,7 +22,7 @@ import org.opendc.simulator.network.utils.toLowerDataUnit
  */
 internal class HostNode(
     override val id: NodeId,
-    override val portSpeed: Kbps,
+    override val portSpeed: DataRate,
     override val numOfPorts: Int = 1,
     override val fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
@@ -48,13 +45,13 @@ internal class HostNode(
 
     @Serializable
     @SerialName("host-node-specs")
-    internal data class HostNodeSpec(
-        val id: NodeId?,
-        val portSpeed: Mbps,
+    internal data class HostNodeSpecs(
+        val id: NodeId? = null,
+        val portSpeed: DataRate,
         val numOfPorts: Int = 1
     ): Specs<HostNode> {
         override fun build(): HostNode =
-            HostNode(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts = numOfPorts)
+            HostNode(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts = numOfPorts)
     }
 }
 

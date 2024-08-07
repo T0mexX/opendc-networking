@@ -5,7 +5,8 @@ import org.opendc.simulator.network.components.internalstructs.UpdateChl
 import org.opendc.simulator.network.components.link.ReceiveLink
 import org.opendc.simulator.network.components.link.SendLink
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.utils.withErr
 import kotlin.math.max
@@ -21,7 +22,7 @@ import kotlin.math.min
  *
  */
 internal class PortImpl(
-    override val maxSpeed: Kbps,
+    override val maxSpeed: DataRate,
     override val owner: Node
 ): Port {
 
@@ -54,13 +55,13 @@ internal class PortImpl(
     override val isConnected: Boolean
         get() = sendLink != null || receiveLink != null
 
-    override val incomingRatesById: Map<FlowId, Kbps> get() =
+    override val incomingRatesById: Map<FlowId, DataRate> get() =
         receiveLink?.incomingRateById ?: emptyMap()
 
-    override val outgoingRatesById: Map<FlowId, Kbps> get() =
+    override val outgoingRatesById: Map<FlowId, DataRate> get() =
         sendLink?.outgoingRatesById ?: emptyMap()
 
-    override val maxPortToPortBW: Kbps get() =  sendLink?.maxPort2PortBW ?: .0
+    override val maxPortToPortBW: DataRate get() =  sendLink?.maxPort2PortBW.ifNullZero()
 
     override val nodeUpdtChl: UpdateChl = owner.updtChl
 
@@ -70,7 +71,9 @@ internal class PortImpl(
      * and that port will be assumed to be turned off.
      */
     override val isActive: Boolean
-        get() = ( (sendLink?.usedBW ?: .0) + (receiveLink?.usedBW ?: .0) ) > .0
+        get() = (
+            sendLink?.usedBW.ifNullZero() + receiveLink?.usedBW.ifNullZero()
+            ) > DataRate.ZERO
 
     /**
      * Utilization percentage of this port.
@@ -79,16 +82,19 @@ internal class PortImpl(
      * Hence, the max data-rate is `maxSpeed * 2`.
      */
     override val util: Double
-        get() = ((sendLink?.usedBW ?: .0) + (receiveLink?.usedBW ?: .0)) / (maxSpeed * 2)
+        get() = (
+            sendLink?.usedBW.ifNullZero() + receiveLink?.usedBW.ifNullZero()
+            ) / (maxSpeed * 2)
 
     /**
      * The current speed of the port.
      * Some switches can change their port speed dynamically to save power.
      */
-    override var currSpeed: Kbps = maxSpeed
+    override var currSpeed: DataRate = maxSpeed
         set(s)  {
             if (s != field)
-                field = s.between(.0, maxSpeed)
+                check(s in DataRate.ZERO..maxSpeed)
+                field = s
                 if (field != s)
                     log.warn("unable to set '$s' as speed for port $this, " +
                         "value should be between 0 and max speed (${this.maxSpeed})"
@@ -109,15 +115,15 @@ internal class PortImpl(
     override val otherEndNode: Node?
         get() = sendLink?.oppositeOf(this)?.owner ?: receiveLink?.oppositeOf(this)?.owner
 
-    override fun incomingRateOf(fId: FlowId): Kbps =
-        receiveLink?.incomingRateOf(fId) ?: .0
+    override fun incomingRateOf(fId: FlowId): DataRate =
+        receiveLink?.incomingRateOf(fId).ifNullZero()
 
-    override fun outgoingRateOf(fId: FlowId): Kbps =
-        sendLink?.outgoingRateOf(fId) ?: .0
+    override fun outgoingRateOf(fId: FlowId): DataRate =
+        sendLink?.outgoingRateOf(fId).ifNullZero()
 
-    override fun tryUpdtRateOf(fId: FlowId, targetRate: Kbps): Kbps =
+    override fun tryUpdtRateOf(fId: FlowId, targetRate: DataRate): DataRate =
         with(sendLink) {
-            this ?: return log.withErr(.0, "unable to update rate on port, port does not have an outgoing connection")
+            this ?: return log.withErr(DataRate.ZERO, "unable to update rate on port, port does not have an outgoing connection")
             updtFlowRate(fId, targetRate)
         }
 

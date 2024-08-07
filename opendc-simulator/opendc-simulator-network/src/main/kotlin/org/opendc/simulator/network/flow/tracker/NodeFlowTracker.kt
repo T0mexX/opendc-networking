@@ -3,7 +3,6 @@ package org.opendc.simulator.network.flow.tracker
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.tracker.TrackerMode.Companion.setUp
-import org.opendc.simulator.network.utils.approxLarger
 import org.opendc.simulator.network.utils.logger
 import java.util.TreeSet
 
@@ -11,7 +10,7 @@ import java.util.TreeSet
  * Keeps track of those flows whose demand is not satisfied,
  * maintaining them ordered by their data rate output.
  */
-internal class FlowTracker(
+internal class NodeFlowTracker(
     private val allOutgoingFlows: Map<FlowId, OutFlow>,
     vararg modes: TrackerMode
 ) {
@@ -85,7 +84,7 @@ internal class FlowTracker(
      * should be added (or its order updated) in the sortedSet.
      */
     fun OutFlow.handlePropChange(fieldChanger: () -> Unit) {
-        fun OutFlow.isNew(): Boolean = demand == .0 && totRateOut == .0
+        fun OutFlow.isNew(): Boolean = demand.isZero() && totRateOut.isZero()
 
         treesByMode.forEach { (mode, tree) ->
             with(mode) {

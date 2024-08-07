@@ -2,12 +2,17 @@ package org.opendc.simulator.network.api
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshotOf
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Internet
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.flow.OutFlow
+import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
+import org.opendc.simulator.network.flow.tracker.TrackerMode
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 
 
@@ -22,7 +27,7 @@ public typealias NodeId = Long
  */
 public class NetworkInterface internal constructor(
     private val node: EndPointNode,
-    private val netController: NetworkController,
+    internal val netController: NetworkController,
     public var owner: String = "unknown"
 ): AutoCloseable {
 
@@ -33,8 +38,11 @@ public class NetworkInterface internal constructor(
 
 
     private val subInterfaces = mutableListOf<NetworkInterface>()
-    private val flowsById = mutableMapOf<FlowId, NetFlow>()
+    internal val flowsById = mutableMapOf<FlowId, NetFlow>()
     private val flowsByName = mutableMapOf<String, NetFlow>()
+    private val genFromInternet = mutableMapOf<FlowId, NetFlow>()
+
+    public fun nodeSnapshot(): NodeSnapshot = netController.snapshotOf(node.id)!!
 
 
     @JvmOverloads
@@ -70,9 +78,9 @@ public class NetworkInterface internal constructor(
     @JvmSynthetic
     public suspend fun startFlowSus(
         destinationId: NodeId = INTERNET_ID,
-        demand: Kbps = .0,
+        demand: DataRate = DataRate.ZERO,
         name: String? = null,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow? {
         val newFlow: NetFlow? = netController.startFlow(
             transmitterId = this.nodeId,
@@ -91,13 +99,14 @@ public class NetworkInterface internal constructor(
 
     /**
      * Non suspending overload for java interoperability.
+     * JvmOverloads annotation not allowed with *value-class* arguments.
      */
-    @JvmOverloads
     public fun startFlow(
         destinationId: NodeId = INTERNET_ID,
-        demand: Kbps = .0,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        demand: DataRate = DataRate.ZERO,
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow? = runBlocking { startFlowSus(destinationId = destinationId, demand = demand, throughputChangeHandler = throughputChangeHandler) }
+    @JvmOverloads public fun startFlow(destinationId: NodeId = INTERNET_ID, throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null): NetFlow? = runBlocking { startFlowSus(destinationId = destinationId, throughputChangeHandler = throughputChangeHandler) }
 
     /**
      * Stops the flow with id [id] if it exists, and it belongs to this node.
@@ -106,6 +115,8 @@ public class NetworkInterface internal constructor(
     public suspend fun stopFlowSus(id: FlowId) {
         flowsById.remove(id)?.let {
             netController.stopFlow(id)
+        } ?: genFromInternet.remove(id)?.let {
+            netController.internetNetworkInterface.stopFlowSus(id)
         } ?: log.error(
             "network interface with owner '$owner' tried to stop flow which does not own"
         )
@@ -133,8 +144,8 @@ public class NetworkInterface internal constructor(
      */
     @JvmSynthetic
     public suspend fun fromInternetSus(
-        demand: Kbps = .0,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        demand: DataRate = DataRate.ZERO,
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow {
         val newFlow: NetFlow = netController.internetNetworkInterface.startFlowSus(
             destinationId = this.nodeId,
@@ -142,19 +153,23 @@ public class NetworkInterface internal constructor(
             throughputChangeHandler = throughputChangeHandler,
         )!!
 
-        flowsById[newFlow.id] = newFlow
+        genFromInternet[newFlow.id] = newFlow
 
         return newFlow
     }
 
     /**
      * Non suspending overload fot java interoperability.
+     * JvmOverloads annotation not allowed with *value-class* arguments.
      */
-    @JvmOverloads
     public fun fromInternet(
-        demand: Kbps = .0,
-        throughputChangeHandler: ((NetFlow, Kbps, Kbps) -> Unit)? = null
+        demand: DataRate = DataRate.ZERO,
+        throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null
     ): NetFlow = runBlocking { fromInternetSus(demand = demand, throughputChangeHandler = throughputChangeHandler) }
+    public fun fromInternet(): NetFlow = runBlocking { fromInternetSus() }
+    public fun fromInternet(demand: DataRate): NetFlow = runBlocking { fromInternetSus(demand = demand) }
+    public fun fromInternet(throughputChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)?): NetFlow = runBlocking { fromInternetSus(throughputChangeHandler = throughputChangeHandler) }
+
 
 
     override fun close() {
@@ -168,5 +183,10 @@ public class NetworkInterface internal constructor(
 
     public companion object {
         internal val log by logger()
+
+        private fun NetFlow.belongsTo(netIface: NetworkInterface): Boolean =
+            id in netIface.flowsById || netIface.subInterfaces.any { belongsTo(it) }
     }
 }
+
+

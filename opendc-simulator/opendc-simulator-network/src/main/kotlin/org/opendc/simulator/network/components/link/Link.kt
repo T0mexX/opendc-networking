@@ -1,15 +1,14 @@
 package org.opendc.simulator.network.components.link
 
 import org.opendc.simulator.network.components.internalstructs.port.Port
-import org.opendc.simulator.network.utils.Kbps
-import kotlin.math.min
+import org.opendc.simulator.network.units.DataRate
 
 internal interface Link {
-    val linkBW: Kbps
-    val maxPort2PortBW: Kbps
-    val usedBW: Kbps
+    val linkBW: DataRate
+    val maxPort2PortBW: DataRate
+    val usedBW: DataRate
     val util: Double
-    val availableBW: Kbps get() = maxPort2PortBW - usedBW
+    val availableBW: DataRate get() = maxPort2PortBW - usedBW
 
     fun oppositeOf(p: Port): Port
 
@@ -17,11 +16,11 @@ internal interface Link {
 
 //    companion object {
 //
-//        fun connectPorts(portA: Port, portB: Port, duplex: Boolean = true, linkBW: Kbps? = null) {
+//        fun connectPorts(portA: Port, portB: Port, duplex: Boolean = true, linkBW: DataRate? = null) {
 //            require(portA.isConnected.not() && portB.isConnected.not())
 //            { "unable to connect ports $portA and $portB. One of the ports is already connected" }
 //
-//            val computedLinkBW: Kbps = linkBW ?: (min(portA.maxSpeed, portB.maxSpeed))
+//            val computedLinkBW: DataRate = linkBW ?: (min(portA.maxSpeed, portB.maxSpeed))
 //
 //            val a2b = SimplexLink(senderP = portA, receiverP = portB, linkBW = computedLinkBW)
 //            portA.connectLink(a2b as SendLink)

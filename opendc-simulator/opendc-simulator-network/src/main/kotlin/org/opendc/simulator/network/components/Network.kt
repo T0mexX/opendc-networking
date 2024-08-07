@@ -7,21 +7,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.components.stability.NetworkStabilityChecker
+import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.policies.forwarding.StaticECMP
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.NonSerializable
-import org.opendc.simulator.network.utils.Result.*
-import org.opendc.simulator.network.utils.Result
-import org.opendc.simulator.network.utils.errAndGet
 import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.ms
 import org.opendc.simulator.network.utils.withWarn
 
 
@@ -32,9 +30,14 @@ import org.opendc.simulator.network.utils.withWarn
 public sealed class Network {
 
 
-    internal val validator: StabilityValidator = StabilityValidator()
+    internal val validator: NetworkStabilityValidator = NetworkStabilityValidator()
 
-    private val networkScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val networkScope =
+        CoroutineScope(
+            Dispatchers.Default +
+                SupervisorJob() +
+                (validator as NetworkStabilityChecker)
+        )
 
     /**
      * Maps [NodeId]s to their corresponding [Node]s, which are part of the [Network]
@@ -62,7 +65,11 @@ public sealed class Network {
     internal val isRunning: Boolean
         get() = runnerJob?.isActive ?: false
 
+    private val onNodeAdded = mutableListOf<(Network, Node) -> Unit>()
+    internal fun onNodeAdded(callback: (Network, Node) -> Unit) { onNodeAdded.add(callback) }
 
+    private val onNodeRemoved = mutableListOf<(Network, Node) -> Unit>()
+    internal fun onNodeRemoved(callback: (Network, Node) -> Unit) { onNodeRemoved.add(callback) }
 
     /**
      * Starts a [NetFlow] if the flow can be established.
@@ -74,7 +81,7 @@ public sealed class Network {
         if (flow.name != NetFlow.DEFAULT_NAME && flow.name in flowsByName)
             return null
 
-        if (flow.demand < 0)
+        if (flow.demand < DataRate.ZERO)
             return log.errAndNull("Unable to start flow, data rate should be >= 0.")
 
         val sender: EndPointNode = endPointNodes[flow.transmitterId]
@@ -126,8 +133,8 @@ public sealed class Network {
         return sb.toString()
     }
 
-    internal fun advanceBy(ms: ms) {
-        flowsById.values.forEach { it.advanceBy(ms) }
+    internal suspend fun advanceBy(time: Time) {
+        flowsById.values.forEach { it.advanceBy(time) }
     }
 
     internal suspend fun awaitStability() {
@@ -153,7 +160,7 @@ public sealed class Network {
             | == NETWORK INFO ===
             | num of core switches: ${getNodesById<CoreSwitch>().size}
             | num of host nodes: ${getNodesById<HostNode>().size}
-            | num of nodes: ${nodes.size} (including INTERNET)
+            | num of nodes: ${nodes.size} (including INTERNET abstract node)
         """.trimIndent()
 
 

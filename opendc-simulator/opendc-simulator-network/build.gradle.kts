@@ -47,6 +47,7 @@ dependencies {
     implementation("io.github.microutils:kotlin-logging-jvm:$kLoggingVersion")
     implementation("ch.qos.logback:logback-classic:$logBackVersion")
     implementation(libs.clikt)
+    implementation(projects.opendcTrace.opendcTraceParquet)
 
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     testImplementation("io.kotest:kotest-property:$version")

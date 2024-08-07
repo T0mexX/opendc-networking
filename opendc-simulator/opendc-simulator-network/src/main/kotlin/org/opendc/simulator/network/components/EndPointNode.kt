@@ -2,7 +2,8 @@ package org.opendc.simulator.network.components
 
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.ifNullZero
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -37,7 +38,7 @@ internal interface EndPointNode: Node {
      * @param[f]  the [NetFlow] to store the reference of.
      */
     fun addReceivingEtoEFlow(f: NetFlow) {
-        flowHandler.receivingFlows[f.id] = f
+        flowHandler.consumedFlows[f.id] = f
     }
 
     /**
@@ -46,16 +47,16 @@ internal interface EndPointNode: Node {
      * @param[flowId]   id of the end-to-end flow whose reference is to be removed.
      */
     fun rmReceivingEtoEFlow(flowId: FlowId) {
-        flowHandler.receivingFlows.remove(flowId)
+        flowHandler.consumedFlows.remove(flowId)
             ?: log.error("unable to remove end-to-end receiving flow, flow not present")
     }
 
 
-    override fun totIncomingDataRateOf(fId: FlowId): Kbps =
+    override fun totIncomingDataRateOf(fId: FlowId): DataRate =
         with(flowHandler) {
-            if (fId in generatedFlows) .0
-            else receivingFlows[fId]?.throughput
-                ?: outgoingFlows[fId]?.demand
-                ?: .0
+            if (fId in generatedFlows) DataRate.ZERO
+            else consumedFlows[fId]?.throughput
+                ?: let { outgoingFlows[fId]?.demand }
+                    .ifNullZero()
         }
 }

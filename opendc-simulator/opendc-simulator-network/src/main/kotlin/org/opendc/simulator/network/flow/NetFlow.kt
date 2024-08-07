@@ -6,14 +6,14 @@ import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.utils.Kb
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.components.stability.NetworkStabilityChecker
+import org.opendc.simulator.network.components.stability.NetworkStabilityChecker.Key.getNetStabilityChecker
+import org.opendc.simulator.network.units.Data
+import org.opendc.simulator.network.units.DataRate
+import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.SuspOnChangeHandler
-import org.opendc.simulator.network.utils.approx
-import org.opendc.simulator.network.utils.ms
-import org.opendc.simulator.network.utils.roundTo0withEps
-import kotlin.properties.Delegates
+import kotlin.coroutines.coroutineContext
 
 /**
  * Represents an end-to-end flow, meaning the flow from one [EndPointNode] to another.
@@ -28,29 +28,29 @@ public class NetFlow internal constructor(
     public val name: String = DEFAULT_NAME,
     public val transmitterId: NodeId,
     public val destinationId: NodeId,
-    demand: Kbps = .0,
+    demand: DataRate = DataRate.ZERO,
     ) {
     public val id: FlowId = nextId
 
     /**
      * Functions [(NetFlow, Kbps, Kbps) -> Unit] invoked whenever the throughput of the flow changes.
      */
-    private val throughputOnChangeHandlers = mutableListOf<OnChangeHandler<NetFlow, Kbps>>()
+    private val throughputOnChangeHandlers = mutableListOf<OnChangeHandler<NetFlow, DataRate>>()
 
     /**
-     * Functions [(NetFlow, Kbps, Kbps) -> Unit] invoked whenever the demand of the flow changes.
+     * Functions [(NetFlow, DataRate, Kbps) -> Unit] invoked whenever the demand of the flow changes.
      */
-    private val demandOnChangeHandlers = mutableListOf<SuspOnChangeHandler<NetFlow, Kbps>>()
+    private val demandOnChangeHandlers = mutableListOf<SuspOnChangeHandler<NetFlow, DataRate>>()
 
     /**
      * Total data transmitted since the start of the flow (in Kb).
      */
-    private var totDataTransmitted: Kb = .0
+    private var totDataTransmitted: Data = Data.ZERO
 
     /**
      * The current demand of the flow (in Kbps).
      */
-    public var demand: Kbps = demand
+    public var demand: DataRate = demand
         private set
     private val demandMutex = Mutex()
 
@@ -66,7 +66,7 @@ public class NetFlow internal constructor(
      * Call observers change handlers, added with [withDemandOnChangeHandler].
      */
     @JvmSynthetic
-    public suspend fun setDemandSus(newDemand: Kbps): Unit = demandMutex.withLock {
+    public suspend fun setDemandSus(newDemand: DataRate): Unit = demandMutex.withLock {
         val oldDemand = demand
         if (newDemand approx oldDemand) return
         demand = newDemand
@@ -80,16 +80,19 @@ public class NetFlow internal constructor(
     /**
      * Non suspending overload for java interoperability.
      */
-    public fun setDemand(newDemand: Kbps) { runBlocking { setDemandSus(newDemand) } }
+    public fun setDemand(newDemand: DataRate) { runBlocking { setDemandSus(newDemand) } }
 
     /**
      * The end-to-end throughput of the flow.
+     *
+     * This property should be updated only by the receiver node
+     * coroutine job, hence synchronized update should be guaranteed.
      */
-    public var throughput: Kbps = .0
+    public var throughput: DataRate = DataRate.ZERO
         internal set(new) = runBlocking { throughputMutex.withLock {
             if (new == field) return@runBlocking
             val old = field
-            field = if (new approx demand) demand else new.roundTo0withEps()
+            field = if (new approx demand) demand else new.roundedTo0WithEps()
 
             throughputOnChangeHandlers.forEach {
                 it.handleChange(obj = this@NetFlow, oldValue = old, newValue = field)
@@ -100,7 +103,7 @@ public class NetFlow internal constructor(
     /**
      * Adds [f] among the functions invoked whenever the throughput of the flow changes.
      */
-    public fun withThroughputOnChangeHandler(f: (NetFlow, Kbps, Kbps) -> Unit): NetFlow {
+    public fun withThroughputOnChangeHandler(f: (NetFlow, DataRate, DataRate) -> Unit): NetFlow {
         throughputOnChangeHandlers.add(f)
 
         return this
@@ -109,7 +112,7 @@ public class NetFlow internal constructor(
     /**
      * Adds [f] among the functions invoked whenever the demand of the flow changes.
      */
-    internal fun withDemandOnChangeHandler(f: SuspOnChangeHandler<NetFlow, Kbps>): NetFlow {
+    internal fun withDemandOnChangeHandler(f: SuspOnChangeHandler<NetFlow, DataRate>): NetFlow {
         demandOnChangeHandlers.add(f)
 
         return this
@@ -117,12 +120,12 @@ public class NetFlow internal constructor(
 
     /**
      * Advances the time for the flow, updating the total data
-     * transmitted according to [ms] milliseconds timelapse.
+     * transmitted according to [time] milliseconds timelapse.
      */
-    internal fun advanceBy(ms: ms) {
-        fun ms.toSeconds(): Double = this.toDouble() / 1000
-
-        totDataTransmitted += throughput * ms.toSeconds()
+    internal suspend fun advanceBy(time: Time) {
+        coroutineContext.getNetStabilityChecker().checkIsStableWhile {
+            totDataTransmitted += throughput * time
+        }
     }
 
     /**

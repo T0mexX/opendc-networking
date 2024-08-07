@@ -18,8 +18,7 @@ import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.Mbps
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.toLowerDataUnit
 
 /**
@@ -31,7 +30,7 @@ import org.opendc.simulator.network.utils.toLowerDataUnit
  */
 internal open class Switch(
     final override val id: NodeId,
-    override val portSpeed: Kbps,
+    override val portSpeed: DataRate,
     override val numOfPorts: Int,
     override val fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
@@ -43,7 +42,7 @@ internal open class Switch(
     override val routingTable: RoutingTable = RoutingTable(this.id)
 
     override val portToNode: MutableMap<NodeId, Port> = HashMap()
-    override val ports: List<Port> =
+    final override val ports: List<Port> =
         buildList { repeat(numOfPorts) {
             add(PortImpl(maxSpeed = portSpeed, owner = this@Switch))
         } }
@@ -66,12 +65,12 @@ internal open class Switch(
     @SerialName("switch-specs")
     internal data class SwitchSpecs (
         val numOfPorts: Int,
-        val portSpeed: Mbps,
+        val portSpeed: DataRate,
         val id: NodeId? = null
     ): Specs<Switch> {
-        override fun build(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts)
+        override fun build(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts)
 
-        fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed.toLowerDataUnit(), numOfPorts)
+        fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts)
     }
 }
 

@@ -1,7 +1,7 @@
 package org.opendc.simulator.network.components
 
 import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.Kbps
+import org.opendc.simulator.network.units.DataRate
 
 /**
  * Classes implementing this interface provide
@@ -13,17 +13,17 @@ internal interface FlowView {
      * Returns the total incoming data rate corresponding
      * to [fId] (generated flows are not included).
      */
-    fun totIncomingDataRateOf(fId: FlowId): Kbps
+    fun totIncomingDataRateOf(fId: FlowId): DataRate
 
     /**
      * Returns the total outgoing data rate corresponding to [fId] (not the throughput).
      */
-    fun totOutgoingDataRateOf(fId: FlowId): Kbps
+    fun totOutgoingDataRateOf(fId: FlowId): DataRate
 
 //    /**
 //     * Returns the outgoing throughput of the flow corresponding to [flowId].
 //     */
-//    fun throughputOutOf(flowId: FlowId): Kbps
+//    fun throughputOutOf(flowId: FlowId): DataRate
 
     /**
      * Returns the [FlowId]s of all flows transiting
@@ -41,14 +41,12 @@ internal interface FlowView {
             "id".padEnd(15) +
                 "in (Kbps)".padEnd(15) +
                 "out (Kbps)".padEnd(15)
-//                "throughput out (Kbps)"
         )
         allTransitingFlowsIds().forEach { flowId ->
             sb.appendLine(
                 flowId.toString().padEnd(15) +
-                    String.format("%.6f", totIncomingDataRateOf(flowId)).padEnd(15) +
-                    String.format("%.6f", totOutgoingDataRateOf(flowId)).padEnd(15)
-//                    String.format("%.6f", throughputOutOf(flowId)).padEnd(15)
+                    String.format("%.6f", totIncomingDataRateOf(flowId).toKbps()).padEnd(15) +
+                    String.format("%.6f", totOutgoingDataRateOf(flowId).toKbps()).padEnd(15)
             )
         }
         return sb.toString()

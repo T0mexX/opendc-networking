@@ -2,11 +2,9 @@ package org.opendc.simulator.network.flow
 
 import org.jetbrains.annotations.TestOnly
 import org.opendc.simulator.network.components.internalstructs.port.Port
-import org.opendc.simulator.network.flow.tracker.FlowTracker
-import org.opendc.simulator.network.utils.Kbps
-import org.opendc.simulator.network.utils.approx
+import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
+import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.roundTo0withEps
 import org.opendc.simulator.network.utils.withWarn
 
 /**
@@ -14,53 +12,53 @@ import org.opendc.simulator.network.utils.withWarn
  */
 internal class OutFlow(
     val id: FlowId,
-    private val flowTracker: FlowTracker
+    private val nodeFlowTracker: NodeFlowTracker
 ): Comparable<OutFlow> {
     /**
      * The sum of the outgoing data rate for flow with [id] on all ports.
      */
-    private var _totRateOut: Kbps = .0
+    private var _totRateOut: DataRate = DataRate.ZERO
         private set(value) {
             @Suppress("NAME_SHADOWING")
-            val value = value.roundTo0withEps()
-            with(flowTracker) { handlePropChange { field = value } }
+            val value = value.roundedTo0WithEps()
+            with(nodeFlowTracker) { handlePropChange { field = value } }
         }
-    val totRateOut: Kbps get() = _totRateOut
+    val totRateOut: DataRate get() = _totRateOut
 
     /**
      * **Setter should only be used by [FlowHandler].**
      * Represents the data rate demand (to be forwarded)
      * in a node (the rate received / generated).
      */
-    var demand: Kbps = .0
+    var demand: DataRate = DataRate.ZERO
         set(value) {
             @Suppress("NAME_SHADOWING")
-            val value = value.roundTo0withEps()
-            if (value == .0) {
-                tryUpdtRate(.0)
+            val value = value.roundedTo0WithEps()
+            if (value.isZero()) {
+                tryUpdtRate(DataRate.ZERO)
             }
 
-            with (flowTracker) { handlePropChange { field = value } }
+            with (nodeFlowTracker) { handlePropChange { field = value } }
         }
 
     /**
      * Maps each port associated with an outgoing path for this flow, to its
      * outgoing data rate for this flow.
      */
-    val outRatesByPort: Map<Port, Kbps> get() = _outRatesByPort
-    private val _outRatesByPort = mutableMapOf<Port, Kbps>()
+    val outRatesByPort: Map<Port, DataRate> get() = _outRatesByPort
+    private val _outRatesByPort = mutableMapOf<Port, DataRate>()
 
     /**
      * Tries to update the outgoing data rate for flow [id] to [newRate].
      * @return  the updated data rate, which can be less than or equal to the requested rate.
      */
-    fun tryUpdtRate(newRate: Kbps = demand): Kbps {
+    fun tryUpdtRate(newRate: DataRate = demand): DataRate {
         @Suppress("NAME_SHADOWING")
-        val newRate = newRate.roundTo0withEps(0.00001)
+        val newRate = newRate.roundedTo0WithEps()
         if (newRate == totRateOut) return totRateOut
 
         val deltaRate = newRate - totRateOut
-        if (deltaRate < 0) reduceRate(targetRate = newRate)
+        if (deltaRate < DataRate.ZERO) reduceRate(targetRate = newRate)
         else tryIncreaseRate(targetRate = newRate)
 
         updtTotRateOut()
@@ -73,15 +71,16 @@ internal class OutFlow(
      * @return  the updated data rate on port [port], which can be
      * less than or equal to the requested value.
      */
-    fun tryUpdtPortRate(port: Port, newRate: Kbps): Kbps {
+    fun tryUpdtPortRate(port: Port, newRate: DataRate): DataRate {
         @Suppress("NAME_SHADOWING")
-        val newRate = newRate.roundTo0withEps(0.00001)
+        val newRate = newRate.roundedTo0WithEps()
 
         return _outRatesByPort.computeIfPresent(port) { _, _ ->
              port.tryUpdtRateOf(fId = id, targetRate = newRate)
         }?.also {
             updtTotRateOut()
-        } ?: log.withWarn(.0, "trying to update a data rate of flow id $id through port $port," +
+        } ?: log.withWarn(DataRate.ZERO, "trying to update a " +
+            "data rate of flow id $id through port $port," +
             " which is not among those used to output this flow")
     }
 
@@ -92,25 +91,25 @@ internal class OutFlow(
     fun setOutPorts(ports: Set<Port>) {
         val toRm = outRatesByPort.keys - ports
         toRm.forEach { port ->
-            val res = port.tryUpdtRateOf(fId = id, targetRate = .0)
-            check(res == .0)
+            val res = port.tryUpdtRateOf(fId = id, targetRate = DataRate.ZERO)
+            check(res.isZero())
         }
 
-        ports.forEach { _outRatesByPort.putIfAbsent(it, .0) }
+        ports.forEach { _outRatesByPort.putIfAbsent(it, DataRate.ZERO) }
 
         updtTotRateOut()
     }
 
     private fun updtTotRateOut() {
-        _totRateOut = outRatesByPort.values.sum()
+        _totRateOut = DataRate.ofKbps(outRatesByPort.values.sumOf { it.toKbps() })
     }
 
-    private fun tryIncreaseRate(targetRate: Kbps) {
+    private fun tryIncreaseRate(targetRate: DataRate) {
         check(targetRate >= totRateOut)
         if (outRatesByPort.isEmpty()) return
-        var deltaRemaining: Kbps = targetRate - totRateOut
-        val targetPerPort: Kbps = targetRate / outRatesByPort.size
-        check (targetPerPort >= .0)
+        var deltaRemaining: DataRate = targetRate - totRateOut
+        val targetPerPort: DataRate = targetRate / outRatesByPort.size
+        check (targetPerPort >= DataRate.ZERO)
         {"${outRatesByPort.size}"}
 
         // reluctant
@@ -118,12 +117,12 @@ internal class OutFlow(
             if (rate >= targetPerPort) return@replaceAll rate
             val resultingRate = port.tryUpdtRateOf(fId = id, targetPerPort)
 
-            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundTo0withEps()
+            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundedTo0WithEps()
 
             return@replaceAll resultingRate
         }
 
-        if (deltaRemaining == .0) return
+        if (deltaRemaining.isZero()) return
 
         // non reluctant
         _outRatesByPort.replaceAll { port, rate ->
@@ -131,17 +130,17 @@ internal class OutFlow(
             {"\n $rate ${port.incomingRateOf(id)}"}
             val resultingRate = port.tryUpdtRateOf(fId = id, targetRate = rate + deltaRemaining)
 
-            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundTo0withEps()
+            deltaRemaining = (deltaRemaining - (resultingRate - rate)).roundedTo0WithEps()
             return@replaceAll resultingRate
         }
     }
 
-    private fun reduceRate(targetRate: Kbps) {
+    private fun reduceRate(targetRate: DataRate) {
         require(targetRate <= totRateOut)
         val deltaRate = targetRate - totRateOut
         _outRatesByPort.replaceAll { port, currRate ->
             // Each port rate is reduced proportionally to its contribution to the total.
-            val portTargetRate = (currRate + deltaRate * (currRate / totRateOut)).roundTo0withEps()
+            val portTargetRate = (currRate + deltaRate * (currRate / totRateOut)).roundedTo0WithEps()
             port.tryUpdtRateOf(fId = id, targetRate = portTargetRate)
         }
     }
