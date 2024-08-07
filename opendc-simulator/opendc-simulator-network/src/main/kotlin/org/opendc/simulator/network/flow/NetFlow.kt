@@ -30,7 +30,7 @@ public class NetFlow internal constructor(
     public val destinationId: NodeId,
     demand: DataRate = DataRate.ZERO,
     ) {
-    public val id: FlowId = nextId
+    public val id: FlowId = runBlocking { nextId() }
 
     /**
      * Functions [(NetFlow, Kbps, Kbps) -> Unit] invoked whenever the throughput of the flow changes.
@@ -151,14 +151,22 @@ public class NetFlow internal constructor(
         /**
          * Returns a unique flow id [Long].
          */
-        var nextId: FlowId = 0
-            get() {
-                if (field == FlowId.MAX_VALUE)
-                    throw RuntimeException("flow id reached its maximum value")
-                field++
-                return field - 1
-            }
-            private set
+        private var nextId: FlowId = 0
+        private val nextIdLock = Mutex()
+
+//            get() {
+//                if (field == FlowId.MAX_VALUE)
+//                    throw RuntimeException("flow id reached its maximum value")
+//                field++
+//                return field - 1
+//            }
+//            private set
+
+        suspend fun nextId(): FlowId = nextIdLock.withLock {
+            if (nextId == FlowId.MAX_VALUE) throw RuntimeException("flow id reached its maximum value")
+            nextId++
+            nextId - 1
+        }
 
 
         /**

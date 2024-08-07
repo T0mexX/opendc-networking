@@ -10,12 +10,12 @@ import java.io.File
 
 private fun bitBrainsSim() {
     val bitBrains = BitBrains.fromFolderWithVmTables(File("resources/traces/bitbrains"))
-    val wl: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..80)
+    val wl: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..10)
 //    val opt = wl.optimize()
 //    val wl2: SimNetWorkload = SimNetWorkload.fromBitBrains(bitBrains, vmsRange = 1..250)
 
     val net = FatTreeNetwork(
-        allSwitchSpecs = Switch.SwitchSpecs(portSpeed = DataRate.ofMbps(1.0), numOfPorts = 8),
+        allSwitchSpecs = Switch.SwitchSpecs(portSpeed = DataRate.ofMbps(1.0), numOfPorts = 4),
         hostNodeSpecs = HostNode.HostNodeSpecs(portSpeed = DataRate.ofGbps(1.0), numOfPorts = 1)
     )
 //    println(net.allNodesToString())
