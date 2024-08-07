@@ -1,5 +1,6 @@
 package org.opendc.simulator.network.api.simworkloads
 
+import kotlinx.coroutines.runBlocking
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.FlowId
@@ -80,7 +81,7 @@ internal abstract class NetworkEvent: Comparable<NetworkEvent> {
         val from: NodeId,
         val to: NodeId,
         val desiredDataRate: DataRate,
-        val flowId: FlowId = NetFlow.nextId
+        val flowId: FlowId = runBlocking { NetFlow.nextId() }
     ): NetworkEvent() {
         override suspend fun NetworkController.exec() {
             this.startFlow(
