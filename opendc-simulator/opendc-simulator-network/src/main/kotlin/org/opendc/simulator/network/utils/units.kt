@@ -62,7 +62,9 @@ internal inline infix fun <T> Double.ifNaN(block: () -> Double): Double =
     if (this.isNaN()) block()
     else this
 
-internal fun Double.fractionToPerc(valueFormatter: String): String =
-    "${String.format(valueFormatter, (this * 100).ifNanThen(.0))}%"
+internal fun Double.ratioToPerc(fmt: String): String =
+    "${String.format(fmt, (this * 100).ifNanThen(.0))}%"
+internal fun Double.fmt(fmt: String): String =
+    String.format(fmt, this)
 
 
