@@ -1,6 +1,7 @@
 package org.opendc.simulator.network.units
 
 import org.opendc.simulator.network.utils.InternalUse
+import org.opendc.simulator.network.utils.fmt
 
 @JvmInline
 public value class Power private constructor (
@@ -13,9 +14,12 @@ public value class Power private constructor (
     public fun toWatts(): Double = value
     public fun toKWatts(): Double = value / 1000.0
 
-    override fun toString(): String =
-        if (value >= 1000.0) "${toKWatts()} KWatts"
-        else "${toWatts()} Watts"
+    override fun toString(): String = fmtValue()
+
+    override fun fmtValue(fmt: String): String =
+        if (value >= 1000.0) "${toKWatts().fmt(fmt)} KWatts"
+        else "${toWatts().fmt(fmt)} Watts"
+
 
 
     public operator fun times(time: Time): Energy = Energy.ofWh(toWatts() * time.toHours())

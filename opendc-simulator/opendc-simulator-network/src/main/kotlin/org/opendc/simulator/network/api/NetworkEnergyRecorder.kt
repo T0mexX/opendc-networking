@@ -55,7 +55,7 @@ public class NetworkEnergyRecorder internal constructor(network: Network) {
 
     internal fun getFmtReport(): String {
         return "\n" + """
-            | === ENERGY REPORT ===
+            | === EN_CONSUMED REPORT ===
             | Current Power Usage: $currPwrUsage
             | Total EnergyConsumed: $totalConsumption
         """.trimIndent()

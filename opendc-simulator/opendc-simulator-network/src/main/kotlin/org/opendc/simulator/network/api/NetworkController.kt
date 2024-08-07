@@ -8,12 +8,8 @@ import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.AVRG_THROUGHPUT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.ENERGY
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.FLOWS
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.INSTANT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.TOT_THROUGHPUT
-import org.opendc.simulator.network.api.NetworkSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
@@ -22,11 +18,15 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.utils.logger
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.api.NodeSnapshot.Companion.snapshot
+import org.opendc.simulator.network.export.Exporter
+import org.opendc.simulator.network.export.network.ALL_NET_FIELDS
+import org.opendc.simulator.network.export.node.ALL_NODE_FIELDS
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.errAndNull
@@ -366,7 +366,7 @@ public class NetworkController(
         if (instantSrc.isExternalSource) {
             runBlocking { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
-            if (logSnapshot) log.info("\n" + snapshot().fmt(NetworkSnapshot.ENERGY))
+            if (logSnapshot) log.info("\n" + snapshot().fmt(NetworkSnapshot.EN_CONSUMED))
 
             val timeSpan = Time.ofMillis(instantSrc.millis()- lastUpdate.toEpochMilli())
             if (timeSpan == Time.ZERO) return
@@ -439,6 +439,9 @@ public class NetworkController(
 
         if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
 
+        val netExp = Exporter(File("resources/net-test.parquet"), ALL_NET_FIELDS)
+        val nodeExp = Exporter(File("resources/node-test.parquet"), ALL_NODE_FIELDS)
+
         runBlocking (network.validator) {
             val pb: ProgressBar = ProgressBarBuilder()
                 .setInitialMax(netWorkload.size.toLong())
@@ -448,7 +451,6 @@ public class NetworkController(
             delay(1000)
 
             with (netWorkload) {
-                println(NodeSnapshot.fmtHdr())
                 while (hasNext()) {
                     val nextDeadline = peek().deadline
 
@@ -457,13 +459,12 @@ public class NetworkController(
                     pb.stepBy(execUntil(nextDeadline))
                     network.awaitStability()
 
-                    
-//                    log.trace(snapshot().fmt(ENERGY or AVRG_THROUGHPUT or TOT_THROUGHPUT or FLOWS or INSTANT))
-//                    network.nodes.values.forEach {
-//                        if (it.id != INTERNET_ID) println(it.snapshot(currentInstant, withStableNetwork = network).fmt())
-//                    }
+                    netExp.write(snapshot())
+                    network.nodes.values.forEach { nodeExp.write(it.snapshot(currentInstant)) }
                 }
             }
+            netExp.close()
+            nodeExp.close()
             pb.refresh()
             println()
             log.info(energyRecorder.getFmtReport())

@@ -1,6 +1,8 @@
-package org.opendc.simulator.network.api
+package org.opendc.simulator.network.api.snapshots
 
 import kotlinx.coroutines.runBlocking
+import org.opendc.simulator.network.api.NetworkController
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.energy.EnergyConsumer
@@ -11,6 +13,8 @@ import org.opendc.simulator.network.flow.tracker.AllByUnsatisfaction
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.Energy
 import org.opendc.simulator.network.units.Power
+import org.opendc.simulator.network.utils.Flag
+import org.opendc.simulator.network.utils.Flags
 import org.opendc.simulator.network.utils.ratioToPerc
 import org.opendc.simulator.network.utils.roundToIfInRange
 import java.time.Instant
@@ -51,7 +55,10 @@ public class NodeSnapshot internal constructor(
     public val totEnConsumed: Energy,
     public val currNodeTputAllFlows: DataRate,
     public val currNodeTputPercAllFlows: Double,
-): Exportable<NodeSnapshot> {
+): Snapshot<NodeSnapshot>(), Exportable<NodeSnapshot> {
+
+    override val dfltColWidth: Int = 27
+
     public val nodeId: NodeId = node.id
 
     /**
@@ -60,9 +67,9 @@ public class NodeSnapshot internal constructor(
      * @return          the formatted string representing the snapshot information,
      * as either 1 or 2 lines with a column for each property.
      */
-    public fun fmt(flags: Int = ALL): String {
+    override fun fmt(flags: Flags<NodeSnapshot>): String {
 
-        val firstLine = flags.ifSet(HDR, dflt = "") { fmtHdr(flags) }
+        val headersLine = flags.ifSet(HDR, dflt = "") { fmtHdr(flags) }
 
         val secondLine = buildString {
             appendPad("| $node")
@@ -71,9 +78,9 @@ public class NodeSnapshot internal constructor(
             flags.ifSet(NUM_FLOWS_OUT) { appendPad(numOutgoingFlows) }
             flags.ifSet(NUM_GEN_FLOWS) { appendPad(numGeneratedFlows) }
             flags.ifSet(NUM_CONS_FLOWS) { appendPad(numConsumedFlows) }
-            flags.ifSet(MIN_THROUGHPUT_PERC) { appendPad(currMinFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
-            flags.ifSet(MAX_THROUGHPUT_PERC) { appendPad(currMaxFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
-            flags.ifSet(AVRG_THROUGHPUT_PERC) { appendPad(if (numOutgoingFlows == 0) "NA" else currAvrgFlowTputPerc.ratioToPerc("%.2f")) }
+            flags.ifSet(MIN_TPUT_PERC) { appendPad(currMinFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
+            flags.ifSet(MAX_TPUT_PERC) { appendPad(currMaxFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
+            flags.ifSet(AVRG_TPUT_PERC) { appendPad(if (numOutgoingFlows == 0) "NA" else currAvrgFlowTputPerc.ratioToPerc("%.2f")) }
             flags.ifSet(TOT_NODE_THROUGHPUT) { appendPad("${currNodeTputAllFlows.fmtValue("%.5f")} (${currNodeTputPercAllFlows.ratioToPerc("%.1f")})") }
             flags.ifSet(TOT_NODE_PORT_USAGE) { appendPad(currNodePortUsageAllPorts.ratioToPerc("%.5f")) }
             flags.ifSet(CURR_PWR_USE) { appendPad(currPwrUse.fmtValue("%.5f")) }
@@ -81,104 +88,116 @@ public class NodeSnapshot internal constructor(
             flags.ifSet(EN_CONSUMED) { appendPad(totEnConsumed.fmtValue("%.5f")) }
         }
 
-        return firstLine + secondLine
+        return headersLine + secondLine
     }
+
+    /**
+     * @return formatted [String] line containing all the headers
+     * of the fields associated with the flags [flags]. The [HDR] flags is ignored.
+     */
+    public override fun fmtHdr(flags: Flags<NodeSnapshot>): String =
+        buildString {
+            appendPad("| node")
+            flags.ifSet(INSTANT) { appendPad("instant", pad = 30) }
+            flags.ifSet(NUM_FLOWS_IN) { appendPad("flows in") }
+            flags.ifSet(NUM_FLOWS_OUT) { appendPad("flows out") }
+            flags.ifSet(NUM_GEN_FLOWS) { appendPad("generating n flows") }
+            flags.ifSet(NUM_CONS_FLOWS) { appendPad("consuming n flows") }
+            flags.ifSet(MIN_TPUT_PERC) { appendPad("curr min flow tput %") }
+            flags.ifSet(MAX_TPUT_PERC) { appendPad("curr max flow tput %") }
+            flags.ifSet(AVRG_TPUT_PERC) { appendPad("curr avrg flow tput %") }
+            flags.ifSet(TOT_NODE_THROUGHPUT) { appendPad("curr tput (all flows) (%)") }
+            flags.ifSet(TOT_NODE_PORT_USAGE) { appendPad("curr node port usage %") }
+            flags.ifSet(CURR_PWR_USE) { appendPad("curr pwr use") }
+            flags.ifSet(AVRG_PWR_USE) { appendPad("avrg pwr over time") }
+            flags.ifSet(EN_CONSUMED) { appendPad("tot energy cons") }
+            appendLine()
+        }
 
     override fun toString(): String = "[NodeSnapshot: id=$nodeId, timestamp=$instant]"
 
     public companion object {
-        private const val COL_WIDTH = 27
 
         /**
          * The [Instant] the [NodeSnapshot] was taken.
          */
-        public const val INSTANT: Int = 1
+        public val INSTANT: Flag<NodeSnapshot> = Flag(1)
 
         /**
          * The number of flows transiting through the node at the instant the snapshot is taken.
          */
-        public const val NUM_FLOWS_IN: Int = 1 shl 1
+        public val NUM_FLOWS_IN: Flag<NodeSnapshot> = Flag(1 shl 1)
 
         /**
          * The number of outgoing flows at the instant the snapshot was taken.
          */
-        public const val NUM_FLOWS_OUT: Int = 1 shl 2
+        public val NUM_FLOWS_OUT: Flag<NodeSnapshot> = Flag(1 shl 2)
 
         /**
          * The number of flows that are being generated by the node at the instant the snapshot was taken.
          */
-        public const val NUM_GEN_FLOWS: Int = 1 shl 3
+        public val NUM_GEN_FLOWS: Flag<NodeSnapshot> = Flag(1 shl 3)
 
         /**
          * The number of flows that are being consumed by the node at the instant the snapshot was taken.
          */
-        public const val NUM_CONS_FLOWS: Int = 1 shl 4
+        public val NUM_CONS_FLOWS: Flag<NodeSnapshot> = Flag(1 shl 4)
 
         /**
          * The lowest throughput percentage among all the flows transiting
          * through the node at the instant the snapshot was taken.
          */
-        public const val MIN_THROUGHPUT_PERC: Int = 1 shl 5
+        public val MIN_TPUT_PERC: Flag<NodeSnapshot> = Flag(1 shl 5)
 
         /**
          * The highest throughput percentage among all the flows transiting
          * through the node at the instant the snapshot was taken.
          */
-        public const val MAX_THROUGHPUT_PERC: Int = 1 shl 6
+        public val MAX_TPUT_PERC: Flag<NodeSnapshot> = Flag(1 shl 6)
 
         /**
          * The average throughput percentage of all the flows transiting through
          * the node at the instant the snapshot was taken.
          */
-        public const val AVRG_THROUGHPUT_PERC: Int = 1 shl 7
+        public val AVRG_TPUT_PERC: Flag<NodeSnapshot> = Flag(1 shl 7)
 
         /**
          * The utilization of all ports of the node at the instant the snapshot was taken,
          * as the sum of used bws divided by the sum of the max bws.
          */
-        public const val TOT_NODE_PORT_USAGE: Int = 1 shl 8
+        public val TOT_NODE_PORT_USAGE: Flag<NodeSnapshot> = Flag(1 shl 8)
 
         /**
          * The power usage at the instant the snapshot was taken.
          */
-        public const val CURR_PWR_USE: Int = 1 shl 9
+        public val CURR_PWR_USE: Flag<NodeSnapshot> = Flag(1 shl 9)
 
         /**
          * The average power usage of the node, from the instant the node
          * was started until the instant the snapshot was taken.
          */
-        public const val AVRG_PWR_USE: Int = 1 shl 10
+        public val AVRG_PWR_USE: Flag<NodeSnapshot> = Flag(1 shl 10)
 
         /**
          * The energy consumed from the instant the node was
          * started until the instant the snapshot was taken.
          */
-        public const val EN_CONSUMED: Int = 1 shl 11
+        public val EN_CONSUMED: Flag<NodeSnapshot> = Flag(1 shl 11)
 
         /**
          * The total data-rate transiting through the node at the instant the snapshot was taken.
          */
-        public const val TOT_NODE_THROUGHPUT: Int = 1 shl 14
+        public val TOT_NODE_THROUGHPUT: Flag<NodeSnapshot> = Flag(1 shl 14)
 
         /**
          * Flag that adds a line to the formatted snapshot string with the fields headers.
          */
-        public const val HDR: Int = 1 shl 15
-
-        /**
-         * "Flag" that includes all the other flags.
-         */
-        public const val ALL: Int = -1
+        public val HDR: Flag<NodeSnapshot> = Flag(1 shl 15)
 
         /**
          * "Flag" that includes all the other flags except [HDR].
          */
-        public const val ALL_NO_HDR: Int = -1 and HDR.inv()
-
-        private inline fun <T> Int.ifSet(flag: Int, dflt: T? = null, block: () -> T): T? =
-            if (this and flag != 0)
-                block()
-            else dflt
+        public val ALL_NO_HDR: Flags<NodeSnapshot> = Flags.all<NodeSnapshot>() -  HDR
 
         internal fun Node.snapshot(instant: Instant, withStableNetwork: Network? = null): NodeSnapshot {
             withStableNetwork?.let {
@@ -211,36 +230,8 @@ public class NodeSnapshot internal constructor(
             )
         }
 
-        /**
-         * @return formatted [String] line containing all the headers
-         * of the fields associated with the flags [flags]. The [HDR] flag is ignored.
-         */
-        public fun fmtHdr(flags: Int = ALL): String =
-            buildString {
-                appendPad("| node")
-                flags.ifSet(INSTANT) { appendPad("instant", pad = 30) }
-                flags.ifSet(NUM_FLOWS_IN) { appendPad("flows in") }
-                flags.ifSet(NUM_FLOWS_OUT) { appendPad("flows out") }
-                flags.ifSet(NUM_GEN_FLOWS) { appendPad("generating n flows") }
-                flags.ifSet(NUM_CONS_FLOWS) { appendPad("consuming n flows") }
-                flags.ifSet(MIN_THROUGHPUT_PERC) { appendPad("curr min flow tput %") }
-                flags.ifSet(MAX_THROUGHPUT_PERC) { appendPad("curr max flow tput %") }
-                flags.ifSet(AVRG_THROUGHPUT_PERC) { appendPad("curr avrg flow tput %") }
-                flags.ifSet(TOT_NODE_THROUGHPUT) { appendPad("curr tput (all flows) (%)") }
-                flags.ifSet(TOT_NODE_PORT_USAGE) { appendPad("curr node port usage %") }
-                flags.ifSet(CURR_PWR_USE) { appendPad("curr pwr use") }
-                flags.ifSet(AVRG_PWR_USE) { appendPad("avrg pwr over time") }
-                flags.ifSet(EN_CONSUMED) { appendPad("tot energy cons") }
-                appendLine()
-            }
-
-        private fun StringBuilder.appendPad(obj: Any?, pad: Int = COL_WIDTH) {
-            append(obj.toString().padEnd(pad))
-        }
-
-        private fun StringBuilder.appendPad(str: String, pad: Int = COL_WIDTH) {
-            append(str.padEnd(pad))
-        }
+        public fun NetworkController.snapshotOf(nodeId: NodeId): NodeSnapshot? =
+            network.nodes[nodeId]?.snapshot(currentInstant)
     }
 }
 
