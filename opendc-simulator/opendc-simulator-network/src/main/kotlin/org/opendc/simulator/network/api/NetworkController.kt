@@ -25,6 +25,7 @@ import org.opendc.simulator.network.components.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.Switch
+import org.opendc.simulator.network.export.ExportField
 import org.opendc.simulator.network.export.Exporter
 import org.opendc.simulator.network.export.network.ALL_NET_FIELDS
 import org.opendc.simulator.network.export.node.ALL_NODE_FIELDS
@@ -112,6 +113,9 @@ public class NetworkController(
      */
     public val currentInstant: Instant
         get() = instantSrc.instant()
+
+    private val netSnapshotExporter: Exporter<NetworkSnapshot>? = null
+    private val nodeSnapshotExporter: Exporter<NetworkSnapshot>? = null
 
     /**
      * The [Instant] when the last [advanceBy] or [sync] was called.
@@ -416,7 +420,7 @@ public class NetworkController(
     public fun execWorkload(
         netWorkload: SimNetWorkload,
         reset: Boolean = true,
-        withVirtualMapping: Boolean = true
+        withVirtualMapping: Boolean = true,
     ) {
         if (netWorkload.hasNext().not()) return log.error("network workload empty")
 
@@ -473,6 +477,15 @@ public class NetworkController(
             println()
             log.info(energyRecorder.getFmtReport())
         }
+    }
+
+    public fun withNetworkSnapshotExporter(
+        targetFile: File,
+        fields: Collection<ExportField<NetworkSnapshot>>,
+        interval: Duration,
+        startInstant: Instant = currentInstant
+    ) {
+
     }
 
     /**

@@ -1,3 +1,5 @@
+@file:OptIn(InternalUse::class)
+
 package org.opendc.simulator.network.units
 
 import org.opendc.simulator.network.utils.InternalUse

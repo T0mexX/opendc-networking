@@ -42,8 +42,8 @@ public interface TaskEligibilityPolicy : StagePolicy<TaskEligibilityPolicy.Logic
     /**
      * The advice given to the scheduler by an admission policy.
      *
-     * @property admit A flag to indicate to the scheduler that the job should be admitted.
-     * @property stop A flag to indicate the scheduler should immediately stop admitting jobs to the scheduling queue and wait
+     * @property admit A flags to indicate to the scheduler that the job should be admitted.
+     * @property stop A flags to indicate the scheduler should immediately stop admitting jobs to the scheduling queue and wait
      * for the next scheduling cycle.
      */
     public enum class Advice(public val admit: Boolean, public val stop: Boolean) {

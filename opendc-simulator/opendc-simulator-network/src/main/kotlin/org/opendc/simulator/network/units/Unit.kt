@@ -13,6 +13,7 @@ private const val minErr: Double = 1.0e-06
 
 @Serializable
 public sealed interface Unit<T: Unit<T>>: Comparable<T> {
+    @InternalUse
     public val value: Double
 
     public operator fun plus(other: T): T = new(value + other.value)

@@ -101,7 +101,7 @@ public class CpuPowerModels {
      * @param asymUtil  A utilization level at which the server attains asymptotic,
      *                  i.e., close to linear power consumption versus the offered load.
      *                  For most of the CPUs,a is in [0.2, 0.5].
-     * @param dvfs      A flag indicates whether DVFS is enabled.
+     * @param dvfs      A flags indicates whether DVFS is enabled.
      */
     public static CpuPowerModel asymptotic(double maxPower, double idlePower, double asymUtil, boolean dvfs) {
         return new AsymptoticPowerModel(maxPower, idlePower, asymUtil, dvfs);

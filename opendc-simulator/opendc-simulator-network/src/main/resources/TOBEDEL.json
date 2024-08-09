@@ -18,7 +18,7 @@
             "type": "host-node-specs",
             "id": 0,
             "numOfPorts": 1000,
-            "portSpeed": 10
+            "portSpeed": "1000 Mbps"
         },
         {
             "type": "host-node-specs",

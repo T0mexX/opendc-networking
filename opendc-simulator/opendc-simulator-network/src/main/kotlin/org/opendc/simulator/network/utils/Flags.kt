@@ -1,4 +1,4 @@
-@file:OptIn(InternalUse::class, InternalUse::class)
+@file:OptIn(InternalUse::class, InternalUse::class, InternalUse::class)
 
 package org.opendc.simulator.network.utils
 
