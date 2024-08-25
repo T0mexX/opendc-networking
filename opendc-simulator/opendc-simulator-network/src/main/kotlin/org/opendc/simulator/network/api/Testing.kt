@@ -68,21 +68,21 @@ private fun idk() {
 
     val iStream = File("resources/scenario-test/net-scenario.json").inputStream()
 
-//    val scenario: NetworkScenario = Json.decodeFromStream(iStream)
+    val scenario: NetworkScenario = Json.decodeFromStream(iStream)
     DfltNodeExportColumns
     DfltNetworkExportColumns
-    val scenario =
-        NetworkScenario(
-            networkSpecs = spec,
-            wl = wl,
-            exportConfig =
-                NetworkExportConfig(
-                    outputFolder = File("resources/bo"),
-                    networkExportColumns = Exportable.getAllLoadedColumns(),
-                    nodeExportColumn = Exportable.getAllLoadedColumns(),
-                    exportInterval = Time.ofMin(5),
-                ),
-        )
+//    val scenario =
+//        NetworkScenario(
+//            networkSpecs = spec,
+//            wl = wl,
+//            exportConfig =
+//                NetworkExportConfig(
+//                    outputFolder = File("resources/bo"),
+//                    networkExportColumns = Exportable.getAllLoadedColumns(),
+//                    nodeExportColumn = Exportable.getAllLoadedColumns(),
+//                    exportInterval = Time.ofMin(5),
+//                ),
+//        )
 
     scenario.run()
 //

@@ -43,11 +43,15 @@ import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.Specs
+import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
+import org.opendc.simulator.network.export.NetExportHandler
+import org.opendc.simulator.network.export.NetworkExportConfig
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.infoNewLn
 import org.opendc.simulator.network.utils.logger
+import org.opendc.simulator.network.utils.withNotNull
 import org.slf4j.Logger
 import java.io.File
 import java.time.Duration
@@ -69,6 +73,8 @@ import java.util.UUID
 public class NetworkController(
     internal val network: Network,
     instantSource: InstantSource? = null,
+    exportConfig: NetworkExportConfig? = null,
+    private val runName: String = "unnamed-run-${UUID.randomUUID().toString().substring(0, 4)}",
 ) : AutoCloseable {
     public companion object {
         public val log: Logger by logger()
@@ -98,6 +104,14 @@ public class NetworkController(
             instantSource: InstantSource? = null,
         ): NetworkController = fromFile(File(path), instantSource)
     }
+
+    private val netExportHandler: NetExportHandler? =
+        exportConfig?.let {
+            NetExportHandler(
+                config = it,
+                runName = runName,
+            )
+        }
 
     /**
      * If a [SimNetWorkload] is to be executed, the node ids of the workload might
@@ -141,13 +155,6 @@ public class NetworkController(
      */
     private var lastUpdate: Instant = Instant.EPOCH
 
-    init {
-        instantSource?.let { lastUpdate = it.instant() }
-
-        network.launch()
-        log.info(network.fmtNodes())
-    }
-
     /**
      * @see[NetEnRecorder]
      */
@@ -182,6 +189,15 @@ public class NetworkController(
      * @see[claimedHostIds]
      */
     private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
+
+    private val controllerInvalidator: NetworkStabilityValidator.Invalidator = network.validator.Invalidator()
+
+    init {
+        instantSource?.let { lastUpdate = it.instant() }
+
+        network.launch()
+        log.info(network.fmtNodes())
+    }
 
     /**
      * See [claimedHostIds] for an explanation of the *claiming process*.
@@ -437,22 +453,39 @@ public class NetworkController(
         time: Time,
         suppressWarn: Boolean,
     ) {
-        if (time < Time.ZERO) return log.error("advanceBy received negative time-span parameter($time), ignoring...")
-        if (time == Time.ZERO) return
-        network.awaitStability()
+        suspend fun advance(jump: Time) {
+            network.awaitStability()
+            if (instantSrc.isInternalSource) {
+                instantSrc.advanceTime(jump)
+            }
 
-        if (instantSrc.isInternalSource) {
-            instantSrc.advanceTime(time)
-        } else if (!suppressWarn) {
+            network.advanceBy(jump)
+            energyRecorder.advanceBy(jump)
+            lastUpdate = instantSrc.instant()
+        }
+
+        if (instantSrc.isExternalSource && suppressWarn.not()) {
             log.warn(
                 "advancing time directly while instant source is set, this can cause ambiguity. " +
                     "You can synchronize the network with the instant source with 'sync()'",
             )
         }
 
-        network.advanceBy(time)
-        energyRecorder.advanceBy(time)
-        lastUpdate = instantSrc.instant()
+        if (time < Time.ZERO) return log.error("advanceBy received negative time-span parameter($time), ignoring...")
+        if (time == Time.ZERO) return
+
+        netExportHandler?.let {
+            // Advances time in multiple steps to allow all exports.
+            with(it) {
+                var remaining: Time = time
+                while (remaining != Time.ZERO) {
+                    val nextJump = remaining min timeUntilExport()
+                    advance(nextJump)
+                    exportIfNeeded()
+                    remaining -= nextJump
+                }
+            }
+        } ?: advance(time)
     }
 
     /**
@@ -465,6 +498,7 @@ public class NetworkController(
      */
     override fun close() {
         network.runnerJob?.cancel()
+        netExportHandler?.close()
     }
 
     /**
@@ -477,6 +511,8 @@ public class NetworkController(
             check(it.demand approxLarger it.throughput || it.demand approx it.throughput) {
                 " Inconsistent state: flow ${it.id} has demand=${it.demand} and throuput=${it.throughput}"
             }
+
+            check(it.demand approx (network.nodesById[it.transmitterId]?.flowHandler?.outgoingFlows?.get(it.id)?.demand ?: DataRate.ZERO))
         }
     }
 }

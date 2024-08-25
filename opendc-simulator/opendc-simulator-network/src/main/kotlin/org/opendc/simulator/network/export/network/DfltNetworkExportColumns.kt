@@ -22,6 +22,7 @@
 
 package org.opendc.simulator.network.export.network
 
+import org.apache.parquet.schema.LogicalTypeAnnotation
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.DOUBLE
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.INT32
 import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.INT64
@@ -47,10 +48,10 @@ import org.opendc.trace.util.parquet.exporter.ExportColumn
 public object DfltNetworkExportColumns {
     public val TIMESTAMP: ExportColumn<NetworkSnapshot> =
         ExportColumn(
-            field = Types.required(INT64).named("timestamp_absolute"),
-            //        field = Types.required(INT64)
-            //            .`as`(LogicalTypeAnnotation.timestampType(true, LogicalTypeAnnotation.TimeUnit.MILLIS))
-            //            .named("a_timestamp")
+//            field = Types.required(INT64).named("timestamp_absolute"),
+                    field = Types.required(INT64)
+                        .`as`(LogicalTypeAnnotation.timestampType(true, LogicalTypeAnnotation.TimeUnit.MILLIS))
+                        .named("a_timestamp")
         ) { it.instant.toEpochMilli() }
 
     public val NUM_FLOWS: ExportColumn<NetworkSnapshot> =

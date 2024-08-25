@@ -59,7 +59,8 @@ public data class NetworkExportConfig(
     val networkExportColumns: List<ExportColumn<NetworkSnapshot>>,
     val nodeExportColumn: List<ExportColumn<NodeSnapshot>>,
     val outputFolder: File,
-    val exportInterval: Time? = null,
+    val exportInterval: Time,
+    val startTime: Time? = null,
 ) {
     /**
      * @return formatted string representing the export config.
@@ -69,11 +70,8 @@ public data class NetworkExportConfig(
         | === NETWORK EXPORT CONFIG ===
         | Network columns  : ${networkExportColumns.map { it.name }.toString().trim('[', ']')}
         | Node columns     : ${nodeExportColumn.map { it.name }.toString().trim('[', ']')}
-        """.trimIndent() + (
-            exportInterval?.let {
-                "\n| Export interval  : $exportInterval"
-            } ?: ""
-        )
+        | Export interval  : $exportInterval
+        """.trimIndent()
 
     public companion object {
         internal val LOG by logger()

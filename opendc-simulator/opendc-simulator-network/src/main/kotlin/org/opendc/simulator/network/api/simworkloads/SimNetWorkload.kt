@@ -86,10 +86,6 @@ public data class SimNetWorkload private constructor(
                     "that it finds, if there is more than 1 between nodesById, undesired behaviour is to be expected.",
             )
         }
-
-        events.toList().slice(0..10).forEach {
-            println(it)
-        }
     }
 
     /**

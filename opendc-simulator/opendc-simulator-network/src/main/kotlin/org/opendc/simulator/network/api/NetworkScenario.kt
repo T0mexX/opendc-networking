@@ -36,18 +36,11 @@ import me.tongfei.progressbar.ProgressBarStyle
 import org.opendc.common.logger.infoNewLine
 import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
-import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
-import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snapshot
-import org.opendc.simulator.network.api.snapshots.NodeSnapshot
-import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.Network
-import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.export.NetworkExportConfig
 import org.opendc.simulator.network.input.readNetworkWl
 import org.opendc.simulator.network.utils.logger
-import org.opendc.trace.util.parquet.exporter.Exporter
-import java.io.File
 import java.util.UUID
 import javax.naming.OperationNotSupportedException
 
@@ -67,11 +60,19 @@ import javax.naming.OperationNotSupportedException
 public data class NetworkScenario(
     val networkSpecs: Specs<Network>,
     val wl: SimNetWorkload,
-    val exportConfig: NetworkExportConfig? = null,
+    private val exportConfig: NetworkExportConfig? = null,
     val virtualMapping: Boolean = true,
 ) : Runnable {
+    // If start time not defined, first workload deadline is used.
+    public val exportConfiguration: NetworkExportConfig? =
+        exportConfig?.let { config ->
+            config.startTime?.let {
+                config
+            } ?: config.copy(startTime = Time.ofInstantFromEpoch(wl.startInstant))
+        }
+
     init {
-        exportConfig?.let { LOG.infoNewLine(it.fmt()) }
+        exportConfiguration?.let { LOG.infoNewLine(it.fmt()) }
     }
 
     override fun run() {
@@ -83,56 +84,14 @@ public data class NetworkScenario(
         private val runName: String = "unnamed-run-${UUID.randomUUID().toString().substring(0, 4)}",
     ) : AutoCloseable {
         val network: Network = networkSpecs.build()
-        val netController: NetworkController = NetworkController(network)
         val runWl: SimNetWorkload = wl.copy()
         val pb: ProgressBar = getProgressBar()
-        var exportDeadline: Time?
-        val networkExporter: Exporter<NetworkSnapshot>?
-        val nodeExporter: Exporter<NodeSnapshot>?
+        val netController: NetworkController = NetworkController(
+            network = network,
+            exportConfig = exportConfiguration,
+        )
 
         init {
-            with(exportConfig) {
-                this ?: let {
-                    exportDeadline = null
-                    networkExporter = null
-                    nodeExporter = null
-                    return@with
-                }
-
-                exportDeadline = exportInterval?.plus(Time.ofInstantFromEpoch(runWl.startInstant))
-
-                // NetworkExportConfig serialization guarantees that
-                // outputFolder exists (if config are not null).
-                val runOutputFolder =
-                    outputFolder.let {
-                        File(it.absolutePath, runName).also { f -> check(f.mkdirs()) }
-                    }
-
-                networkExporter =
-                    networkExportColumns.let { columns ->
-                        if (columns.isEmpty() || exportDeadline == null) {
-                            null
-                        } else {
-                            Exporter(
-                                outputFile = File(runOutputFolder.absolutePath, "network.parquet"),
-                                columns = columns,
-                            )
-                        }
-                    }
-
-                nodeExporter =
-                    exportConfig?.nodeExportColumn?.let { columns ->
-                        if (columns.isEmpty() || exportDeadline == null) {
-                            null
-                        } else {
-                            Exporter(
-                                outputFile = File(runOutputFolder.absolutePath, "node.parquet"),
-                                columns = columns,
-                            )
-                        }
-                    }
-            }
-
             if (virtualMapping) runWl.performVirtualMappingOn(netController)
             // Sets controller time to the instant of the first network event.
             netController.instantSrc.setInternalTime(
@@ -142,19 +101,16 @@ public data class NetworkScenario(
             netController.execWl(runWl)
         }
 
-        private fun NetworkController.execWl(runWl: SimNetWorkload) =
+        private fun NetworkController.execWl(runWl: SimNetWorkload)  =
             runBlocking(network.validator) {
                 delay(1000)
-                with(runWl) {
+                with(runWl) wl@ {
                     while (runWl.hasNext()) {
-                        val nextDeadline = nextDeadline()
+                        val nextWlDeadline = runWl.peek().deadline
                         // Executes all network events up until `nextDeadline`
                         // included (with all events with that deadline).
-                        pb.stepBy(execUntil(nextDeadline))
+                        pb.stepBy(execUntil(nextWlDeadline))
                         network.awaitStability()
-//                        LOG.infoNewLine(this@execWl.snapshot().fmt())
-
-                        exportIfNeeded()
                     }
                 }
 
@@ -171,39 +127,35 @@ public data class NetworkScenario(
                 .setTaskName("Simulating network...")
                 .build()
 
-        private fun nextDeadline(): Time = exportDeadline?.min(runWl.peek().deadline) ?: runWl.peek().deadline
-
-        private fun exportIfNeeded() {
-            // Non-mutable for smart cast.
-            val exportDeadline = exportDeadline ?: return
-            val currTime = netController.instantSrc.time
-
-            // If not yet time to export then return.
-            if (exportDeadline approxLarger currTime) return
-            // Check export deadline not passed yet.
-            check(exportDeadline approx currTime)
-
-            // Write network snapshot to output file.
-            networkExporter?.write(netController.snapshot())
-
-            // Write each node's snapshot to output file.
-            network.nodesById.values.forEach {
-                if (it.id == INTERNET_ID) return@forEach
-                nodeExporter?.write(
-                    it.snapshot(
-                        instant = netController.currentInstant,
-//                        withStableNetwork = network,
-                    ),
-                )
-            }
-
-            this.exportDeadline = exportConfig?.exportInterval!! + exportDeadline
-        }
+//        private fun exportIfNeeded() {
+//            // Non-mutable for smart cast.
+//            val exportDeadline = exportDeadline ?: return
+//            val currTime = netController.instantSrc.time
+//
+//            // If not yet time to export then return.
+//            if (exportDeadline approxLarger currTime) return
+//            // Check export deadline not passed yet.
+//            check(exportDeadline approx currTime)
+//
+//            // Write network snapshot to output file.
+//            networkExporter?.write(netController.snapshot())
+//
+//            // Write each node's snapshot to output file.
+//            network.nodesById.values.forEach {
+//                if (it.id == INTERNET_ID) return@forEach
+//                nodeExporter?.write(
+//                    it.snapshot(
+//                        instant = netController.currentInstant,
+////                        withStableNetwork = network,
+//                    ),
+//                )
+//            }
+//
+//            this.exportDeadline = exportConfig?.exportInterval!! + exportDeadline
+//        }
 
         override fun close() {
             netController.close()
-            networkExporter?.close()
-            nodeExporter?.close()
         }
     }
 
