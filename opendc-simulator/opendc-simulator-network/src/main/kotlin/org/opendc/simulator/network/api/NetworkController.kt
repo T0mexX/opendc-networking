@@ -190,8 +190,6 @@ public class NetworkController(
      */
     private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
 
-    private val controllerInvalidator: NetworkStabilityValidator.Invalidator = network.validator.Invalidator()
-
     init {
         instantSource?.let { lastUpdate = it.instant() }
 

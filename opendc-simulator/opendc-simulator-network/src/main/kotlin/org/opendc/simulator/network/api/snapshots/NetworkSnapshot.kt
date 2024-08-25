@@ -25,14 +25,19 @@ package org.opendc.simulator.network.api.snapshots
 import kotlinx.coroutines.runBlocking
 import org.opendc.common.units.DataRate
 import org.opendc.common.units.Energy
+import org.opendc.common.units.Percentage
+import org.opendc.common.units.Percentage.Companion.percentageOf
 import org.opendc.common.units.Power
+import org.opendc.common.units.Unit.Companion.sumOfUnit
 import org.opendc.common.utils.ifNaN
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.HDR
 import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.HDR
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
+import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.Flag
 import org.opendc.simulator.network.utils.Flags
 import org.opendc.simulator.network.utils.ratioToPerc
@@ -64,8 +69,8 @@ public class NetworkSnapshot private constructor(
     public val numCoreSwitches: Int,
     public val numActiveFlows: Int,
     public val totTput: DataRate,
-    public val totTputPerc: Double,
-    public val avrgTputPerc: Double,
+    public val totTputPerc: Percentage?,
+    public val avrgTputPerc: Percentage?,
     public val currPwrUse: Power,
     public val avrgPwrUseOverTime: Power,
     public val totEnConsumed: Energy,
@@ -90,8 +95,8 @@ public class NetworkSnapshot private constructor(
                 flags.ifSet(CORE_SWITCHES) { appendPad(numCoreSwitches) }
                 flags.ifSet(FLOWS) { appendPad(numActiveFlows) }
                 flags.ifSet(TOT_TPUT) { appendPad(totTput.fmtValue("%.5f")) }
-                flags.ifSet(TOT_TPUT_PERC) { appendPad(totTputPerc.ratioToPerc("%.5f")) }
-                flags.ifSet(AVRG_TPUT_PERC) { appendPad(avrgTputPerc.ratioToPerc("%.5f")) }
+                flags.ifSet(TOT_TPUT_PERC) { appendPad(totTputPerc?.fmtValue("%.5f")) }
+                flags.ifSet(AVRG_TPUT_PERC) { appendPad(avrgTputPerc?.fmtValue("%.5f")) }
                 flags.ifSet(CURR_PWR_USE) { appendPad(currPwrUse.fmtValue("%.5f")) }
                 flags.ifSet(AVRG_PWR_USE) { appendPad(avrgPwrUseOverTime.fmtValue("%.5f")) }
                 flags.ifSet(EN_CONSUMED) { appendPad(totEnConsumed.fmtValue("%.5f")) }
@@ -108,7 +113,7 @@ public class NetworkSnapshot private constructor(
         buildString {
             append("| ")
             flags.ifSet(INSTANT) { appendPad("instant", pad = 30) }
-            flags.ifSet(NODES) { appendPad("nodesById") }
+            flags.ifSet(NODES) { appendPad("nodes") }
             flags.ifSet(HOST_NODES) { appendPad("hosts (assigned)") }
             flags.ifSet(CORE_SWITCHES) { appendPad("core switches") }
             flags.ifSet(FLOWS) { appendPad("active flows") }
@@ -194,7 +199,11 @@ public class NetworkSnapshot private constructor(
         public val ALL_NO_HDR: Flags<NetworkSnapshot> = Flags.all<NetworkSnapshot>() - HDR
 
         public fun NetworkController.snapshot(): NetworkSnapshot {
-            val network = this.network
+            val network: Network = this.network
+            val flows: Collection<NetFlow> = network.flowsById.values
+            val activeFlows: Collection<NetFlow> = flows.filterNot { it.demand.isZero() }
+            val totDemand: DataRate = flows.sumOfUnit { it.demand }
+            val totThroughput: DataRate = flows.sumOfUnit { it.throughput }
 
             runBlocking { network.awaitStability() }
 
@@ -204,12 +213,16 @@ public class NetworkSnapshot private constructor(
                 numHostNodes = network.getNodesById<HostNode>().size,
                 claimedHostNodes = claimedHostIds.size,
                 numCoreSwitches = network.getNodesById<CoreSwitch>().size,
-                numActiveFlows = network.flowsById.values.filterNot { it.demand.isZero() }.size,
-                totTput = DataRate.ofKbps(network.flowsById.values.sumOf { it.throughput.toKbps() }),
-                totTputPerc = network.flowsById.values.let { fs -> fs.sumOf { it.throughput.toKbps() } / fs.sumOf { it.demand.toKbps() } },
-                avrgTputPerc =
-                    network.flowsById.values.filterNot { it.demand.isZero() }
-                        .let { fs -> fs.sumOf { (it.throughput / it.demand) ifNaN .0 } / fs.size },
+                numActiveFlows = activeFlows.size,
+                totTput = totThroughput,
+                totTputPerc = if (flows.isEmpty()) null else totThroughput roundedPercentageOf  totDemand,
+                avrgTputPerc = let {
+                    if (activeFlows.isEmpty()) {
+                        null
+                    } else {
+                        activeFlows.sumOfUnit { it.throughput roundedPercentageOf  it.demand } / activeFlows.size
+                    }
+                },
                 currPwrUse = energyRecorder.currPwrUsage,
                 avrgPwrUseOverTime = energyRecorder.avrgPwrUsage,
                 totEnConsumed = energyRecorder.totalConsumption,

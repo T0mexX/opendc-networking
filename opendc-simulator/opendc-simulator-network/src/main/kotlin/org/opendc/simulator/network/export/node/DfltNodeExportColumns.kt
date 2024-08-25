@@ -77,17 +77,17 @@ public object DfltNodeExportColumns {
     public val MIN_F_TPUT: ExportColumn<NodeSnapshot> =
         ExportColumn(
             field = Types.optional(DOUBLE).named("min_flow_throughput_ratio"),
-        ) { it.currMinFlowTputPerc }
+        ) { it.currMinFlowTputPerc?.toRatio() }
 
     public val MAX_F_TPUT: ExportColumn<NodeSnapshot> =
         ExportColumn(
             field = Types.optional(DOUBLE).named("max_flow_throughput_ratio"),
-        ) { it.currMaxFlowTputPerc }
+        ) { it.currMaxFlowTputPerc?.toRatio() }
 
     public val AVRG_F_TPUT: ExportColumn<NodeSnapshot> =
         ExportColumn(
             field = Types.optional(DOUBLE).named("avg_flow_throughput_ratio"),
-        ) { it.currAvrgFlowTputPerc }
+        ) { it.currAvrgFlowTputPerc?.toRatio() }
 
     public val TPUT: ExportColumn<NodeSnapshot> =
         ExportColumn(
@@ -97,7 +97,7 @@ public object DfltNodeExportColumns {
     public val TPUT_PERC: ExportColumn<NodeSnapshot> =
         ExportColumn(
             field = Types.optional(DOUBLE).named("node_throughput_ratio"),
-        ) { it.currNodeTputPercAllFlows }
+        ) { it.currNodeTputPercAllFlows?.toRatio() }
 
     public val CURR_PWR_USE: ExportColumn<NodeSnapshot> =
         ExportColumn(

@@ -77,12 +77,12 @@ public object DfltNetworkExportColumns {
     public val AVRG_TPUT_PERC: ExportColumn<NetworkSnapshot> =
         ExportColumn(
             field = Types.optional(DOUBLE).named("avg_tput_ratio"),
-        ) { it.avrgTputPerc }
+        ) { it.avrgTputPerc?.toRatio() }
 
     public val TOT_TPUT_PERC: ExportColumn<NetworkSnapshot> =
         ExportColumn(
             field = Types.optional(DOUBLE).named("tot_tput_ratio"),
-        ) { it.totTputPerc }
+        ) { it.totTputPerc?.toRatio() }
 
     public val CURR_PWR_USE: ExportColumn<NetworkSnapshot> =
         ExportColumn(

@@ -25,7 +25,10 @@ package org.opendc.simulator.network.api.snapshots
 import kotlinx.coroutines.runBlocking
 import org.opendc.common.units.DataRate
 import org.opendc.common.units.Energy
+import org.opendc.common.units.Percentage
+import org.opendc.common.units.Percentage.Companion.percentageOf
 import org.opendc.common.units.Power
+import org.opendc.common.units.Unit.Companion.sumOfUnit
 import org.opendc.common.utils.roundToIfWithinEpsilon
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.api.NodeId
@@ -69,15 +72,15 @@ public class NodeSnapshot internal constructor(
     public val numOutgoingFlows: Int,
     public val numGeneratingFlows: Int,
     public val numConsumedFlows: Int,
-    public val currMinFlowTputPerc: Double?,
-    public val currMaxFlowTputPerc: Double?,
-    public val currAvrgFlowTputPerc: Double,
-    public val currNodePortUsageAllPorts: Double,
+    public val currMinFlowTputPerc: Percentage?,
+    public val currMaxFlowTputPerc: Percentage?,
+    public val currAvrgFlowTputPerc: Percentage?,
+    public val currNodePortUsageAllPorts: Percentage,
     public val avrgPwrUseOverTime: Power,
     public val currPwrUse: Power,
     public val totEnConsumed: Energy,
     public val currNodeTputAllFlows: DataRate,
-    public val currNodeTputPercAllFlows: Double,
+    public val currNodeTputPercAllFlows: Percentage?,
 ) : Snapshot<NodeSnapshot>(), Exportable {
     override val dfltColWidth: Int = 27
 
@@ -100,13 +103,13 @@ public class NodeSnapshot internal constructor(
                 flags.ifSet(NUM_FLOWS_OUT) { appendPad(numOutgoingFlows) }
                 flags.ifSet(NUM_GEN_FLOWS) { appendPad(numGeneratingFlows) }
                 flags.ifSet(NUM_CONS_FLOWS) { appendPad(numConsumedFlows) }
-                flags.ifSet(MIN_TPUT_PERC) { appendPad(currMinFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
-                flags.ifSet(MAX_TPUT_PERC) { appendPad(currMaxFlowTputPerc?.ratioToPerc("%.2f") ?: "NA") }
-                flags.ifSet(AVRG_TPUT_PERC) { appendPad(if (numOutgoingFlows == 0) "NA" else currAvrgFlowTputPerc.ratioToPerc("%.2f")) }
+                flags.ifSet(MIN_TPUT_PERC) { appendPad(currMinFlowTputPerc?.fmtValue("%.2f")) }
+                flags.ifSet(MAX_TPUT_PERC) { appendPad(currMaxFlowTputPerc?.fmtValue("%.2f")) }
+                flags.ifSet(AVRG_TPUT_PERC) { appendPad(currAvrgFlowTputPerc?.fmtValue("%.2f")) }
                 flags.ifSet(
                     TOT_NODE_THROUGHPUT,
-                ) { appendPad("${currNodeTputAllFlows.fmtValue("%.5f")} (${currNodeTputPercAllFlows.ratioToPerc("%.1f")})") }
-                flags.ifSet(TOT_NODE_PORT_USAGE) { appendPad(currNodePortUsageAllPorts.ratioToPerc("%.5f")) }
+                ) { appendPad("${currNodeTputAllFlows.fmtValue("%.5f")} (${currNodeTputPercAllFlows?.fmtValue("%.1f") ?: "N/A"})") }
+                flags.ifSet(TOT_NODE_PORT_USAGE) { appendPad(currNodePortUsageAllPorts.fmtValue("%.5f")) }
                 flags.ifSet(CURR_PWR_USE) { appendPad(currPwrUse.fmtValue("%.5f")) }
                 flags.ifSet(AVRG_PWR_USE) { appendPad(avrgPwrUseOverTime.fmtValue("%.5f")) }
                 flags.ifSet(EN_CONSUMED) { appendPad(totEnConsumed.fmtValue("%.5f")) }
@@ -243,15 +246,15 @@ public class NodeSnapshot internal constructor(
                 numOutgoingFlows = fh.outgoingFlows.size,
                 numGeneratingFlows = fh.generatingFlows.size,
                 numConsumedFlows = fh.consumingFlows.size,
-                currMinFlowTputPerc = flows.getOrNull(0)?.tPutPerc(),
-                currMaxFlowTputPerc = flows.lastOrNull()?.tPutPerc(),
-                currAvrgFlowTputPerc = flows.sumOf { it.tPutPerc() } / flows.size,
-                currNodeTputPercAllFlows = flows.sumOf { it.totRateOut.toKbps() } / flows.sumOf { it.demand.toKbps() },
+                currMinFlowTputPerc = flows.firstOrNull()?.let { it.totRateOut roundedPercentageOf it.demand },
+                currMaxFlowTputPerc = flows.lastOrNull()?.let { it.totRateOut roundedPercentageOf it.demand },
+                currAvrgFlowTputPerc = if (flows.isEmpty()) null else flows.sumOfUnit { it.totRateOut roundedPercentageOf  it.demand } / flows.size,
+                currNodeTputPercAllFlows = if (flows.isEmpty()) null else flows.sumOf { it.totRateOut.toKbps() } roundedPercentageOf  flows.sumOf { it.demand.toKbps() },
                 currPwrUse = (this as? EnergyConsumer<*>)?.enMonitor?.currPwrUsage ?: Power.ZERO,
                 avrgPwrUseOverTime = (this as? EnergyConsumer<*>)?.enMonitor?.avrgPwrUsage ?: Power.ZERO,
                 totEnConsumed = (this as? EnergyConsumer<*>)?.enMonitor?.totEnConsumpt ?: Energy.ZERO,
                 currNodeTputAllFlows = totNodeTput,
-                currNodePortUsageAllPorts = totNodeTput / DataRate.ofKbps(ports.sumOf { it.maxSpeed.toKbps() }),
+                currNodePortUsageAllPorts = totNodeTput roundedPercentageOf  ports.sumOfUnit { it.maxSpeed }
             )
         }
 

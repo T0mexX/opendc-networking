@@ -22,6 +22,10 @@
 
 package org.opendc.simulator.network.api.snapshots
 
+import org.opendc.common.units.Percentage
+import org.opendc.common.units.Percentage.Companion.ofRatio
+import org.opendc.common.units.Percentage.Companion.percentageOf
+import org.opendc.common.units.Unit
 import org.opendc.simulator.network.utils.Flags
 
 public abstract class Snapshot<T> {
@@ -35,7 +39,9 @@ public abstract class Snapshot<T> {
         obj: Any?,
         pad: Int = dfltColWidth,
     ) {
-        append(obj.toString().padEnd(pad))
+        obj?.let {
+            append(obj.toString().padEnd(pad))
+        } ?: append("N/A".padEnd(pad))
     }
 
     protected fun StringBuilder.appendPad(
@@ -43,5 +49,19 @@ public abstract class Snapshot<T> {
         pad: Int = dfltColWidth,
     ) {
         append(str.padEnd(pad))
+    }
+
+    protected companion object {
+        @JvmStatic
+        protected infix fun Number.roundedPercentageOf(other: Number): Percentage =
+            (this percentageOf other)
+                .roundToIfWithinEpsilon(to = ofRatio(1.0))
+                .roundToIfWithinEpsilon(to = ofRatio(.0))
+
+        @JvmStatic
+        protected infix fun <T : Unit<T>> T.roundedPercentageOf(other: T): Percentage =
+            (this percentageOf other)
+                .roundToIfWithinEpsilon(to = ofRatio(1.0))
+                .roundToIfWithinEpsilon(to = ofRatio(.0))
     }
 }

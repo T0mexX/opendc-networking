@@ -36,6 +36,8 @@ import me.tongfei.progressbar.ProgressBarStyle
 import org.opendc.common.logger.infoNewLine
 import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.export.NetworkExportConfig
@@ -111,6 +113,8 @@ public data class NetworkScenario(
                         // included (with all events with that deadline).
                         pb.stepBy(execUntil(nextWlDeadline))
                         network.awaitStability()
+//                        LOG.infoNewLine(snapshot().fmt())
+//                        network.nodesById.values.forEach { LOG.infoNewLine(it.snapshot(currentInstant).fmt()) }
                     }
                 }
 
