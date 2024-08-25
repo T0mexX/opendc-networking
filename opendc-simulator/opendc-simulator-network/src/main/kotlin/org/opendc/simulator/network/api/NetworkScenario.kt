@@ -152,6 +152,7 @@ public data class NetworkScenario(
                         // included (with all events with that deadline).
                         pb.stepBy(execUntil(nextDeadline))
                         network.awaitStability()
+//                        LOG.infoNewLine(this@execWl.snapshot().fmt())
 
                         exportIfNeeded()
                     }

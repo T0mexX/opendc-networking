@@ -183,7 +183,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
 
             // if this node is the destination
             _consumingFlows[fId]?.let {
-                it.throughput = (it.throughput + deltaRate).roundToIfWithinEpsilon(DataRate.ZERO)
+                it.throughput += deltaRate
                 return@forEach
             }
 
