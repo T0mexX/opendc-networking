@@ -23,6 +23,6 @@
 package org.opendc.experiments.tf20.network
 
 /**
- * A node represents a machine with which other nodes can communicate.
+ * A node represents a machine with which other nodesById can communicate.
  */
 public data class NetworkNode(val hostname: String)

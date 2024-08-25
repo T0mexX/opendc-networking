@@ -53,7 +53,7 @@ public abstract class TrainableModel(vararg layers: Layer) : AutoCloseable {
     protected val layersByName: MutableMap<String, Layer> = mutableMapOf()
 
     /**
-     * A flag to indicate that the model is compiled.
+     * A flags to indicate that the model is compiled.
      */
     public var isCompiled: Boolean = false
         private set

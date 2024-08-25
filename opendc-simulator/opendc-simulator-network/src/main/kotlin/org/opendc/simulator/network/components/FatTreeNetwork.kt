@@ -1,36 +1,52 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.components
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.utils.NonSerializable
-import kotlin.math.pow
-import org.opendc.simulator.network.components.Switch.SwitchSpecs
 import org.opendc.simulator.network.components.HostNode.HostNodeSpecs
+import org.opendc.simulator.network.components.Switch.SwitchSpecs
 import org.opendc.simulator.network.utils.logger
-import java.io.File
 import kotlin.math.min
+import kotlin.math.pow
 
 /**
  * Fat-tree network topology built based on the number of ports of the [SwitchSpecs] passed as parameter.
  * The number of ports is usually referred as ***k*** and should be a multiple of 2 and larger than 2.
  */
-@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
-@Serializable(with = NonSerializable::class)
 internal class FatTreeNetwork(
-    coreSpecs: SwitchSpecs,
-    aggrSpecs: SwitchSpecs,
-    torSpecs: SwitchSpecs,
-    hostNodeSpecs: HostNodeSpecs
-): Network() {
-
-    constructor(allSwitchSpecs: SwitchSpecs, hostNodeSpecs: HostNodeSpecs):
+    private val coreSpecs: SwitchSpecs,
+    private val aggrSpecs: SwitchSpecs,
+    private val torSpecs: SwitchSpecs,
+    private val hostNodeSpecs: HostNodeSpecs,
+) : Network() {
+    constructor(allSwitchSpecs: SwitchSpecs, hostNodeSpecs: HostNodeSpecs) :
         this(allSwitchSpecs, allSwitchSpecs, allSwitchSpecs, hostNodeSpecs)
 
-    override val nodes: Map<NodeId, Node>
+    override val nodesById: Map<NodeId, Node>
     override val endPointNodes: Map<NodeId, EndPointNode>
-
 
     /**
      * Parameter that determines the topology which is defined as
@@ -39,7 +55,6 @@ internal class FatTreeNetwork(
      * This value has to be even and larger than 2.
      */
     private val k: Int = minOf(coreSpecs.numOfPorts, aggrSpecs.numOfPorts, torSpecs.numOfPorts) / 2 * 2
-
 
     /**
      * The [FatTreePod]s that belong to ***this*** [FatTreeNetwork].
@@ -72,15 +87,15 @@ internal class FatTreeNetwork(
         require(k.isEven() && k > 2) { "Fat tree can only be built with even-port-number (>2) switches" }
 
         // to connect to abstract node "internet"
-        @Suppress("NAME_SHADOWING")
         val coreSpecs = coreSpecs.copy(numOfPorts = coreSpecs.numOfPorts + 1)
 
         log.info("building fat-tree with k=$k")
         pods = buildList { repeat(k) { add(FatTreePod(aggrSpecs, torSpecs, hostNodeSpecs)) } }
 
-        val coreSwitchesChunked = buildList {
-            repeat(k * k / 4) { add(coreSpecs.buildCoreSwitchFromSpecs()) }
-        }.chunked(k / 2)
+        val coreSwitchesChunked =
+            buildList {
+                repeat(k * k / 4) { add(coreSpecs.buildCoreSwitchFromSpecs()) }
+            }.chunked(k / 2)
 
         pods.forEach { pod ->
             pod.aggrSwitches.forEachIndexed { switchIdx, switch ->
@@ -98,16 +113,25 @@ internal class FatTreeNetwork(
 
         internet = Internet().connectedTo(coreSwitches)
 
-        nodes = buildMap {
-            putAll((leafs + torSwitches + aggregationSwitches + coreSwitches).associateBy { it.id })
-            check(internet.id !in this)
-            { "unable to create network: one node has id $INTERNET_ID, which is reserved for internet abstraction" }
-            put(internet.id, internet)
-        }
+        nodesById =
+            buildMap {
+                putAll((leafs + torSwitches + aggregationSwitches + coreSwitches).associateBy { it.id })
+                check(
+                    internet.id !in this,
+                ) { "unable to create network: one node has id $INTERNET_ID, which is reserved for internet abstraction" }
+                put(internet.id, internet)
+            }
 
         endPointNodes = (coreSwitches + leafs + internet).associateBy { it.id }
     }
 
+    override fun toSpecs(): Specs<FatTreeNetwork> =
+        FatTreeTopologySpecs(
+            coreSwitchSpecs = coreSpecs,
+            aggrSwitchSpecs = aggrSpecs,
+            torSwitchSpecs = torSpecs,
+            hostNodeSpecs = hostNodeSpecs,
+        )
 
     /**
      * A pod that belongs tot the enclosing [FatTreeNetwork] instance.
@@ -117,7 +141,7 @@ internal class FatTreeNetwork(
     inner class FatTreePod(
         aggrSpecs: SwitchSpecs,
         torSpecs: SwitchSpecs,
-        hostNodeSpecs: HostNodeSpecs
+        hostNodeSpecs: HostNodeSpecs,
     ) {
         /**
          * [HostNode]s that belong to ***this*** pod.
@@ -134,39 +158,35 @@ internal class FatTreeNetwork(
          */
         val aggrSwitches: List<Switch>
 
-
         init {
             val k: Int = min(aggrSpecs.numOfPorts, torSpecs.numOfPorts)
-            hostNodes = buildList {
-                repeat( (k / 2).toDouble().pow(2.0).toInt() ) { add(hostNodeSpecs.build()) }
-            }
+            hostNodes =
+                buildList {
+                    repeat((k / 2).toDouble().pow(2.0).toInt()) { add(hostNodeSpecs.build()) }
+                }
 
-            torSwitches = buildList {
-                    repeat (k / 2) { add(torSpecs.build()) }
+            torSwitches =
+                buildList {
+                    repeat(k / 2) { add(torSpecs.build()) }
                 }
 
             hostNodes.forEachIndexed { index, server ->
-                runBlocking { server.connect( torSwitches[index / (k / 2)] ) }
+                runBlocking { server.connect(torSwitches[index / (k / 2)]) }
             }
 
-            aggrSwitches = torSwitches
-                .map { _ ->
-                    val newSwitch = aggrSpecs.build()
-                    torSwitches.forEach { runBlocking { newSwitch.connect(it) } }
-                    newSwitch
-                }.toList()
+            aggrSwitches =
+                torSwitches
+                    .map { _ ->
+                        val newSwitch = aggrSpecs.build()
+                        torSwitches.forEach { runBlocking { newSwitch.connect(it) } }
+                        newSwitch
+                    }.toList()
         }
     }
 
     companion object {
         private val log by logger()
-
-        internal fun fromFile(file: File) =
-            Specs.fromFile<FatTreeNetwork>(file).build()
     }
-
-
-
 
     @Serializable
     @SerialName("fat-tree-specs")
@@ -177,23 +197,25 @@ internal class FatTreeNetwork(
         val aggrSwitchSpecs: SwitchSpecs? = null,
         val torSwitchSpecs: SwitchSpecs? = null,
         val hostNodeSpecs: HostNodeSpecs,
-    ): Specs<FatTreeNetwork> {
+    ) : Specs<FatTreeNetwork> {
         /**
          * Returns a [FatTreeNetwork] if the specs are valid, throws error otherwise.
          */
         override fun build(): FatTreeNetwork {
-            val error by lazy { IllegalArgumentException("Unable to build Fat-Tree from specs. " +
-                "Either define all layers specs or provide a general switch specs") }
+            val error by lazy {
+                IllegalArgumentException(
+                    "Unable to build Fat-Tree from specs. " +
+                        "Either define all layers specs or provide a general switch specs",
+                )
+            }
             return FatTreeNetwork(
                 coreSpecs = coreSwitchSpecs ?: run { switchSpecs ?: throw error },
                 aggrSpecs = aggrSwitchSpecs ?: run { switchSpecs ?: throw error },
                 torSpecs = torSwitchSpecs ?: run { switchSpecs ?: throw error },
-                hostNodeSpecs = hostNodeSpecs
+                hostNodeSpecs = hostNodeSpecs,
             )
         }
     }
 }
 
 private fun Int.isEven(): Boolean = this % 2 == 0
-
-

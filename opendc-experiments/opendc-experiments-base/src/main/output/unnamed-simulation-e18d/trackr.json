@@ -1,0 +1,10 @@
+[{
+    "name": "unnamed-simulation-e18d",
+    "topology": {
+        "pathToFile": "resources/env/single.json"
+    },
+    "workload": {
+        "pathToFile": "resources/bitbrains-small",
+        "type": "ComputeWorkload"
+    }
+}]

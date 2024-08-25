@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.api
 
 import kotlinx.coroutines.delay
@@ -8,29 +30,24 @@ import kotlinx.serialization.json.decodeFromStream
 import me.tongfei.progressbar.ProgressBar
 import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
+import org.opendc.common.units.DataRate
+import org.opendc.common.units.Time
+import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
 import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snapshot
-import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.CoreSwitch
+import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
-import org.opendc.simulator.network.components.Specs
-import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
-import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot.Companion.snapshot
-import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
-import org.opendc.simulator.network.components.EndPointNode
-import org.opendc.simulator.network.components.INTERNET_ID
+import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.components.Switch
-import org.opendc.simulator.network.export.Exporter
-import org.opendc.simulator.network.export.network.ALL_NET_FIELDS
-import org.opendc.simulator.network.export.node.ALL_NODE_FIELDS
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.units.Time
+import org.opendc.simulator.network.components.Specs
+import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.errAndNull
+import org.opendc.simulator.network.utils.infoNewLn
+import org.opendc.simulator.network.utils.logger
 import org.slf4j.Logger
 import java.io.File
 import java.time.Duration
@@ -52,7 +69,7 @@ import java.util.UUID
 public class NetworkController(
     internal val network: Network,
     instantSource: InstantSource? = null,
-): AutoCloseable {
+) : AutoCloseable {
     public companion object {
         public val log: Logger by logger()
 
@@ -63,8 +80,11 @@ public class NetworkController(
          * @throws[NoSuchFileException]
          */
         @ExperimentalSerializationApi
-        public fun fromFile(file: File, instantSource: InstantSource? = null): NetworkController {
-            val jsonReader = Json() { ignoreUnknownKeys = true }
+        public fun fromFile(
+            file: File,
+            instantSource: InstantSource? = null,
+        ): NetworkController {
+            val jsonReader = Json { ignoreUnknownKeys = true }
             val netSpec = jsonReader.decodeFromStream<Specs<Network>>(file.inputStream())
             return NetworkController(netSpec.build(), instantSource)
         }
@@ -73,8 +93,10 @@ public class NetworkController(
          * @see[fromFile]
          */
         @OptIn(ExperimentalSerializationApi::class)
-        public fun fromPath(path: String, instantSource: InstantSource? = null): NetworkController =
-            fromFile(File(path), instantSource)
+        public fun fromPath(
+            path: String,
+            instantSource: InstantSource? = null,
+        ): NetworkController = fromFile(File(path), instantSource)
     }
 
     /**
@@ -123,14 +145,14 @@ public class NetworkController(
         instantSource?.let { lastUpdate = it.instant() }
 
         network.launch()
-        log.info(network.nodesFmt())
+        log.info(network.fmtNodes())
     }
 
     /**
-     * @see[NetworkEnergyRecorder]
+     * @see[NetEnRecorder]
      */
-    public val energyRecorder: NetworkEnergyRecorder =
-        NetworkEnergyRecorder(network)
+    public val energyRecorder: NetEnRecorder =
+        NetEnRecorder(network)
 
     /**
      * The 'network interface' of the INTERNET abstract node.
@@ -153,7 +175,7 @@ public class NetworkController(
      * - If the host knows which physical node to claim it can invoke [claimNode].
      * - If the host does not know/care which physical node to claim it can invoke [claimNextHostNode].
      */
-    internal val claimedHostIds: Set<NodeId> get() = _claimedHostIds
+    public val claimedHostIds: Set<NodeId> get() = _claimedHostIds
     private val _claimedHostIds = mutableSetOf<NodeId>()
 
     /**
@@ -164,7 +186,7 @@ public class NetworkController(
     /**
      * See [claimedHostIds] for an explanation of the *claiming process*.
      *
-     * @return  the network interface of an unclaimed [HostNode] if exists, `null` otherwise.
+     * @return the network interface of an unclaimed [HostNode] if exists, `null` otherwise.
      */
     public fun claimNextHostNode(): NetworkInterface? {
         val hostsById = network.getNodesById<HostNode>()
@@ -180,7 +202,7 @@ public class NetworkController(
     /**
      * See [claimedHostIds] for an explanation of the *claiming process*.
      *
-     * @return  the network interface of an unclaimed [CoreSwitch] if exists, `null` otherwise.
+     * @return the network interface of an unclaimed [CoreSwitch] if exists, `null` otherwise.
      */
     public fun claimNextCoreNode(): NetworkInterface? {
         val coreSwitches = network.getNodesById<CoreSwitch>()
@@ -199,9 +221,13 @@ public class NetworkController(
      *
      * Used only when a [SimNetWorkload] is executed with virtual mapping (see [execWorkload]).
      */
-    internal fun virtualMap(from: NodeId, to: NodeId) {
-        if (from in virtualMapping)
+    internal fun virtualMap(
+        from: NodeId,
+        to: NodeId,
+    ) {
+        if (from in virtualMapping) {
             log.warn("overriding mapping of virtual node id $from")
+        }
 
         virtualMapping[from] = to
     }
@@ -209,17 +235,17 @@ public class NetworkController(
     /**
      * Invokes [claimNode] with [UUID.node] value as [NodeId].
      */
-    public fun claimNode(uuid: UUID): NetworkInterface? =
-        claimNode(uuid.node())
+    public fun claimNode(uuid: UUID): NetworkInterface? = claimNode(uuid.node())
 
     /**
-     * @return  the network interface of [Node] with id [nodeId] if it
+     * @return the network interface of [Node] with id [nodeId] if it
      * exists (can start/receive flows) and it is yet unclaimed, `null` otherwise.
      */
     public fun claimNode(nodeId: NodeId): NetworkInterface? {
         // Check that node is not already claimed.
-        if (nodeId in _claimedHostIds || nodeId in claimedCoreSwitchIds)
+        if (nodeId in _claimedHostIds || nodeId in claimedCoreSwitchIds) {
             return log.errAndNull("unable to claim node nodeId $nodeId, nodeId already claimed")
+        }
 
         // If node is host.
         network.getNodesById<HostNode>()[nodeId]
@@ -236,8 +262,10 @@ public class NetworkController(
             }
 
         // else
-        return log.errAndNull("unable to claim node nodeId $nodeId, " +
-            "nodeId not existent or not associated to a core switch or a host node")
+        return log.errAndNull(
+            "unable to claim node nodeId $nodeId, " +
+                "nodeId not existent or not associated to a core switch or a host node",
+        )
     }
 
     /**
@@ -250,19 +278,20 @@ public class NetworkController(
      * @param[throughputOnChangeHandler]    a lambda to be invoked whenever the throughput of the flow changes, with the
      * flow itself as first param, the old value as second and the new value as third.
      *
-     * @return  the newly started flow if it was started successfully, `null` otherwise.
+     * @return the newly started flow if it was started successfully, `null` otherwise.
      */
     public suspend fun startFlow(
         transmitterId: NodeId,
-        destinationId: NodeId = internetNetworkInterface.nodeId, // TODO: understand how multiple core switches work
+        destinationId: NodeId = internetNetworkInterface.nodeId,
         demand: DataRate = DataRate.ZERO,
         name: String = NetFlow.DEFAULT_NAME,
         throughputOnChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null,
     ): NetFlow? {
-        val mappedTransmitterId: NodeId =   mappedOrSelf(transmitterId)
+        val mappedTransmitterId: NodeId = mappedOrSelf(transmitterId)
         val mappedDestId: NodeId = mappedOrSelf(destinationId)
 
-        val netFlow = NetFlow(
+        val netFlow =
+            NetFlow(
                 transmitterId = mappedTransmitterId,
                 destinationId = mappedDestId,
                 name = name,
@@ -279,20 +308,29 @@ public class NetworkController(
     /**
      * Starts [netFlow] if it can be started.
      *
-     * @return  the flow itself if it has been started successfully, `null` otherwise.
+     * @return the flow itself if it has been started successfully, `null` otherwise.
      */
     private suspend fun startFlow(netFlow: NetFlow): NetFlow? {
-        if (netFlow.transmitterId !in network.endPointNodes)
-            return log.errAndNull("unable to start network flow from node ${netFlow.transmitterId}, " +
-                "node does not exist or is not an end-point node")
+        if (netFlow.transmitterId !in network.endPointNodes) {
+            return log.errAndNull(
+                "unable to start network flow from node ${netFlow.transmitterId}, " +
+                    "node does not exist or is not an end-point node",
+            )
+        }
 
-        if (netFlow.destinationId !in network.endPointNodes)
-            return log.errAndNull("unable to start network flow directed to node ${netFlow.destinationId}, " +
-                "node does not exist or it is not an end-point-node")
+        if (netFlow.destinationId !in network.endPointNodes) {
+            return log.errAndNull(
+                "unable to start network flow directed to node ${netFlow.destinationId}, " +
+                    "node does not exist or it is not an end-point-node",
+            )
+        }
 
-        if (netFlow.id in network.flowsById.keys)
-            return log.errAndNull("unable to start network flow with flow id ${netFlow.id}, " +
-                "a flow that id already exists")
+        if (netFlow.id in network.flowsById.keys) {
+            return log.errAndNull(
+                "unable to start network flow with flow id ${netFlow.id}, " +
+                    "a flow that id already exists",
+            )
+        }
 
         network.startFlow(netFlow)
 
@@ -301,13 +339,13 @@ public class NetworkController(
 
     /**
      * **The usage if this method assumes there can only
-     * be 1 flow between 2 nodes (1 per direction).**
+     * be 1 flow between 2 nodesById (1 per direction).**
      *
      * - If a [NetFlow] with transmitter [transmitterId] and destination
      * [destinationId] already exists in the network then it is updated with the new demand [demand].
      * - If no [NetFlow] with this "signature" exists (and it can be started), then it is started (see [startFlow]).
      *
-     * @return  the [NetFlow] (update/created) if its update/creation was successful,
+     * @return the [NetFlow] (update/created) if its update/creation was successful,
      * `null` if the flow was not in the network, and it could not be started.
      */
     public suspend fun startOrUpdateFlow(
@@ -321,16 +359,16 @@ public class NetworkController(
 
         return network.flowsById.values.find {
             it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
-        } ?. let {
+        }?. let {
             it.setDemand(demand)
             if (dataRateOnChangeHandler != null) it.withThroughputOnChangeHandler(dataRateOnChangeHandler)
 
             it
         } ?: startFlow(
-                transmitterId = transmitterId,
-                destinationId = destinationId,
-                demand = demand,
-                throughputOnChangeHandler = dataRateOnChangeHandler
+            transmitterId = transmitterId,
+            destinationId = destinationId,
+            demand = demand,
+            throughputOnChangeHandler = dataRateOnChangeHandler,
         )
     }
 
@@ -339,18 +377,19 @@ public class NetworkController(
      *
      * @return the [NetFlow] that was terminated if any, `null` otherwise.
      */
-    public suspend fun stopFlow(flowId: FlowId): NetFlow? =
-        network.stopFlow(flowId)
+    public suspend fun stopFlow(flowId: FlowId): NetFlow? = network.stopFlow(flowId)
 
     /**
-     * @return      the network interface of node with id [nodeId] if it exists,
+     * @return the network interface of node with id [nodeId] if it exists,
      * independently of the fact that it was already claimed or not (used internally), `null` otherwise.
      */
     private fun getNetInterfaceOf(nodeId: NodeId): NetworkInterface? =
         network.endPointNodes[nodeId]?.let {
             NetworkInterface(node = it, netController = this, owner = "physical node $nodeId")
-        } ?: log.errAndNull("unable to retrieve network interface, " +
-                "node does not exist or does not provide an interface")
+        } ?: log.errAndNull(
+            "unable to retrieve network interface, " +
+                "node does not exist or does not provide an interface",
+        )
 
     /**
      * If the network time source is external (see [instantSrc]), the network time is advanced to sync with the source.
@@ -363,16 +402,21 @@ public class NetworkController(
      * has a throughput higher than its demand.
      */
     @JvmOverloads
-    public fun sync(logSnapshot: Boolean = false, consistencyCheck: Boolean = true) {
+    public fun sync(
+        logSnapshot: Boolean = false,
+        consistencyCheck: Boolean = false,
+    ) {
         if (instantSrc.isExternalSource) {
             runBlocking { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
-            if (logSnapshot) log.info("\n" + snapshot().fmt(NetworkSnapshot.EN_CONSUMED))
+            if (logSnapshot) log.infoNewLn(snapshot().fmt())
 
-            val timeSpan = Time.ofMillis(instantSrc.millis()- lastUpdate.toEpochMilli())
+            val timeSpan = Time.ofMillis(instantSrc.millis() - lastUpdate.toEpochMilli())
             if (timeSpan == Time.ZERO) return
             runBlocking { advanceBy(timeSpan, suppressWarn = true) }
-        } else log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
+        } else {
+            log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
+        }
     }
 
     /**
@@ -385,17 +429,26 @@ public class NetworkController(
     /**
      * Advances the network time by [time] milliseconds, updating network related statistics.
      */
-    public suspend fun advanceBy(time: Time) { advanceBy(time, suppressWarn = false) }
-    private suspend fun advanceBy(time: Time, suppressWarn: Boolean) {
+    public suspend fun advanceBy(time: Time) {
+        advanceBy(time, suppressWarn = false)
+    }
+
+    private suspend fun advanceBy(
+        time: Time,
+        suppressWarn: Boolean,
+    ) {
         if (time < Time.ZERO) return log.error("advanceBy received negative time-span parameter($time), ignoring...")
         if (time == Time.ZERO) return
         network.awaitStability()
 
-        if (instantSrc.isInternalSource)
+        if (instantSrc.isInternalSource) {
             instantSrc.advanceTime(time)
-        else  if (!suppressWarn)
-            log.warn("advancing time directly while instant source is set, this can cause ambiguity. " +
-                "You can synchronize the network with the instant source with 'sync()'")
+        } else if (!suppressWarn) {
+            log.warn(
+                "advancing time directly while instant source is set, this can cause ambiguity. " +
+                    "You can synchronize the network with the instant source with 'sync()'",
+            )
+        }
 
         network.advanceBy(time)
         energyRecorder.advanceBy(time)
@@ -403,83 +456,9 @@ public class NetworkController(
     }
 
     /**
-     * Executes a [SimNetWorkload] on this network.
-     *
-     * **External time source is overwritten with an internal one**.
-     *
-     * @param[netWorkload]          the workload to be executed.
-     * @param[reset]                if `true`, the network state is reset and
-     * its internal time source is set to the start of the workload.
-     * @param[withVirtualMapping]   if `true`, it performs virtual mapping of the
-     * workload node ids to the physical network node ids (see [virtualMapping]).
-     */
-    public fun execWorkload(
-        netWorkload: SimNetWorkload,
-        reset: Boolean = true,
-        withVirtualMapping: Boolean = true
-    ) {
-        if (netWorkload.hasNext().not()) return log.error("network workload empty")
-
-        if (instantSrc.isExternalSource) {
-            log.warn("network controller external time source will " +
-                "be replaced with an internal one to tun the workload.")
-            // If time source was external, an internal time source with same timestamp is set.
-            // This time stamp is then overwritten if `reset` is `true`.
-            instantSrc = NetworkInstantSrc(internal = Time.ofMillis(instantSrc.instant().toEpochMilli()))
-        }
-
-        if (reset) {
-            network.resetFlows()
-//            network.launch() //TODO
-            instantSrc.setInternalTime(netWorkload.peek().deadline)
-            energyRecorder.reset()
-            _claimedHostIds.clear()
-            claimedCoreSwitchIds.clear()
-            virtualMapping.clear()
-        }
-
-        if (withVirtualMapping) netWorkload.performVirtualMappingOn(this)
-
-        val netExp = Exporter(File("resources/net-test.parquet"), ALL_NET_FIELDS)
-        val nodeExp = Exporter(File("resources/node-test.parquet"), ALL_NODE_FIELDS)
-
-        runBlocking (network.validator) {
-            val pb: ProgressBar = ProgressBarBuilder()
-                .setInitialMax(netWorkload.size.toLong())
-                .setStyle(ProgressBarStyle.ASCII)
-                .setTaskName("Simulating...").build()
-
-            delay(1000)
-
-            with (netWorkload) {
-                while (hasNext()) {
-                    val nextDeadline = peek().deadline
-
-                    // Executes all network events up until `nextDeadline`
-                    // included (with all events with that deadline).
-                    pb.stepBy(execUntil(nextDeadline))
-                    network.awaitStability()
-
-//                    log.info("\n" + snapshot().fmt())
-//                    log.info("\n" + networkSwitch.getNodesById<Switch>().values.first()!!.snapshot(currentInstant).fmt())
-                    log.info("\n" + getNetInterfaceOf(network.endPointNodes.values.first()!!.id)?.snapshot()?.fmt())
-                    netExp.write(snapshot())
-                    network.getNodesById<Switch>().values.forEach { nodeExp.write(it.snapshot(currentInstant)) }
-                }
-            }
-            netExp.close()
-            nodeExp.close()
-            pb.refresh()
-            println()
-            log.info(energyRecorder.getFmtReport())
-        }
-    }
-
-    /**
      * @return the physical [NodeId] to which [id] is mapped if any, [id] otherwise.
      */
-    private fun mappedOrSelf(id: NodeId): NodeId =
-        virtualMapping[id] ?: let { id }
+    private fun mappedOrSelf(id: NodeId): NodeId = virtualMapping[id] ?: let { id }
 
     /**
      * Cancels the coroutine that runs the network.
@@ -495,9 +474,9 @@ public class NetworkController(
         network.awaitStability()
 
         network.flowsById.values.forEach {
-            check(it.demand approxLarger it.throughput || it.demand approx it.throughput)
-            {" Inconsistent state: flow ${it.id} has demand=${it.demand} and throuput=${it.throughput}"}
+            check(it.demand approxLarger it.throughput || it.demand approx it.throughput) {
+                " Inconsistent state: flow ${it.id} has demand=${it.demand} and throuput=${it.throughput}"
+            }
         }
     }
 }
-

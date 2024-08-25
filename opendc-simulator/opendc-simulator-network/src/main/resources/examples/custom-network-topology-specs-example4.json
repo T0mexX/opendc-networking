@@ -6,25 +6,25 @@
             "type": "switch-specs",
             "id": 1,
             "numOfPorts": 2,
-            "portSpeed": 1000
+            "portSpeed": "1 Mbps"
         },
         {
             "type": "switch-specs",
             "id": 2,
             "numOfPorts": 2,
-            "portSpeed": 1000
+            "portSpeed": "1 Mbps"
         },
         {
             "type": "host-node-specs",
             "id": 0,
             "numOfPorts": 2,
-            "portSpeed": 10000
+            "portSpeed": "10 Mbps"
         },
         {
             "type": "host-node-specs",
             "id": 3,
             "numOfPorts": 2,
-            "portSpeed": 10000
+            "portSpeed": "10 Mbps"
         }
     ],
     "links": [

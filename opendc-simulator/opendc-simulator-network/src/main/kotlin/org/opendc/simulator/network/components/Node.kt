@@ -1,26 +1,47 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.components
 
 import kotlinx.coroutines.yield
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.flow.FlowHandler
-import org.opendc.simulator.network.flow.RateUpdt
-import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
+import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
+import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.units.ifNullZero
-import org.opendc.simulator.network.utils.Result.*
+import org.opendc.simulator.network.utils.ifNull0
 import org.opendc.simulator.network.utils.logger
 
 /**
  * Interface representing a node in a [Network].
  */
-internal interface Node: FlowView {
-    // TODO: allow connection between nodes without immediate vector routing forwarding,
+internal interface Node : FlowView, WithSpecs<Node> {
+    // TODO: allow connection between nodesById without immediate vector routing forwarding,
     //  to optimize network building
 
     /**
@@ -41,7 +62,9 @@ internal interface Node: FlowView {
     /**
      * Number of ports of ***this*** [Node].
      */
-    val numOfPorts: Int get() { return ports.size }
+    val numOfPorts: Int get() {
+        return ports.size
+    }
 
     /**
      * Policy that determines how [Flow]s are forwarded.
@@ -67,7 +90,9 @@ internal interface Node: FlowView {
      * Property returning the number of [Node]s connected to ***this***.
      */
     private val numOfConnectedNodes: Int
-        get() { return ports.count { it.isConnected } }
+        get() {
+            return ports.count { it.isConnected }
+        }
 
     val updtChl: UpdateChl
 
@@ -96,7 +121,7 @@ internal interface Node: FlowView {
         notifyAdjNodes()
     }
 
-    suspend fun notifyAdjNodes() {
+    private suspend fun notifyAdjNodes() {
         portToNode.values.forEach { it.notifyReceiver() }
     }
 
@@ -107,21 +132,24 @@ internal interface Node: FlowView {
         updtChl.send(RateUpdt(allTransitingFlowsIds().associateWith { DataRate.ZERO })) // TODO: change
     }
 
+    override fun totIncomingDataRateOf(fId: FlowId): DataRate = flowHandler.outgoingFlows[fId]?.demand.ifNull0()
 
-    override fun totIncomingDataRateOf(fId: FlowId): DataRate =
-        flowHandler.outgoingFlows[fId]?.demand.ifNullZero()
-
-    override fun totOutgoingDataRateOf(fId: FlowId): DataRate =
-        flowHandler.outgoingFlows[fId]?.totRateOut.ifNullZero()
+    override fun totOutgoingDataRateOf(fId: FlowId): DataRate = flowHandler.outgoingFlows[fId]?.totRateOut.ifNull0()
 
     override fun allTransitingFlowsIds(): Collection<FlowId> =
         with(flowHandler) {
-            outgoingFlows.keys + consumedFlows.keys
+            outgoingFlows.keys + consumingFlows.keys
         }
 
+    fun fmt(): String =
+        """
+        | Type = ${this::class.simpleName}
+        | numPorts = $numOfPorts
+        | portSpeed = $portSpeed
+        | numConnectedNodes = $numOfConnectedNodes
+        """.trimIndent()
 
     companion object {
         private val log by logger()
     }
 }
-

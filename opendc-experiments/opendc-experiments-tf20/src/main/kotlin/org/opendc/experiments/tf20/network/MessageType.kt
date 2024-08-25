@@ -23,7 +23,7 @@
 package org.opendc.experiments.tf20.network
 
 /**
- * Enumeration of the types of messages exchanged between worker and master nodes during TensorFlow execution.
+ * Enumeration of the types of messages exchanged between worker and master nodesById during TensorFlow execution.
  */
 public enum class MessageType {
     REQUEST,

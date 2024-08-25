@@ -23,7 +23,7 @@
 package org.opendc.experiments.tf20.network
 
 /**
- * A communication message between TensorFlow worker and master nodes.
+ * A communication message between TensorFlow worker and master nodesById.
  *
  * @property from The source node.
  * @property to The destination node.

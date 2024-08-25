@@ -46,7 +46,7 @@ internal class HpcSampledComputeWorkload(
     private val logger = KotlinLogging.logger {}
 
     /**
-     * The pattern to match compute nodes in the workload.
+     * The pattern to match compute nodesById in the workload.
      */
     private val pattern = Regex("^(ComputeNode|cn).*")
 

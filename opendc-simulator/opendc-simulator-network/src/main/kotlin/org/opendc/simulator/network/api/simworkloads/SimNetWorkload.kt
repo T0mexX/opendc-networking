@@ -1,68 +1,95 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.api.simworkloads
 
-import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import org.opendc.common.units.DataRate
+import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.NetworkController
-import org.opendc.simulator.network.components.INTERNET_ID
-import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.flow.NetFlow
+import org.opendc.simulator.network.utils.NonSerializable
+import org.opendc.simulator.network.utils.isSorted
 import org.opendc.simulator.network.utils.logger
+import org.opendc.simulator.network.utils.withErr
 import org.opendc.trace.preset.BitBrains
 import org.opendc.trace.table.Table
 import org.opendc.trace.table.TableReader
 import org.opendc.trace.table.concatWithName
-import org.opendc.simulator.network.api.simworkloads.NetworkEvent.*
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.units.Time
-import org.opendc.simulator.network.utils.withErr
-import java.io.File
 import java.time.Duration
 import java.time.Instant
 import java.util.LinkedList
 import java.util.Queue
 
-public class SimNetWorkload internal constructor(
-    netEvents: List<NetworkEvent>,
-    coreIds: Collection<NodeId> = listOf(),
-    hostIds: Collection<NodeId> = listOf(),
+// TODO: implement serialization for workload
+@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
+@Serializable(NonSerializable::class)
+public data class SimNetWorkload private constructor(
+    private val sortedEvents: List<NetworkEvent>,
+    private val coreIds: Set<NodeId> = emptySet(),
+    private val hostIds: Set<NodeId> = emptySet(),
     // TODO: add end-point node category
-){
-
-    private val coreIds: Set<NodeId> = coreIds.toSet()
-    private val hostIds: Set<NodeId> = hostIds.toSet()
-
-
-
-    private val events: Queue<NetworkEvent> = LinkedList(netEvents.sorted())
-
-    public val size: Int = events.size
-
-    public val startInstant: Instant = events.peek()?.deadline?.toInstantFromEpoch()
-        ?: Instant.ofEpochMilli(0L)
-
-    public val endInstant: Instant = events.last()?.deadline?.toInstantFromEpoch()
-        ?: Instant.ofEpochMilli(0L)
-
+) {
+    internal constructor(
+        events: Collection<NetworkEvent>,
+        coreIds: Collection<NodeId> = emptySet(),
+        hostIds: Collection<NodeId> = emptySet(),
+    ) :
+        this(sortedEvents = events.sorted(), coreIds = coreIds.toSet(), hostIds = hostIds.toSet())
 
     init {
-        check(hostIds.none { it in coreIds } && INTERNET_ID !in coreIds && INTERNET_ID !in hostIds)
-        { "unable to create workload, conflicting ids" }
+        check(sortedEvents.isSorted())
+    }
 
-        if (events.any { it !is NetworkEvent.FlowUpdate } && events.any { it is FlowUpdate }) {
-            log.warn("A network workload should be built with either only FlowUpdates (which assume ony 1 flow between 2 nodes) " +
-                "or with FlowStart, Stop, RateUpdate. A FlowUpdate will update the first flow with the same transmitter and receiver " +
-                "that it finds, if there is more than 1 between nodes, undesired behaviour is to be expected.")
+    private val events: Queue<NetworkEvent> = LinkedList(sortedEvents)
+
+    public val startInstant: Instant =
+        events.peek()?.deadline?.toInstantFromEpoch()
+            ?: Instant.ofEpochMilli(0L)
+
+    public val endInstant: Instant =
+        events.lastOrNull()?.deadline?.toInstantFromEpoch()
+            ?: Instant.ofEpochMilli(0L)
+
+    public val size: Int = sortedEvents.size
+
+    init {
+        check(
+            hostIds.none { it in coreIds } && INTERNET_ID !in coreIds && INTERNET_ID !in hostIds,
+        ) { "unable to create workload, conflicting ids" }
+
+        if (events.any { it !is NetworkEvent.FlowUpdate } && events.any { it is NetworkEvent.FlowUpdate }) {
+            LOG.warn(
+                "A network workload should be built with either only FlowUpdates (which assume ony 1 flow between 2 nodesById) " +
+                    "or with FlowStart, Stop, RateUpdate. A FlowUpdate will update the first flow with the same transmitter and receiver " +
+                    "that it finds, if there is more than 1 between nodesById, undesired behaviour is to be expected.",
+            )
         }
 
-        log.info(
-            "\n" + """
-                | == NETWORK WORKLOAD ===
-                | start instant: $startInstant
-                | end instant: $endInstant
-                | duration: ${Duration.ofMillis(endInstant.toEpochMilli() - startInstant.toEpochMilli())}
-                | num of network events: ${events.size}
-            """.trimIndent()
-        )
+        events.toList().slice(0..10).forEach {
+            println(it)
+        }
     }
 
     /**
@@ -72,7 +99,7 @@ public class SimNetWorkload internal constructor(
      * **It does not reset the controller state**:
      * - Does not reset flows
      * - Does not reset virtual mapping (should not interfere, worst case it fucks up mapping of something else)
-     * - Does not reset claimed nodes (not all nodes might be claimable)
+     * - Does not reset claimed nodesById (not all nodesById might be claimable)
      * - Does not reset time (if network events deadline are passed they won't be executed
      * - Does not reset energy consumption
      *
@@ -85,36 +112,44 @@ public class SimNetWorkload internal constructor(
 
         // map core switch ids of the workload to physical core switches of the network
         coreIds.forEach { vId ->
-            checkNotNull(controller.claimNextCoreNode()?.nodeId?.let { pId -> controller.virtualMap(vId, pId) })
-            { "unable to map workload to network, not enough core switches claimable in the network" }
+            checkNotNull(
+                controller.claimNextCoreNode()?.nodeId?.let {
+                        pId ->
+                    controller.virtualMap(vId, pId)
+                },
+            ) { "unable to map workload to network, not enough core switches claimable in the network" }
         }
 
-        // map host node ids of the workload to physical host nodes of the network
+        // map host node ids of the workload to physical host nodesById of the network
         hostIds.forEach { vId ->
-            checkNotNull(controller.claimNextHostNode()?.nodeId?.let { pId -> controller.virtualMap(vId, pId) })
-            { "unable to map workload to network, not enough host nodes claimable in the network" }
+            checkNotNull(
+                controller.claimNextHostNode()?.nodeId?.let {
+                        pId ->
+                    controller.virtualMap(vId, pId)
+                },
+            ) { "unable to map workload to network, not enough host nodesById claimable in the network" }
         }
 
-        val allWorkLoadIds: Set<NodeId> = buildSet {
-            events.forEach { addAll(it.involvedIds()) }
-        }
+        val allWorkLoadIds: Set<NodeId> =
+            buildSet {
+                events.forEach { addAll(it.involvedIds()) }
+            }
 
         val allMappedIds: Set<NodeId> =
             coreIds + hostIds
 
         // warns if any node id present in the workload has not been mapped
-        if (allWorkLoadIds.any { it !in  allMappedIds && it != INTERNET_ID}) {
-            log.warn("the following workloads node ids were not mapped to network node ids: [INTERNET_ID]")
+        if (allWorkLoadIds.any { it !in allMappedIds && it != INTERNET_ID }) {
+            LOG.warn("the following workloads node ids were not mapped to network node ids: [INTERNET_ID]")
         }
     }
 
     internal suspend fun NetworkController.execNext() {
         events.poll()?.let { with(it) { execIfNotPassed() } }
-            ?: log.error("unable to execute network event, no more events remaining in the workload")
+            ?: LOG.error("unable to execute network event, no more events remaining in the workload")
     }
 
-    internal fun hasNext(): Boolean =
-        events.isNotEmpty()
+    internal fun hasNext(): Boolean = events.isNotEmpty()
 
     internal suspend fun NetworkController.execUntil(until: Time): Long {
         var consumed: Long = 0
@@ -124,65 +159,90 @@ public class SimNetWorkload internal constructor(
             consumed++
         }
 
+        advanceBy(until - instantSrc.time)
+
         return consumed
     }
 
     internal fun peek(): NetworkEvent = events.peek()
 
-    @OptIn(ExperimentalSerializationApi::class)
-    public fun execOn(networkFile: File, withVirtualMapping: Boolean = true) {
-        val controller = NetworkController.fromFile(networkFile)
+    public fun fmt(): String =
+        """
+        | == NETWORK WORKLOAD ===
+        | start instant: $startInstant
+        | end instant: $endInstant
+        | duration: ${Duration.ofMillis(endInstant.toEpochMilli() - startInstant.toEpochMilli())}
+        | num of network events: ${events.size}
+        """.trimIndent()
 
-        controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
 
-        println(controller.energyRecorder.getFmtReport())
-    }
-
-    internal fun execOn(network: Network, withVirtualMapping: Boolean = true) {
-        val controller = NetworkController(network)
-
-        controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
-    }
+//    @OptIn(ExperimentalSerializationApi::class)
+//    public fun execOn(
+//        networkFile: File,
+//        withVirtualMapping: Boolean = true,
+//    ) {
+//        val controller = NetworkController.fromFile(networkFile)
+//
+//        controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
+//
+//        println(controller.energyRecorder.fmt())
+//    }
+//
+//    internal fun execOn(
+//        network: Network,
+//        withVirtualMapping: Boolean = true,
+//    ) {
+//        val controller = NetworkController(network)
+//
+//        controller.execWorkload(this, withVirtualMapping = withVirtualMapping)
+//    }
 
     internal fun optimize(): SimNetWorkload {
         val flowGetters = mutableMapOf<Pair<NodeId, NodeId>, () -> NetFlow>()
 
-        val newEvents = events.map { e ->
-            if (e is FlowUpdate) {
-                val fromTo = Pair(e.from, e.to)
-                if (fromTo !in flowGetters) {
-                    val start = e.toFlowStart()
-                    flowGetters[fromTo] = { start.targetFlow }
-                    start
-                } else e.toFlowChangeRate(
-                    flowGetters[fromTo] ?: return log.withErr(this, "unable to optimize, unexpected error occurred")
-                )
-            } else return log.withErr(this, "unable to optimize, only workloads composed of FlowUpdate exclusively are optimizable")
-        }
+        val newEvents =
+            events.map { e ->
+                if (e is NetworkEvent.FlowUpdate) {
+                    val fromTo = Pair(e.from, e.to)
+                    if (fromTo !in flowGetters) {
+                        val start = e.toFlowStart()
+                        flowGetters[fromTo] = { start.targetFlow }
+                        start
+                    } else {
+                        e.toFlowChangeRate(
+                            flowGetters[fromTo] ?: return LOG.withErr(this, "unable to optimize, unexpected error occurred"),
+                        )
+                    }
+                } else {
+                    return LOG.withErr(this, "unable to optimize, only workloads composed of FlowUpdate exclusively are optimizable")
+                }
+            }
 
         return SimNetWorkload(newEvents, hostIds = hostIds)
     }
 
     public companion object {
-        private val log by logger()
+        internal val LOG by logger()
 
-        public fun fromBitBrains(trace: BitBrains, vmsRange: IntRange? = null): SimNetWorkload {
-            val tblReader: TableReader = vmsRange?.let {
-                val vmTables = buildList {
-                    vmsRange.forEach { add(trace.tablesByName[it.toString()]) }
-                }.filterNotNull()
+        public fun fromBitBrains(
+            trace: BitBrains,
+            vmsRange: IntRange = 1..1250,
+        ): SimNetWorkload {
+            val tblReader: TableReader =
+                    Table.concatWithName(
+                        tables = trace.vmTablesInRange(vmsRange),
+                        name = "table for vms in range $vmsRange"
+                    ).getReader()
 
-                Table.concatWithName(vmTables, "table for vms in range $vmsRange").getReader()
-            } ?: trace.allVmsTable.getReader()
-
-            val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() } )!!
-            val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { DataRate.ofKBps(it) } )!!
-            val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { DataRate.ofKBps(it) } )!!
+            val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() })!!
+            val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { DataRate.ofKBps(it) })!!
+            val netRxRd = tblReader.addColumnReader(BitBrains.NET_RX, process = { DataRate.ofKBps(it) })!!
             val deadlineRd = tblReader.addColumnReader(BitBrains.TIMESTAMP, process = { Time.ofSec(it) })!!
 
             val vmIds = mutableSetOf<Long>()
             val netEvents = mutableListOf<NetworkEvent>()
-            while (tblReader.nextLine()) {
+
+            tblReader.onLineRead {
                 vmIds.add(idRd.currRowValue)
 
                 netEvents.add(
@@ -190,8 +250,8 @@ public class SimNetWorkload internal constructor(
                         from = idRd.currRowValue,
                         to = INTERNET_ID,
                         desiredDataRate = netTxRd.currRowValue,
-                        deadline = deadlineRd.currRowValue
-                    )
+                        deadline = deadlineRd.currRowValue,
+                    ),
                 )
 
                 netEvents.add(
@@ -199,12 +259,12 @@ public class SimNetWorkload internal constructor(
                         from = INTERNET_ID,
                         to = idRd.currRowValue,
                         desiredDataRate = netRxRd.currRowValue,
-                        deadline = deadlineRd.currRowValue
-                    )
+                        deadline = deadlineRd.currRowValue,
+                    ),
                 )
-            }
+            }.readAll()
 
-            return SimNetWorkload(netEvents, hostIds = vmIds)
+            return SimNetWorkload(events = netEvents, hostIds = vmIds)
         }
     }
 }

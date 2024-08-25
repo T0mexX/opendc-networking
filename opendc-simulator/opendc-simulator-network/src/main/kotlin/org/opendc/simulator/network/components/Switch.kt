@@ -1,25 +1,45 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.components
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.flow.FlowHandler
-import org.opendc.simulator.network.energy.EnergyConsumer
-import org.opendc.simulator.network.components.internalstructs.port.Port
-import org.opendc.simulator.network.components.internalstructs.port.PortImpl
-import org.opendc.simulator.network.utils.IdDispenser
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.UpdateChl
+import org.opendc.simulator.network.components.internalstructs.port.Port
+import org.opendc.simulator.network.components.internalstructs.port.PortImpl
 import org.opendc.simulator.network.energy.EnModel
 import org.opendc.simulator.network.energy.EnMonitor
+import org.opendc.simulator.network.energy.EnergyConsumer
 import org.opendc.simulator.network.energy.emodels.SwitchDfltEnModel
+import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
-import org.opendc.simulator.network.policies.fairness.MaxMinNoForcedReduction
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.utils.toLowerDataUnit
+import org.opendc.simulator.network.utils.IdDispenser
 
 /**
  * A [Node] whose job is to route incoming flows according to [portSelectionPolicy].
@@ -34,8 +54,7 @@ internal open class Switch(
     override val numOfPorts: Int,
     override val fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
-): Node, EnergyConsumer<Switch> {
-
+) : Node, EnergyConsumer<Switch> {
     override val updtChl = UpdateChl()
 
     override val enMonitor: EnMonitor<Switch> by lazy { EnMonitor(this) }
@@ -43,9 +62,11 @@ internal open class Switch(
 
     override val portToNode: MutableMap<NodeId, Port> = HashMap()
     final override val ports: List<Port> =
-        buildList { repeat(numOfPorts) {
-            add(PortImpl(maxSpeed = portSpeed, owner = this@Switch))
-        } }
+        buildList {
+            repeat(numOfPorts) {
+                add(PortImpl(maxSpeed = portSpeed, owner = this@Switch))
+            }
+        }
     override val flowHandler = FlowHandler(ports)
 
     override suspend fun consumeUpdt() {
@@ -55,25 +76,22 @@ internal open class Switch(
 
     override fun getDfltEnModel(): EnModel<Switch> = SwitchDfltEnModel
 
-    override fun toString(): String = "[Switch: id=$id]"
+    override fun toSpecs(): Specs<Switch> = SwitchSpecs(id = id, numOfPorts = numOfPorts, portSpeed = portSpeed)
 
+    override fun toString(): String = "[Switch: id=$id]"
 
     /**
      * Serializable representation of the specifics from which a switch can be built.
      */
     @Serializable
     @SerialName("switch-specs")
-    internal data class SwitchSpecs (
+    internal data class SwitchSpecs(
         val numOfPorts: Int,
         val portSpeed: DataRate,
-        val id: NodeId? = null
-    ): Specs<Switch> {
+        val id: NodeId? = null,
+    ) : Specs<Switch> {
         override fun build(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts)
 
         fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts)
     }
 }
-
-
-
-

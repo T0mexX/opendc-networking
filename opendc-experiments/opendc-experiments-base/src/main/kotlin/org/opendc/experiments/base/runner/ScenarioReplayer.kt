@@ -78,7 +78,7 @@ public class RunningServerWatcher : ServerWatcher {
  * @param clock The simulation clock.
  * @param trace The trace to simulate.
  * @param seed The seed to use for randomness.
- * @param submitImmediately A flag to indicate that the servers are scheduled immediately (so not at their start time).
+ * @param submitImmediately A flags to indicate that the servers are scheduled immediately (so not at their start time).
  * @param failureModelSpec A failure model to use for injecting failures.
  */
 public suspend fun ComputeService.replay(

@@ -34,7 +34,7 @@ public interface TFDevice : AutoCloseable {
     public val uid: UUID
 
     /**
-     * A flag to indicate whether the device is a GPU.
+     * A flags to indicate whether the device is a GPU.
      */
     public val isGpu: Boolean
 

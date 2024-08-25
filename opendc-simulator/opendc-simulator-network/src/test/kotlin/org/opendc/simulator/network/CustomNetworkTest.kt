@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network
 
 import io.kotest.assertions.throwables.shouldNotThrowAny
@@ -27,14 +49,13 @@ import org.opendc.simulator.network.units.DataRate
 import java.io.File
 
 @OptIn(ExperimentalSerializationApi::class, ExperimentalKotest::class)
-class CustomNetworkTest: FunSpec({
+class CustomNetworkTest : FunSpec({
     val jsonReader = Json { ignoreUnknownKeys = true }
     val specsTest1File = File("src/test/resources/custom-network/specs-test2.json")
     val specsTest2File = File("src/test/resources/custom-network/specs-test2.json")
     val dupNodesFile = File("src/test/resources/custom-network/specs-duplicate-node-id.json")
     val undeployableLinksFile = File("src/test/resources/custom-network/specs-undeployable-link.json")
     val badLinkArraySizesFile = File("src/test/resources/custom-network/specs-bad-link-array-sizes.json")
-
 
     context("build network from json file") {
 
@@ -58,7 +79,7 @@ class CustomNetworkTest: FunSpec({
             }
 
             undeployableLinksFile.let { testFile ->
-                context("link between non-existing nodes (ignoring)").config(enabled = testFile.exists()) {
+                context("link between non-existing nodesById (ignoring)").config(enabled = testFile.exists()) {
                     shouldNotThrowAny { jsonReader.decodeFromStream<Specs<Network>>(testFile.inputStream()).build() }
                 }
             }
@@ -77,36 +98,40 @@ class CustomNetworkTest: FunSpec({
 
     context("build correct links from link list") {
         data class TestData(val nodes: List<Node>, val linkList: List<Pair<NodeId, NodeId>>)
+
         fun Node.isConnectedTo(other: Node): Boolean = this.portToNode.contains(other.id)
 
-        val testDataGenerator: Arb<TestData> = Arb.bind(
-            Arb.int(2..20),
-            Arb.int(1..10)
-        ) { numOfNodes, numOfLinks ->
-            val nodes: List<Node> = buildList {
-                (0L..<numOfNodes).forEach { id ->  add(Switch(id = id, numOfPorts = numOfNodes, portSpeed = DataRate.ZERO)) }
+        val testDataGenerator: Arb<TestData> =
+            Arb.bind(
+                Arb.int(2..20),
+                Arb.int(1..10),
+            ) { numOfNodes, numOfLinks ->
+                val nodes: List<Node> =
+                    buildList {
+                        (0L..<numOfNodes).forEach { id -> add(Switch(id = id, numOfPorts = numOfNodes, portSpeed = DataRate.ZERO)) }
+                    }
+                val links: List<Pair<NodeId, NodeId>> =
+                    buildList {
+                        val arbNodeId = Arb.long(0L..<numOfNodes)
+                        repeat(numOfLinks) { add(Pair(arbNodeId.next(), arbNodeId.next())) }
+                    }
+                TestData(nodes, links)
             }
-            val links: List<Pair<NodeId, NodeId>> = buildList {
-                val arbNodeId = Arb.long(0L..<numOfNodes)
-                repeat(numOfLinks) { add(Pair(arbNodeId.next(), arbNodeId.next())) }
-            }
-            TestData(nodes, links)
-        }
 
         checkAll(iterations = 100, testDataGenerator) { testData ->
-            context("Test with nodes ${testData.nodes} and links ${testData.linkList}") {
+            context("Test with nodesById ${testData.nodes} and links ${testData.linkList}") {
                 val nodes: List<Node> = testData.nodes
                 val links: List<Pair<NodeId, NodeId>> = testData.linkList
                 val network = CustomNetwork(nodes)
                 network.connectFromLinkList(links)
                 withData(links) { link ->
                     if (link.first != link.second) {
-                        network.nodes[link.first]
-                            ?.isConnectedTo(network.nodes[link.second]!!)
+                        network.nodesById[link.first]
+                            ?.isConnectedTo(network.nodesById[link.second]!!)
                             ?.shouldBeTrue()
                     } else {
-                        network.nodes[link.first]
-                            ?.isConnectedTo(network.nodes[link.second]!!)
+                        network.nodesById[link.first]
+                            ?.isConnectedTo(network.nodesById[link.second]!!)
                             ?.shouldBeFalse()
                     }
                 }

@@ -1,12 +1,34 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.flow
 
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.tracker.NodeFlowTracker
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
-import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.logger
 
 /**
@@ -20,8 +42,10 @@ import org.opendc.simulator.network.utils.logger
  * Only used to provide the [availableBW].
  */
 internal class FlowHandler(internal val ports: Collection<Port>) {
-
-    private companion object { val log by logger(); var bo = 0 }
+    private companion object {
+        val log by logger()
+        var bo = 0
+    }
 
     /**
      * The current total available bandwidth on the switch,
@@ -35,7 +59,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Needs to be kept updated by owner [Node] through [generateFlow] and [stopGeneratedFlow].
      * If the node is not [EndPointNode] this property shall be ignored.
      */
-    val generatedFlows: Map<FlowId, NetFlow> get() = _generatedFlows
+    val generatingFlows: Map<FlowId, NetFlow> get() = _generatedFlows
     private val _generatedFlows = mutableMapOf<FlowId, NetFlow>()
 
     /**
@@ -43,7 +67,15 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Needs to be kept updated by owner [Node]. If the node is not an
      * [EndPointNode] this property shall be ignored.
      */
-    val consumedFlows = mutableMapOf<FlowId, NetFlow>()
+    val consumingFlows: Map<FlowId, NetFlow> get() = _consumingFlows
+    private val _consumingFlows = mutableMapOf<FlowId, NetFlow>()
+
+    /**
+     * Keeps track of the flows that this node consumed,
+     * in case some of those flows are still in the network after they have
+     * been stopped, and they arrive at destination.
+     */
+    private val consumedFlowsIds = mutableSetOf<FlowId>()
 
     /**
      * Keeps track of all outgoing flows in the form of [OutFlow]s.
@@ -56,39 +88,63 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
     private val _outgoingFlows = mutableMapOf<FlowId, OutFlow>()
 
     /**
-     * Keeps track of those flows whose demand is not satisfied,
-     * maintaining a collection of these flows ordered by output rate.
+     * Keeps track of outFlows according to specific sorting rules.
      */
     val nodeFlowTracker = NodeFlowTracker(allOutgoingFlows = _outgoingFlows)
 
     /**
-     * Adds [newFlow] in the [generatedFlows] table. Additionally, it queues the [RateUpdt]
+     * Adds [flow] among those that are consumed by this node,
+     * logging a warning if a flow with same id has been added previously.
+     */
+    fun addConsumingFlow(flow: NetFlow) {
+        _consumingFlows.compute(flow.id) { _, oldFlow ->
+            oldFlow?.let {
+                log.warn("adding flow $flow (or at least its id) among the consuming ones multiple times")
+            }
+            flow
+        }
+    }
+
+    fun rmConsumingFlow(fId: FlowId) {
+        consumedFlowsIds += fId
+        _consumingFlows.remove(fId) ?: let {
+            log.warn("unable to remove flow with id $fId among those that are being received, not there.")
+        }
+    }
+
+    /**
+     * Adds [newFlow] in the [generatingFlows] table. Additionally, it queues the [RateUpdt]
      * associated to the new flow automatically. The caller does **NOT** need to queue
      * an update itself. An observer on [newFlow] for changes of [NetFlow.demand],
      * is set up. This observer queues a demand update whenever a change occurs.
      */
     suspend fun Node.generateFlow(newFlow: NetFlow) {
-        val updt = RateUpdt(
-            _generatedFlows.putIfAbsent(newFlow.id, newFlow)
-            // If flow with same id already present
-            ?. let { currFlow ->
-                log.error("adding generated flow whose id is already present. Replacing...")
-                _generatedFlows[newFlow.id] = newFlow
-                mapOf(newFlow.id to (newFlow.demand - currFlow.demand))
-            // Else
-            } ?: mapOf(newFlow.id to newFlow.demand)
-        )
+        val updt =
+            RateUpdt(
+                _generatedFlows.putIfAbsent(newFlow.id, newFlow)
+                    // If flow with same id already present
+                    ?. let { currFlow ->
+                        log.error("adding generated flow whose id is already present. Replacing...")
+                        _generatedFlows[newFlow.id] = newFlow
+                        mapOf(newFlow.id to (newFlow.demand - currFlow.demand))
+                        // Else
+                    } ?: mapOf(newFlow.id to newFlow.demand),
+            )
 
-        // Sets up the handler of any data rate changes, propagating updates to other nodes
+        // Sets up the handler of any data rate changes, propagating updates to other nodesById
         // changes of this flow data rate can be performed through a NetworkController,
         // the NetworkInterface of this node, or through the instance of the NetFlow itself.
         newFlow.withDemandOnChangeHandler { _, old, new ->
             if (old == new) return@withDemandOnChangeHandler
 
-            if (new < DataRate.ZERO) log.warn("unable to change generated flow with id '${newFlow.id}' " +
-                "data-rate to $new, data-rate should be positive. Falling back to 0")
+            if (new < DataRate.ZERO) {
+                log.warn(
+                    "unable to change generated flow with id '${newFlow.id}' " +
+                        "data-rate to $new, data-rate should be positive. Falling back to 0",
+                )
+            }
 
-            updtChl.send(  RateUpdt(newFlow.id, (new - old))  )
+            updtChl.send(RateUpdt(newFlow.id, (new - old)))
         }
 
         // Update to be processed by the node runner coroutine.
@@ -96,15 +152,18 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
     }
 
     suspend fun Node.stopGeneratedFlow(fId: FlowId) {
-        val removedFlow = _generatedFlows.remove(fId)
-            ?: let {
-                log.error("unable to stop generated flow with id $fId in node $this, " +
-                    "flow is not present in the generated flows table")
-                return
-            }
+        val removedFlow =
+            _generatedFlows.remove(fId)
+                ?: let {
+                    log.error(
+                        "unable to stop generated flow with id $fId in node $this, " +
+                            "flow is not present in the generated flows table",
+                    )
+                    return
+                }
 
         // Update to be processed by the node runner coroutine
-        updtChl.send(  RateUpdt(fId, -removedFlow.demand)  )
+        updtChl.send(RateUpdt(fId, -removedFlow.demand))
     }
 
     /**
@@ -119,14 +178,20 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      */
     suspend fun Node.updtFlows(updt: RateUpdt) {
         updt.forEach { (fId, dr) ->
-            val deltaRate = dr.roundedTo0WithEps()
+            val deltaRate = dr.roundToIfWithinEpsilon(DataRate.ZERO)
             if (deltaRate.isZero()) return@forEach
 
             // if this node is the destination
-            consumedFlows[fId]?.let {
-                it.throughput = (it.throughput + deltaRate).roundedTo0WithEps()
+            _consumingFlows[fId]?.let {
+                it.throughput = (it.throughput + deltaRate).roundToIfWithinEpsilon(DataRate.ZERO)
                 return@forEach
             }
+
+            if (fId in consumedFlowsIds) {
+                // If this node was the destination but the flow has been stopped => ignore.
+                return@forEach
+            }
+
             // else
             _outgoingFlows.getOrPut(fId) {
                 // if flow is new
@@ -137,17 +202,17 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
             }.let {
                 it.demand += deltaRate
 
-                check(it.demand >= DataRate.ZERO)
+                check(it.demand >= DataRate.ZERO) { "flowId=$fId, nodeId=${this.id}, demand=${it.demand}" }
 
                 // if demand is 0 the entry is removed
-                if (it.demand.roundedTo0WithEps().isZero()) {
+                if (it.demand.roundToIfWithinEpsilon(DataRate.ZERO).isZero()) {
                     _outgoingFlows.remove(it.id)
                     nodeFlowTracker.remove(it)
                 }
             }
         }
 
-        with (this.fairnessPolicy) { applyPolicy(updt) }
+        with(this.fairnessPolicy) { applyPolicy(updt) }
     }
 
     /**
@@ -162,4 +227,3 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
         }
     }
 }
-

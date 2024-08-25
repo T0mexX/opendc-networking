@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network
 
 import io.kotest.core.spec.style.FunSpec
@@ -25,7 +47,7 @@ import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.units.ifNullZero
 
-class FlowHandlerTest: FunSpec({
+class FlowHandlerTest : FunSpec({
 
     /**
      * Each [OutFlow] stores its rates per port
@@ -37,45 +59,52 @@ class FlowHandlerTest: FunSpec({
     context("OutFlow rateByPort and totRateOut consistency with Link rates") {
         data class TestData(val flowUpdts: List<Pair<FlowId, DataRate>>, val numOfFlows: Int, val numOfInBetweenSwitches: Int)
 
-        val testDataGenerator: Arb<TestData> = Arb.bind(
-            Arb.int(2..50),
-            Arb.int(50..1000),
-            Arb.int(2..10)
-        ) { numOfFlows, numOfUpdts, numOfInBetweenSwitches ->
-            val arbFlowId = Arb.long(0L..<numOfFlows)
-            val rateTracker: MutableMap<FlowId, DataRate> = (0L..<numOfFlows).associateWith { DataRate.ZERO }.toMutableMap()
-            val updts = buildList {
-                (1..numOfUpdts).forEach { _ ->
-                    val fId = arbFlowId.next()
-                    // Ensures rate >= 0.
-                    val deltaRate = arbitrary {
-                        DataRate.ofKbps(
-                            Arb.double(
-                                -rateTracker.getOrDefault(fId, DataRate.ZERO).toKbps()..1000.0
-                            ).next()
-                        )
-                    }.next()
-                    rateTracker.compute(fId) { _, oldRate -> (oldRate.ifNullZero()) + deltaRate }
-                    add(Pair(fId, deltaRate))
-                }
-            }
+        val testDataGenerator: Arb<TestData> =
+            Arb.bind(
+                Arb.int(2..50),
+                Arb.int(50..1000),
+                Arb.int(2..10),
+            ) { numOfFlows, numOfUpdts, numOfInBetweenSwitches ->
+                val arbFlowId = Arb.long(0L..<numOfFlows)
+                val rateTracker: MutableMap<FlowId, DataRate> = (0L..<numOfFlows).associateWith { DataRate.ZERO }.toMutableMap()
+                val updts =
+                    buildList {
+                        (1..numOfUpdts).forEach { _ ->
+                            val fId = arbFlowId.next()
+                            // Ensures rate >= 0.
+                            val deltaRate =
+                                arbitrary {
+                                    DataRate.ofKbps(
+                                        Arb.double(
+                                            -rateTracker.getOrDefault(fId, DataRate.ZERO).toKbps()..1000.0,
+                                        ).next(),
+                                    )
+                                }.next()
+                            rateTracker.compute(fId) { _, oldRate -> (oldRate.ifNullZero()) + deltaRate }
+                            add(Pair(fId, deltaRate))
+                        }
+                    }
 
-            TestData(updts, numOfFlows, numOfInBetweenSwitches)
-        }
+                TestData(updts, numOfFlows, numOfInBetweenSwitches)
+            }
 
         checkAll(iterations = 5, testDataGenerator) { testData ->
             NetFlow.reset()
             val sender = CoreSwitch(id = -1, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = DataRate.ofKbps(10000.0))
             val receiver = CoreSwitch(id = -2, numOfPorts = testData.numOfInBetweenSwitches + 1, portSpeed = DataRate.ofKbps(10000.0))
-            val inBetweenSwitches = buildList {
-                (0L..<testData.numOfInBetweenSwitches).forEach { id ->
-                    add(Switch(id = id, numOfPorts = 2, portSpeed = DataRate.ofKbps(1000.0)))
+            val inBetweenSwitches =
+                buildList {
+                    (0L..<testData.numOfInBetweenSwitches).forEach { id ->
+                        add(Switch(id = id, numOfPorts = 2, portSpeed = DataRate.ofKbps(1000.0)))
+                    }
                 }
-            }
 
             repeat(testData.numOfFlows + 1) { NetFlow(transmitterId = sender.id, destinationId = receiver.id) }
 
-            inBetweenSwitches.forEach { it.connect(sender); it.connect(receiver) }
+            inBetweenSwitches.forEach {
+                it.connect(sender)
+                it.connect(receiver)
+            }
             val fh: FlowHandler = sender.flowHandler
             val nFlows: Map<FlowId, OutFlow> = fh.outgoingFlows
 
@@ -108,7 +137,7 @@ class FlowHandlerTest: FunSpec({
 
             testData.flowUpdts.forEach { (fId, deltaRate) ->
                 runBlocking {
-                    with(fh) { sender.updtFlows( RateUpdt(fId to deltaRate) ) }
+                    with(fh) { sender.updtFlows(RateUpdt(fId to deltaRate)) }
                 }
                 nFlows[fId].isConsistent(fId)
             }

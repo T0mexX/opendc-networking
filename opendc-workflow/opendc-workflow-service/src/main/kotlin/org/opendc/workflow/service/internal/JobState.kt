@@ -27,7 +27,7 @@ import kotlin.coroutines.Continuation
 
 public class JobState(public val job: Job, public val submittedAt: Long, internal val cont: Continuation<Unit>) {
     /**
-     * A flag to indicate whether this job is finished.
+     * A flags to indicate whether this job is finished.
      */
     public val isFinished: Boolean
         get() = tasks.isEmpty()

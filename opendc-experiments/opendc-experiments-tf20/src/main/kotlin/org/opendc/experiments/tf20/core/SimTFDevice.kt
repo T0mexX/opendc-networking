@@ -87,7 +87,7 @@ public class SimTFDevice(
             val queue = ArrayDeque<Work>()
 
             /**
-             * A flag to indicate that the workload is idle.
+             * A flags to indicate that the workload is idle.
              */
             val isIdle
                 get() = activeWork == null

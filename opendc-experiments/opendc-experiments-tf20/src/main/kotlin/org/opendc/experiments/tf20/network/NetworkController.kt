@@ -27,7 +27,7 @@ import org.opendc.common.Dispatcher
 import org.opendc.common.util.TimerScheduler
 
 /**
- * The network controller represents a simple network model between the worker and master nodes during
+ * The network controller represents a simple network model between the worker and master nodesById during
  * TensorFlow execution.
  */
 public class NetworkController(dispatcher: Dispatcher) : AutoCloseable {
@@ -42,7 +42,7 @@ public class NetworkController(dispatcher: Dispatcher) : AutoCloseable {
     private val channels = mutableMapOf<NetworkNode, Channel<Message>>()
 
     /**
-     * A map of the bandwidth between the different nodes.
+     * A map of the bandwidth between the different nodesById.
      */
     private val bandwidthMatrix: MutableMap<Pair<NetworkNode, NetworkNode>, Long> = mutableMapOf()
 

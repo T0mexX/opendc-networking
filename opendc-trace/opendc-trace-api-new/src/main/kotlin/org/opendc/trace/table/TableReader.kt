@@ -19,18 +19,29 @@ public abstract class TableReader(
 
     protected val colReaders: MutableMap<String, MutableList<ColumnReader<*, *>>> = mutableMapOf()
 
+    private var onLineRead: () -> Unit = { }
+
     public fun nextLine(): Boolean {
         return parseNextLine()
             .also {
                 // if a new line has been parsed
-                if (it)
+                if (it) {
 
                     // set artificial columns readers current values
                     // and call their respective post-processing functions
                     artificialCols.forEach { (colName, colValue) ->
                         colReaders[colName]?.forEach { cr -> cr.setArtificially(colValue) }
                     }
+
+                    onLineRead()
+                }
             }
+    }
+
+    public fun onLineRead(block: () -> Unit): TableReader {
+        onLineRead = block
+
+        return this
     }
 
     protected abstract fun parseNextLine(): Boolean

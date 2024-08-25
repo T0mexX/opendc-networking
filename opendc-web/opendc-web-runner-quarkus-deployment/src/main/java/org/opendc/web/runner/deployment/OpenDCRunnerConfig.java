@@ -31,7 +31,7 @@ import io.quarkus.runtime.annotations.ConfigRoot;
 @ConfigRoot(name = "opendc-runner")
 public class OpenDCRunnerConfig {
     /**
-     * A flag to include the OpenDC web runner extension into the build.
+     * A flags to include the OpenDC web runner extension into the build.
      */
     @ConfigItem(defaultValue = "true")
     boolean include;

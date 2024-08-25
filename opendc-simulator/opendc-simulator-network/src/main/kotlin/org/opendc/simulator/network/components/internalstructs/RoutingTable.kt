@@ -1,7 +1,29 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.components.internalstructs
 
-import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.utils.RWLock
 
@@ -10,7 +32,6 @@ import org.opendc.simulator.network.utils.RWLock
  * @param[ownerId]  id of [Node] to which this table belongs.
  */
 internal class RoutingTable(private val ownerId: NodeId) {
-
     private val rwLock = RWLock(2)
 
 //    /**
@@ -25,8 +46,6 @@ internal class RoutingTable(private val ownerId: NodeId) {
 //                }.filterNot { it.second == 0 }.toMap()
 //            }
 //        }
-
-
 
     /**
      * This bool is updated each time a vector is merged in the routing table.
@@ -43,34 +62,36 @@ internal class RoutingTable(private val ownerId: NodeId) {
      */
     private val table: HashMap<NodeId, MutableMap<NodeId, PossiblePath>> = HashMap()
 
-    suspend fun getVect(): Map<NodeId, Int> = rwLock.withRLock {
-        table.mapNotNull { (nextNodeId, _) ->
-            nextNodeId to (minNumOfHopsTo(nextNodeId) ?: return@mapNotNull null)
-        }.toMap()
-    }
+    suspend fun getVect(): Map<NodeId, Int> =
+        rwLock.withRLock {
+            table.mapNotNull { (nextNodeId, _) ->
+                nextNodeId to (minNumOfHopsTo(nextNodeId) ?: return@mapNotNull null)
+            }.toMap()
+        }
 
     /**
-    * Adds [pathToAdd] to the routing table. If a path with
+     * Adds [pathToAdd] to the routing table. If a path with
      * the same next hop is already present, it is substituted.
-    * @param[pathToAdd] The possible path to add to the table.
-    */
+     * @param[pathToAdd] The possible path to add to the table.
+     */
     private fun addOrReplacePath(pathToAdd: PossiblePath) {
         val destId: NodeId = pathToAdd.destinationId
         if (destId == ownerId) return
 
-
-        val possiblePaths = table[destId] ?: let {
-            table[destId] = mutableMapOf(pathToAdd.nextHop.id to pathToAdd)
-            isTableChanged = true
-            return
-        }
+        val possiblePaths =
+            table[destId] ?: let {
+                table[destId] = mutableMapOf(pathToAdd.nextHop.id to pathToAdd)
+                isTableChanged = true
+                return
+            }
 
         if (pathToAdd == possiblePaths[pathToAdd.nextHop.id]) return
 
         possiblePaths[pathToAdd.nextHop.id] = pathToAdd
         filterOutNonOptimal(destId)
-        if (possiblePaths.containsKey(pathToAdd.nextHop.id))
+        if (possiblePaths.containsKey(pathToAdd.nextHop.id)) {
             isTableChanged = true
+        }
     }
 
     /**
@@ -79,25 +100,33 @@ internal class RoutingTable(private val ownerId: NodeId) {
      * @param[destId]       final destination of the path to be removed.
      * @param[nextHopId]    the next hop [NodeId] of the path to be removed.
      */
-    private fun rmPath(destId: NodeId, nextHopId: NodeId) {
+    private fun rmPath(
+        destId: NodeId,
+        nextHopId: NodeId,
+    ) {
         isTableChanged = (table[destId]?.remove(nextHopId) != null).or(isTableChanged)
-        if (table[destId]?.isEmpty() == true)
+        if (table[destId]?.isEmpty() == true) {
             table.remove(destId)
+        }
     }
 
     /**
      * Returns possible minimal cost paths to a certain destination id.
      * @param[destId]   destination id whose possible minimal paths are to be returned.
      */
-    suspend fun getPossiblePathsTo(destId: NodeId): Collection<PossiblePath> = rwLock.withRLock {
-        table.getOrDefault(destId, mapOf()).values
-    }
+    suspend fun getPossiblePathsTo(destId: NodeId): Collection<PossiblePath> =
+        rwLock.withRLock {
+            table.getOrDefault(destId, mapOf()).values
+        }
 
     /**
      * Merges routing vector of adjacent [Node].
      * @param[routingVector]    routing vector of adjacent [Node], mapping destination id to its cost (number of hops).
      */
-    suspend fun mergeRoutingVector(routingVector: Map<NodeId, Int>, vectOwner: Node) = rwLock.withWLock {
+    suspend fun mergeRoutingVector(
+        routingVector: Map<NodeId, Int>,
+        vectOwner: Node,
+    ) = rwLock.withWLock {
         isTableChanged = false
         val routVectBefore = this.getVect()
         addOrReplacePath(PossiblePath(vectOwner.id, numOfHops = 1, nextHop = vectOwner))
@@ -111,8 +140,8 @@ internal class RoutingTable(private val ownerId: NodeId) {
                     PossiblePath(
                         destinationId = destId,
                         numOfHops = numOfHops + 1,
-                        nextHop = vectOwner
-                    )
+                        nextHop = vectOwner,
+                    ),
                 )
             }
 
@@ -125,12 +154,13 @@ internal class RoutingTable(private val ownerId: NodeId) {
     /**
      * Removes all possible paths whose next hop is [node].
      */
-    suspend fun removeNextHop(node: Node) = rwLock.withWLock {
-        table.forEach { (_, possPaths) ->
-            possPaths.remove(node.id)
+    suspend fun removeNextHop(node: Node) =
+        rwLock.withWLock {
+            table.forEach { (_, possPaths) ->
+                possPaths.remove(node.id)
+            }
+            table.values.removeAll { it.isEmpty() }
         }
-        table.values.removeAll { it.isEmpty() }
-    }
 
     /**
      * Filters out non-optimal paths associated with destination
@@ -147,8 +177,7 @@ internal class RoutingTable(private val ownerId: NodeId) {
     /**
      * Returns the minimum distance between ***this*** and the node with id [destId].
      */
-    private fun minNumOfHopsTo(destId: NodeId): Int? =
-        table[destId]?.minOf { (_, possPath) -> possPath.numOfHops }
+    private fun minNumOfHopsTo(destId: NodeId): Int? = table[destId]?.minOf { (_, possPath) -> possPath.numOfHops }
 
     override fun toString(): String = table.toString()
 
@@ -165,10 +194,10 @@ internal class RoutingTable(private val ownerId: NodeId) {
     ) : Comparable<PossiblePath> {
         override fun compareTo(other: PossiblePath): Int = this.numOfHops compareTo other.numOfHops
 
-        fun Node.associatedPort(): Port? =
-            portToNode[this@PossiblePath.nextHop.id]
+        fun Node.associatedPort(): Port? = portToNode[this@PossiblePath.nextHop.id]
     }
 }
+
 /**
  * Type alias representing the routing vector of a [Node]. For improved readability.
  */

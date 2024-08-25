@@ -47,7 +47,7 @@ public class TaskState(public val job: JobState, public val task: Task) {
     public val dependents: HashSet<TaskState> = HashSet()
 
     /**
-     * A flag to indicate whether this workflow task instance is a workflow root.
+     * A flags to indicate whether this workflow task instance is a workflow root.
      */
     public val isRoot: Boolean
         get() = dependencies.isEmpty()

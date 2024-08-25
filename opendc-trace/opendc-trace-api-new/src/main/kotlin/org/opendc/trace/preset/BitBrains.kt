@@ -23,7 +23,7 @@ public class BitBrains private constructor(vmsTables: List<Table>) : Trace {
     init {
         metaTable = VirtualTable(
             name = "meta",
-            sequence {
+            rowSeq = sequence {
                 vmsTables.map { vmTable -> vmTable.getReader() }
                     .forEach { rd ->
                         val tableName: String = rd.tableName
@@ -46,6 +46,18 @@ public class BitBrains private constructor(vmsTables: List<Table>) : Trace {
 
         tablesByName = (vmsTables + allVmsTable + metaTable).associateBy { it.name }
     }
+
+    public fun vmTablesInRange(range: IntRange = 1..1250): List<Table> =
+        buildList {
+            range.forEach {
+                add(
+                    tablesByName.getOrElse(it.toString()) {
+                        log.warn("vm table $it not found")
+                        null
+                    }
+                )
+            }
+        }.filterNotNull()
 
 
     public companion object {
@@ -103,6 +115,9 @@ public class BitBrains private constructor(vmsTables: List<Table>) : Trace {
                 ?: emptyList()
 
             vmTables.ifEmpty { throw IllegalArgumentException("no vm tables found in directory ${directory.absolutePath}") }
+
+            if (vmTables.size != 1250)
+                log.warn("original bitbrains trace has 1250 vms but only ${vmTables.size} where found in folder ${directory.absolutePath}")
 
             return BitBrains(vmTables)
         }

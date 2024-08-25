@@ -1,16 +1,37 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.flow
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.jetbrains.annotations.VisibleForTesting
-import org.opendc.simulator.network.components.EndPointNode
+import org.opendc.common.units.DataRate
+import org.opendc.common.units.DataSize
+import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.components.stability.NetworkStabilityChecker
+import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.stability.NetworkStabilityChecker.Key.getNetStabilityChecker
-import org.opendc.simulator.network.units.Data
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.units.Time
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.SuspOnChangeHandler
 import kotlin.coroutines.coroutineContext
@@ -29,7 +50,7 @@ public class NetFlow internal constructor(
     public val transmitterId: NodeId,
     public val destinationId: NodeId,
     demand: DataRate = DataRate.ZERO,
-    ) {
+) {
     public val id: FlowId = runBlocking { nextId() }
 
     /**
@@ -45,7 +66,7 @@ public class NetFlow internal constructor(
     /**
      * Total data transmitted since the start of the flow (in Kb).
      */
-    private var totDataTransmitted: Data = Data.ZERO
+    private var totDataTransmitted: DataSize = DataSize.ZERO
 
     /**
      * The current demand of the flow (in Kbps).
@@ -66,21 +87,24 @@ public class NetFlow internal constructor(
      * Call observers change handlers, added with [withDemandOnChangeHandler].
      */
     @JvmSynthetic
-    public suspend fun setDemandSus(newDemand: DataRate): Unit = demandMutex.withLock {
-        val oldDemand = demand
-        if (newDemand approx oldDemand) return
-        demand = newDemand
+    public suspend fun setDemandSus(newDemand: DataRate): Unit =
+        demandMutex.withLock {
+            val oldDemand = demand
+            if (newDemand approx oldDemand) return
+            demand = newDemand
 
-        // calls observers handlers
-        demandOnChangeHandlers.forEach {
-            it.handleChange(this, oldDemand, newDemand)
+            // calls observers handlers
+            demandOnChangeHandlers.forEach {
+                it.handleChange(this, oldDemand, newDemand)
+            }
         }
-    }
 
     /**
      * Non suspending overload for java interoperability.
      */
-    public fun setDemand(newDemand: DataRate) { runBlocking { setDemandSus(newDemand) } }
+    public fun setDemand(newDemand: DataRate) {
+        runBlocking { setDemandSus(newDemand) }
+    }
 
     /**
      * The end-to-end throughput of the flow.
@@ -89,15 +113,18 @@ public class NetFlow internal constructor(
      * coroutine job, hence synchronized update should be guaranteed.
      */
     public var throughput: DataRate = DataRate.ZERO
-        internal set(new) = runBlocking { throughputMutex.withLock {
-            if (new == field) return@runBlocking
-            val old = field
-            field = if (new approx demand) demand else new.roundedTo0WithEps()
+        internal set(new) =
+            runBlocking {
+                throughputMutex.withLock {
+                    if (new == field) return@runBlocking
+                    val old = field
+                    field = if (new approx demand) demand else new.roundToIfWithinEpsilon(DataRate.ZERO)
 
-            throughputOnChangeHandlers.forEach {
-                it.handleChange(obj = this@NetFlow, oldValue = old, newValue = field)
+                    throughputOnChangeHandlers.forEach {
+                        it.handleChange(obj = this@NetFlow, oldValue = old, newValue = field)
+                    }
+                }
             }
-        } }
     private val throughputMutex = Mutex()
 
     /**
@@ -162,12 +189,12 @@ public class NetFlow internal constructor(
 //            }
 //            private set
 
-        suspend fun nextId(): FlowId = nextIdLock.withLock {
-            if (nextId == FlowId.MAX_VALUE) throw RuntimeException("flow id reached its maximum value")
-            nextId++
-            nextId - 1
-        }
-
+        suspend fun nextId(): FlowId =
+            nextIdLock.withLock {
+                if (nextId == FlowId.MAX_VALUE) throw RuntimeException("flow id reached its maximum value")
+                nextId++
+                nextId - 1
+            }
 
         /**
          * Stores the [NodeId] of the destination for each [NetFlow]

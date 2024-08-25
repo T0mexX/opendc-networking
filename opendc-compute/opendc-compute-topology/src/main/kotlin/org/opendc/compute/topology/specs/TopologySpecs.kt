@@ -42,7 +42,7 @@ public data class TopologySpec(
  * Definition of a compute cluster modeled in the simulation.
  *
  * @param name The name of the cluster.
- * @param hosts List of the different hosts (nodes) available in this cluster
+ * @param hosts List of the different hosts (nodesById) available in this cluster
  * @param location Location of the cluster. This can impact the carbon intensity
  */
 @Serializable

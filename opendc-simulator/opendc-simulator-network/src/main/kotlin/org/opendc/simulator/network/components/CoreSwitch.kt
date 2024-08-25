@@ -1,7 +1,30 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.components
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.flow.NetFlow
@@ -9,7 +32,6 @@ import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
-import org.opendc.simulator.network.units.DataRate
 import org.opendc.simulator.network.utils.IdDispenser
 
 /**
@@ -22,8 +44,7 @@ internal class CoreSwitch(
     numOfPorts: Int,
     fairnessPolicy: FairnessPolicy = MaxMinPerPort,
     portSelectionPolicy: PortSelectionPolicy = StaticECMP,
-): Switch(id, portSpeed, numOfPorts, fairnessPolicy, portSelectionPolicy), EndPointNode {
-
+) : Switch(id, portSpeed, numOfPorts, fairnessPolicy, portSelectionPolicy), EndPointNode {
     override suspend fun consumeUpdt() {
         super<EndPointNode>.consumeUpdt()
         enMonitor.update()
@@ -33,6 +54,7 @@ internal class CoreSwitch(
         return super<EndPointNode>.run(invalidator)
     }
 
+    override fun toSpecs(): Specs<CoreSwitch> = CoreSwitchSpecs(id = id, numOfPorts = numOfPorts, portSpeed = portSpeed)
 
     /**
      * Serializable representation of the specifics from which a core switch can be built.
@@ -40,11 +62,11 @@ internal class CoreSwitch(
      */
     @Serializable
     @SerialName("core-switch-specs")
-    internal data class CoreSwitchSpecs (
+    internal data class CoreSwitchSpecs(
         val numOfPorts: Int,
         val portSpeed: DataRate,
-        val id: NodeId? = null
-    ): Specs<CoreSwitch> {
+        val id: NodeId? = null,
+    ) : Specs<CoreSwitch> {
         override fun build(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts + 1)
     }
 }

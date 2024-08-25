@@ -1,15 +1,35 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.energy.emodels
 
+import org.opendc.common.units.DataRate
+import org.opendc.common.units.Power
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.energy.EnModel
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.units.Power
-import org.opendc.simulator.network.units.times
-import org.opendc.simulator.network.utils.toHigherDataUnit
 import kotlin.math.log
 import kotlin.math.pow
-
+import kotlin.time.times
 
 /**
  * Model defined by Xiaodong Wang et al. in 'CARPO:
@@ -17,7 +37,7 @@ import kotlin.math.pow
  *
  * Only derived by 1000Mbps 48 ports PRONTO 3240 switches.
  */
-internal object SwitchDfltEnModel: EnModel<Switch> {
+internal object SwitchDfltEnModel : EnModel<Switch> {
     private val CHASSIS_PWR: Power = Power.ofWatts(67.7)
     private val IDLE_PORT_PWR_10Mbps: Power = Power.ofWatts(3.0 / 48)
     private val IDLE_PORT_PWR_100Mbps: Power = Power.ofWatts(12.5 / 48)
@@ -35,7 +55,7 @@ internal object SwitchDfltEnModel: EnModel<Switch> {
         val numOfActivePorts: Int = e.getActivePorts().size
 
         val totalStaticPwr: Power = CHASSIS_PWR + idlePortPwr * numOfActivePorts
-        val totalDynamicPwr: Power = e.avrgPortUtilization() * STATIC_TO_DYNAMIC_RATIO * totalStaticPwr
+        val totalDynamicPwr: Power = totalStaticPwr * STATIC_TO_DYNAMIC_RATIO * e.avrgPortUtilization()
 
         return totalStaticPwr + totalDynamicPwr
     }
@@ -45,7 +65,6 @@ internal object SwitchDfltEnModel: EnModel<Switch> {
      * @param[portSpeed]    speed of the port to compute static energy consumption of.
      */
     private fun getPortIdlePwr(portSpeed: DataRate): Power {
-
         return when (portSpeed.toMbps()) {
             10.0 -> IDLE_PORT_PWR_10Mbps
             100.0 -> IDLE_PORT_PWR_100Mbps
@@ -64,12 +83,10 @@ internal object SwitchDfltEnModel: EnModel<Switch> {
      *  @return the ports of ***this*** [Switch] that are currently active.
      *  @see[Port.isActive]
      */
-    private fun Switch.getActivePorts(): Collection<Port> =
-        this.portToNode.values.filter { it.isActive  }
+    private fun Switch.getActivePorts(): Collection<Port> = this.portToNode.values.filter { it.isActive }
 
     /**
-     * @return  average port utilization considering both active and not active ports.
+     * @return average port utilization considering both active and not active ports.
      */
-    private fun Switch.avrgPortUtilization(): Double =
-        this.ports.sumOf { it.util } / ports.size
+    private fun Switch.avrgPortUtilization(): Double = this.ports.sumOf { it.util } / ports.size
 }

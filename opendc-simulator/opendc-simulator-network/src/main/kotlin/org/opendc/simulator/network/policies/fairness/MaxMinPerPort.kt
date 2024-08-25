@@ -1,22 +1,45 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.policies.fairness
 
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.flow.tracker.AllByDemand
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.units.ifNullZero
+import org.opendc.simulator.network.utils.ifNull0
 import org.opendc.simulator.network.utils.isSorted
 
-internal object MaxMinPerPort: FairnessPolicy {
+internal object MaxMinPerPort : FairnessPolicy {
     override fun FlowHandler.applyPolicy(updt: RateUpdt) {
         resetAll()
 
-        if (FairnessPolicy.VERIFY)
+        if (FairnessPolicy.VERIFY) {
             check(ports.all { it.availableTxBW() approx it.maxPortToPortBW }) {
                 println(ports.filter { it.isConnected }.map { it.availableTxBW() })
             }
+        }
 
         // All flows sorted by demand.
         val flows: List<OutFlow> = nodeFlowTracker[AllByDemand]
@@ -24,16 +47,16 @@ internal object MaxMinPerPort: FairnessPolicy {
 
         // Each port of the node associated with the number of flows
         // that need to traverse it.
-        val remainingFlowsPerPort: MutableMap<Port, Int> = buildMap {
-            flows.forEach { flow ->
-                flow.outRatesByPort.keys.forEach { port ->
-                    compute(port) { _, oldValue ->
-                        (oldValue ?: 0) + 1
+        val remainingFlowsPerPort: MutableMap<Port, Int> =
+            buildMap {
+                flows.forEach { flow ->
+                    flow.outRatesByPort.keys.forEach { port ->
+                        compute(port) { _, oldValue ->
+                            (oldValue ?: 0) + 1
+                        }
                     }
                 }
-            }
-        }.toMutableMap()
-
+            }.toMutableMap()
 
         // Max-min for each port multiple ports.
         flows.forEachIndexed { idx, outFlow ->
@@ -50,8 +73,7 @@ internal object MaxMinPerPort: FairnessPolicy {
 
                 remainingFlowsPerPort[port] = remFlowsForThisPort - 1
             }
-            flows.forEach { try { it.verify() } catch (e: Exception) { println("IDX($idx) (prevF: ${flows.slice(0..idx)}) ${e.message}") } }
-
+//            flows.forEach { try { it.verify() } catch (e: Exception) { println("IDX($idx) (prevF: ${flows.slice(0..idx)}) ${e.message}") } }
         }
 
         if (FairnessPolicy.VERIFY) {
@@ -61,13 +83,11 @@ internal object MaxMinPerPort: FairnessPolicy {
     }
 }
 
-private fun Port.availableTxBW(): DataRate =
-    sendLink?.availableBW.ifNullZero()
-
+private fun Port.availableTxBW(): DataRate = sendLink?.availableBW.ifNull0()
 
 private fun FlowHandler.resetAll() {
     outgoingFlows.values.forEach {
-        check(it.tryUpdtRate(DataRate.ZERO).isZero()) {"${it.id}"}
+        check(it.tryUpdtRate(DataRate.ZERO).isZero()) { "${it.id}" }
     }
 }
 
@@ -85,8 +105,7 @@ private fun FlowHandler.verify() {
             if (f.passesThrough(p)) {
                 val currOut: DataRate = p.outgoingRateOf(f.id)
 
-                check(currOut approxLargerOrEqual  prevOut)
-                { "MaxMin policy error "}
+                check(currOut approxLargerOrEq prevOut) { "MaxMin policy error " }
 
                 prevOut = currOut
             }

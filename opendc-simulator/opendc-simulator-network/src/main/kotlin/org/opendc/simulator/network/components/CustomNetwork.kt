@@ -1,37 +1,61 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.components
 
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.serialDescriptor
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonUnquotedLiteral
+import kotlinx.serialization.serializer
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
-import org.opendc.simulator.network.flow.FlowId
-import org.opendc.simulator.network.utils.NonSerializable
-import org.opendc.simulator.network.utils.Result
-import org.opendc.simulator.network.utils.Result.*
-import org.opendc.simulator.network.utils.errAndGet
+import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.logger
 
 /**
  * Network that is not built following a specific algorithm.
  * It can be built from json with specific format.
  */
-@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
-@Serializable(with = NonSerializable::class)
 internal class CustomNetwork(
-    nodes: List<Node> = mutableListOf()
-): Network() {
-    companion object { val log by logger() }
+    nodes: List<Node> = mutableListOf(),
+) : Network() {
+    companion object {
+        val log by logger()
+    }
 
-    override val nodes: MutableMap<NodeId, Node> =
+    override val nodesById: MutableMap<NodeId, Node> =
         nodes.associateBy { it.id }.toMutableMap()
 
     override val endPointNodes: MutableMap<NodeId, EndPointNode> =
@@ -40,11 +64,11 @@ internal class CustomNetwork(
 
     override val internet: Internet =
         Internet().connectedTo(
-            coreSwitches = this.nodes.values.filterIsInstance<CoreSwitch>()
+            coreSwitches = this.nodesById.values.filterIsInstance<CoreSwitch>(),
         )
 
     init {
-        this.nodes[internet.id] = internet
+        this.nodesById[internet.id] = internet
         endPointNodes[internet.id] = internet
     }
 
@@ -53,54 +77,70 @@ internal class CustomNetwork(
      * If the link cannot be established, a warning message is logged and the link is ignored.
      * @param[links]    the list of pair representing the links to be established in the network.
      */
-    fun connectFromLinkList(links: List<Pair<NodeId, NodeId>>) = runBlocking {
-        fun warnOfUnsetLink(id1: NodeId, id2: NodeId) {
-            log.warn("SimplexLink from (NodeId=$id1) <-> (NodeId=$id2) could not be established, " +
-                "one of the nodes does not exist or it's connecting to itself.")
-        }
+    fun connectFromLinkList(links: List<Pair<NodeId, NodeId>>) =
+        runBlocking {
+            fun warnOfUnsetLink(
+                id1: NodeId,
+                id2: NodeId,
+            ) {
+                log.warn(
+                    "SimplexLink from (NodeId=$id1) <-> (NodeId=$id2) could not be established, " +
+                        "one of the nodesById does not exist or it's connecting to itself.",
+                )
+            }
 
-        links.forEach { (id1, id2) ->
-            val node1: Node = nodes[id1] ?: let {warnOfUnsetLink(id1, id2); return@forEach}
-            val node2: Node = nodes[id2] ?: let {warnOfUnsetLink(id1, id2); return@forEach}
-            if (node1 === node2) { warnOfUnsetLink(id1, id2); return@forEach }
-            node1.connect(node2)
+            links.forEach { (id1, id2) ->
+                val node1: Node =
+                    nodesById[id1] ?: let {
+                        warnOfUnsetLink(id1, id2)
+                        return@forEach
+                    }
+                val node2: Node =
+                    nodesById[id2] ?: let {
+                        warnOfUnsetLink(id1, id2)
+                        return@forEach
+                    }
+                if (node1 === node2) {
+                    warnOfUnsetLink(id1, id2)
+                    return@forEach
+                }
+                node1.connect(node2)
+            }
         }
-    }
 
     /**
      * Adds a node to the network if a node with same id is not already present.
      * @param[node] node to add.
+     * @return [node] if it was added, `null` otherwise.
      */
-    fun addNode(node: Node): Result {
-
-        if (node.id == internet.id) return log.errAndGet("unable to add node $node, id is reserved for internet abstraction")
-        if (this.isRunning) runBlocking {
-            val job = Job(runnerJob)
-            launch(job) {
-                node.run(invalidator = this@CustomNetwork.validator.Invalidator())
+    fun addNode(node: Node): Node? {
+        if (node.id == internet.id) return log.errAndNull("unable to add node $node, id is reserved for internet abstraction")
+        if (this.isRunning) {
+            runBlocking {
+                val job = Job(runnerJob)
+                launch(job) {
+                    node.run(invalidator = this@CustomNetwork.validator.Invalidator())
+                }
             }
         }
 
-        nodes[node.id]?.let { return log.errAndGet("unable to add node $node, id already present") }
-        nodes[node.id] = node
+        nodesById[node.id]?.let { return log.errAndNull("unable to add node $node, id already present") }
+        nodesById[node.id] = node
         (node as? EndPointNode)?.let { endPointNodes[node.id] = node }
 
-        return SUCCESS
+        return node
     }
 
     /**
      * Removes a node from the network, and all its generated [NetFlow]s.
+     * @return the removed [Node] if any, `null` otherwise.
      */
-    suspend fun rmNode(nodeId: NodeId): Result {
-        nodes[nodeId]?. also {
+    suspend fun rmNode(nodeId: NodeId): Node? =
+        nodesById[nodeId]?. also {
             it.disconnectAll()
             rmEtoEFlowsGenBy(nodeId)
-            nodes.remove(nodeId)
-
-        } ?: return log.errAndGet("unable to remove node, not present in the network")
-
-        return SUCCESS
-    }
+            nodesById.remove(nodeId)
+        } ?: log.errAndNull("unable to remove node, not present in the network")
 
     /**
      * Removes all [NetFlow]s generated by node with id [nodeId].
@@ -109,7 +149,27 @@ internal class CustomNetwork(
         flowsById.values.removeAll { it.transmitterId == nodeId }
     }
 
+    override fun toSpecs(): Specs<CustomNetwork> {
+        val links: List<Pair<NodeId, NodeId>> =
+            buildList {
+                val nodes = nodesById.values.filterNot { it is Internet }
+                val doneNodes = mutableSetOf<NodeId>()
 
+                nodes.forEach { node ->
+                    addAll(
+                        node.portToNode.keys
+                            .filterNot { it in doneNodes }
+                            .map { Pair(it, node.id) },
+                    )
+                    doneNodes.add(node.id)
+                }
+            }
+
+        return CustomNetworkSpecs(
+            nodesSpecs = nodesById.values.filterNot { it is Internet }.map { it.toSpecs() },
+            links = links,
+        )
+    }
 
     /**
      * [Specs] of [CustomNetwork], deserializable from json.
@@ -120,23 +180,23 @@ internal class CustomNetwork(
     internal data class CustomNetworkSpecs(
         val nodesSpecs: List<Specs<Node>>,
         @Serializable(with = LinkListSerializer::class)
-        val links: List<Pair<NodeId, NodeId>>
-    ): Specs<CustomNetwork> {
-
-        companion object { val log by logger()}
-
+        val links: List<Pair<NodeId, NodeId>>,
+    ) : Specs<CustomNetwork> {
         override fun build(): CustomNetwork {
             val nodes: List<Node> = nodesSpecs.map { it.build() }
             val distinctNodes = nodes.distinctBy { it.id }
-            if (nodes.size != distinctNodes.size)
-                log.warn("Some nodes with already existing ids got filtered out.")
+            if (nodes.size != distinctNodes.size) {
+                log.warn("Some nodesById with already existing ids got filtered out.")
+            }
             val customNetwork = CustomNetwork(distinctNodes)
             customNetwork.connectFromLinkList(links)
             return customNetwork
         }
+
+        companion object {
+            val log by logger()
+        }
     }
-
-
 
     /**
      * Deserializer of a json array of array (**size 2**) of ints `[[1, 2], [2, 3]]`,
@@ -144,25 +204,53 @@ internal class CustomNetwork(
      * - Filters out arrays (links) with size not equal to 2.
      * - Filters out links that try to connect a node to itself.
      */
-    private class LinkListSerializer: KSerializer<List<Pair<NodeId, NodeId>>> {
-        companion object { private val log by logger() }
+    private class LinkListSerializer : KSerializer<List<Pair<NodeId, NodeId>>> {
+        companion object {
+            private val log by logger()
+        }
 
-        override val descriptor: SerialDescriptor =
-            PrimitiveSerialDescriptor("link-list", PrimitiveKind.STRING)
+        override val descriptor: SerialDescriptor = serialDescriptor<List<Pair<NodeId, NodeId>>>()
+//            PrimitiveSerialDescriptor("link-list", PrimitiveKind.STRING)
 
         override fun deserialize(decoder: Decoder): List<Pair<NodeId, NodeId>> {
             val listOfArrays: List<List<NodeId>> =
                 decoder.decodeSerializableValue(kotlinx.serialization.serializer())
-            val linkList: List<Pair<NodeId, NodeId>> = listOfArrays
-                .filterNot { if (it.size != 2) { log.warn("Invalid link represented by array $it, size of array should be 2"); return@filterNot true } else false }
-                .map { it[0] to it[1] }
-                .filterNot { if (it.first == it.second) { log.warn("Invalid link $it, a node may not connect to itself"); return@filterNot true } else false }
+            val linkList: List<Pair<NodeId, NodeId>> =
+                listOfArrays
+                    .filterNot {
+                        if (it.size != 2) {
+                            log.warn("Invalid link represented by array $it, size of array should be 2")
+                            return@filterNot true
+                        } else {
+                            false
+                        }
+                    }
+                    .map { it[0] to it[1] }
+                    .filterNot {
+                        if (it.first == it.second) {
+                            log.warn("Invalid link $it, a node may not connect to itself")
+                            return@filterNot true
+                        } else {
+                            false
+                        }
+                    }
 
             return linkList
         }
 
-        override fun serialize(encoder: Encoder, value: List<Pair<NodeId, NodeId>>) {
-            throw IllegalStateException("A link list (List<Pair<NodeId, NodeId>>) should never be serialized.")
+        @OptIn(ExperimentalSerializationApi::class)
+        override fun serialize(
+            encoder: Encoder,
+            value: List<Pair<NodeId, NodeId>>,
+        ) {
+            // Serialize JsonPrimitive Literal to avoid pretty print of the arrays & quotes
+            val noPrettySerializedLinks =
+                value.map {
+                    JsonUnquotedLiteral(Json.encodeToString(listOf(it.first, it.second)))
+                }
+
+            val serializer = ListSerializer(serializer<JsonPrimitive>())
+            encoder.encodeSerializableValue(serializer, noPrettySerializedLinks)
         }
     }
 }
