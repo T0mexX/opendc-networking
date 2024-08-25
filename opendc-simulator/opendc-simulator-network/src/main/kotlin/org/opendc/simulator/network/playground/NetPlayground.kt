@@ -36,13 +36,14 @@ import org.opendc.simulator.network.api.NetEnRecorder
 import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
+import org.opendc.simulator.network.playground.cmds.AdvanceTime
 import org.opendc.simulator.network.playground.cmds.Export
 import org.opendc.simulator.network.playground.cmds.NewFlow
 import org.opendc.simulator.network.playground.cmds.NewLink
 import org.opendc.simulator.network.playground.cmds.NewSwitch
 import org.opendc.simulator.network.playground.cmds.NodeInfo
 import org.opendc.simulator.network.playground.cmds.PGCmd
-import org.opendc.simulator.network.playground.cmds.PowerDraw
+import org.opendc.simulator.network.playground.cmds.EnReport
 import org.opendc.simulator.network.playground.cmds.Quit
 import org.opendc.simulator.network.playground.cmds.RmFlow
 import org.opendc.simulator.network.playground.cmds.RmLink
@@ -52,6 +53,7 @@ import org.opendc.simulator.network.playground.cmds.ShowSnapshot
 import org.opendc.simulator.network.utils.PatternMatching.Companion.whenMatch
 import org.opendc.simulator.network.utils.logger
 import java.io.File
+import java.time.Instant
 
 public fun main(args: Array<String>): Unit = NetworkPlayground().main(args)
 
@@ -96,11 +98,12 @@ private class NetworkPlayground : CliktCommand() {
             RmFlow,
             NewLink,
             RmLink,
-            PowerDraw,
+            EnReport,
             ShowFlows,
             NodeInfo,
             ShowSnapshot,
             Export,
+            AdvanceTime,
             Quit,
         )
 
@@ -118,7 +121,11 @@ private class NetworkPlayground : CliktCommand() {
             }
 
         val energyRecorder = NetEnRecorder(network)
-        env = PGEnv(network = network, energyRecorder = energyRecorder)
+        env = PGEnv(
+            network = network,
+            energyRecorder = energyRecorder,
+            pgTimeSource = PGTimeSource(Instant.now())
+        )
 
         playgroundScope =
             CoroutineScope(
@@ -126,7 +133,8 @@ private class NetworkPlayground : CliktCommand() {
                     CoroutineName("network playground") +
                     supervisorJob +
                     exceptionHandler +
-                    env,
+                    env +
+                    network.validator
             )
     }
 

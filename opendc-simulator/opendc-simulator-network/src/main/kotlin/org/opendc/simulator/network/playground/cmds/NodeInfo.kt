@@ -23,6 +23,7 @@
 package org.opendc.simulator.network.playground.cmds
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
@@ -39,6 +40,9 @@ internal data object NodeInfo : PGCmd("NODE_INFO") {
 
         val node: Node = network.getNodeElseCanc(nodeId)
 
-        log.infoNewLn(node.fmt())
+        launch {
+            network.awaitStability()
+            log.infoNewLn(node.fmt())
+        }
     }
 }

@@ -20,18 +20,35 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.network.playground
+package org.opendc.simulator.network.playground.cmds
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import org.opendc.common.logger.infoNewLine
+import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.NetEnRecorder
 import org.opendc.simulator.network.components.Network
-import kotlin.coroutines.AbstractCoroutineContextElement
-import kotlin.coroutines.CoroutineContext
+import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.PGTimeSource
 
-internal data class PGEnv(
-    val network: Network,
-    val energyRecorder: NetEnRecorder,
-    val pgTimeSource: PGTimeSource,
-) : AbstractCoroutineContextElement(Key) {
-    companion object Key : CoroutineContext.Key<PGEnv>
+internal data object AdvanceTime : PGCmd("ADVANCE_TIME") {
+    override val regex = Regex("\\s*(?:advance by|advance|adv)\\s+(.+)\\s*", RegexOption.IGNORE_CASE)
+
+    override fun CoroutineScope.execCmd(result: MatchResult) {
+        val pgEnv: PGEnv = coroutineContext[PGEnv]!!
+        val network: Network = pgEnv.network
+        val enRecorder: NetEnRecorder = pgEnv.energyRecorder
+        val pgTimeSource: PGTimeSource = pgEnv.pgTimeSource
+
+        val timeDelta: Time = json.decodeFromString(result.groupValues[1])
+
+        launch {
+            network.awaitStability()
+            pgTimeSource.advanceBy(timeDelta)
+            network.advanceBy(timeDelta)
+            enRecorder.advanceBy(timeDelta)
+
+            log.info("advanced time by $timeDelta. Time elapsed since start: ${pgTimeSource.timeElapsed}")
+        }
+    }
 }
-

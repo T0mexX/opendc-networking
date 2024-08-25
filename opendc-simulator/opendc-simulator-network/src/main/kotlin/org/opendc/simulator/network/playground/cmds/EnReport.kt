@@ -23,16 +23,19 @@
 package org.opendc.simulator.network.playground.cmds
 
 import kotlinx.coroutines.CoroutineScope
-import org.opendc.simulator.network.api.NetEnRecorder
+import kotlinx.coroutines.launch
 import org.opendc.simulator.network.playground.PGEnv
 import org.opendc.simulator.network.utils.infoNewLn
 
-internal data object PowerDraw : PGCmd("POWER_DRAW") {
-    override val regex = Regex("\\s*(?:p|pwr|power)\\s*(?:|draw)\\s*")
+internal data object EnReport : PGCmd("ENERGY_REPORT") {
+    override val regex = Regex("\\s*(?:energy|en|e)(?:|report|rep|r)\\s*")
 
     override fun CoroutineScope.execCmd(result: MatchResult) {
-        val enRecorder: NetEnRecorder = coroutineContext[PGEnv]!!.energyRecorder
+        val pgEnv: PGEnv = coroutineContext[PGEnv]!!
 
-        log.infoNewLn(enRecorder.fmt(NetEnRecorder.PWR_DRAW))
+        launch {
+            pgEnv.network.awaitStability()
+            log.infoNewLn(pgEnv.energyRecorder.fmt())
+        }
     }
 }
