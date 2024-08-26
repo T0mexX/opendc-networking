@@ -415,13 +415,13 @@ public class NetworkController(
         consistencyCheck: Boolean = false,
     ) {
         if (instantSrc.isExternalSource) {
-            runBlocking { network.awaitStability() }
+            runBlocking(network.validator) { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
             if (logSnapshot) log.infoNewLn(snapshot().fmt())
 
             val timeSpan = Time.ofMillis(instantSrc.millis() - lastUpdate.toEpochMilli())
             if (timeSpan == Time.ZERO) return
-            runBlocking { advanceBy(timeSpan, suppressWarn = true) }
+            runBlocking(network.validator) { advanceBy(timeSpan, suppressWarn = true) }
         } else {
             log.error("unable to synchronize network, instant source not set. Use 'advanceBy()' instead")
         }

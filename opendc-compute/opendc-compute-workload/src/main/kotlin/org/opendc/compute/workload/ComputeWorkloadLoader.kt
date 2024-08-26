@@ -81,6 +81,10 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
         val netTxCol = reader.resolve(resourceStateNetTx).let { if (it < 0) null else it }
         val netRxCol = reader.resolve(resourceStateNetRx).let { if (it < 0) null else it }
 
+        if (netTxCol == null && netRxCol == null) {
+            logger.info("no network related columns found")
+        }
+
         val fragments = mutableMapOf<String, Builder>()
 
         return try {
