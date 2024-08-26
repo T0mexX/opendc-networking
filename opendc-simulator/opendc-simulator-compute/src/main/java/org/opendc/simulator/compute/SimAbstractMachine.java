@@ -146,6 +146,9 @@ public abstract class SimAbstractMachine implements SimMachine {
 
             graph.disconnect(getMemory().getInput());
 
+            // If network interface defined, terminate all
+            // flows that were started through this interface
+            if (getNetworkInterface() != null) getNetworkInterface().close();
 
             for (SimStorageInterface storage : getStorageInterfaces()) {
                 StorageDevice impl = (StorageDevice) storage;

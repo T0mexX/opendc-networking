@@ -24,12 +24,15 @@ package org.opendc.simulator.compute.workload;
 
 import java.util.List;
 import java.util.Map;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.SimMachineContext;
 import org.opendc.simulator.compute.SimMemory;
 import org.opendc.simulator.compute.SimNetworkInterface;
 import org.opendc.simulator.compute.SimProcessingUnit;
 import org.opendc.simulator.compute.SimStorageInterface;
 import org.opendc.simulator.flow2.FlowGraph;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A {@link SimWorkload} that composes two {@link SimWorkload}s.
@@ -119,6 +122,9 @@ final class SimChainWorkload implements SimWorkload {
         private Context(SimMachineContext ctx) {
             this.ctx = ctx;
         }
+
+        @Override
+        public @Nullable NetworkInterface getNetworkInterface() { return ctx.getNetworkInterface(); }
 
         @Override
         public FlowGraph getGraph() {

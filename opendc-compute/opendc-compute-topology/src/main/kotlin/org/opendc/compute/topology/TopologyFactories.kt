@@ -34,6 +34,8 @@ import org.opendc.simulator.compute.model.MemoryUnit
 import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
 import org.opendc.simulator.compute.power.getPowerModel
+import org.opendc.simulator.network.api.NetworkController
+import org.opendc.simulator.network.api.NetworkInterface
 import java.io.File
 import java.io.InputStream
 import java.util.SplittableRandom
@@ -77,13 +79,21 @@ public fun clusterTopology(
     return topology.toHostSpecs(random)
 }
 
+public fun TopologySpec.Companion.fromFile(file: File): TopologySpec =
+    reader.read(file)
+public fun TopologySpec.Companion.fromPath(path: String): TopologySpec =
+    reader.read(File(path))
+public fun TopologySpec.Companion.fromInput(input: InputStream): TopologySpec =
+    reader.read(input)
+
+
 /**
  * Helper method to convert a [TopologySpec] into a list of [HostSpec]s.
  */
-private fun TopologySpec.toHostSpecs(random: RandomGenerator): List<HostSpec> {
+public fun TopologySpec.toHostSpecs(random: RandomGenerator): List<HostSpec> {
     return clusters.flatMap { cluster ->
         List(cluster.count) {
-            cluster.toHostSpecs(random)
+            cluster.toHostSpecs(random, networkController)
         }.flatten()
     }
 }
@@ -93,16 +103,18 @@ private fun TopologySpec.toHostSpecs(random: RandomGenerator): List<HostSpec> {
  */
 private var clusterId = 0
 
-private fun ClusterSpec.toHostSpecs(random: RandomGenerator): List<HostSpec> {
+private fun ClusterSpec.toHostSpecs(
+    random: RandomGenerator,
+    networkController: NetworkController?
+): List<HostSpec> {
     val hostSpecs =
         hosts.flatMap { host ->
             (
-                List(host.count) {
-                    host.toHostSpecs(
-                        clusterId,
-                        random,
-                    )
-                }
+                host.toHostsSpecs(
+                    clusterId,
+                    random,
+                    networkController = networkController
+                )
             )
         }
     clusterId++
@@ -112,42 +124,62 @@ private fun ClusterSpec.toHostSpecs(random: RandomGenerator): List<HostSpec> {
 /**
  * Helper method to convert a [HostJSONSpec] into a [HostSpec]s.
  */
-private var hostId = 0
+private var hostId = 0 // used if no network controller
 private var globalCoreId = 0
 
-private fun HostJSONSpec.toHostSpecs(
+private fun HostJSONSpec.toHostsSpecs(
     clusterId: Int,
     random: RandomGenerator,
-): HostSpec {
-    val unknownProcessingNode = ProcessingNode("unknown", "unknown", "unknown", cpu.coreCount)
-    val units = List(cpu.count) { ProcessingUnit(unknownProcessingNode, globalCoreId++, cpu.coreSpeed.toMHz()) }
+    networkController: NetworkController?
+): List<HostSpec> {
+    return buildList {
+        repeat(count) { hostIndex ->
+            val unknownProcessingNode = ProcessingNode("unknown", "unknown", "unknown", cpu.coreCount)
+            val units = List(cpu.count) { ProcessingUnit(unknownProcessingNode, globalCoreId++, cpu.coreSpeed.toMHz()) }
 
-    val unknownMemoryUnit = MemoryUnit(memory.vendor, memory.modelName, memory.memorySpeed.toMHz(), memory.memorySize.toMiB().toLong())
-    val machineModel =
-        MachineModel(
-            units,
-            listOf(unknownMemoryUnit),
-        )
+            val unknownMemoryUnit = MemoryUnit(memory.vendor, memory.modelName, memory.memorySpeed.toMHz(), memory.memorySize.toMiB().toLong())
+            val machineModel =
+                MachineModel(
+                    units,
+                    listOf(unknownMemoryUnit),
+                )
 
-    val powerModel =
-        getPowerModel(powerModel.modelType, powerModel.power.toWatts(), powerModel.maxPower.toWatts(), powerModel.idlePower.toWatts())
+            val powerModel =
+                getPowerModel(powerModel.modelType, powerModel.power.toWatts(), powerModel.maxPower.toWatts(), powerModel.idlePower.toWatts())
 
-    var hostName: String
-    if (name == null) {
-        hostName = "Host-$hostId"
-    } else {
-        hostName = name
+            val networkInterface: NetworkInterface? =
+                // networkController != null  => network specifications were provided and network simulation is requested.
+                networkController?.let { controller ->
+                    // The id specified in the "nodeIds" property in the Host JSON schema if any.
+                    val jsonNodeId = nodeIds.getOrNull(hostIndex)
+                    jsonNodeId?.let jsonIdTry@{
+                        // The network interface of the node with id corresponding to jsonNodeId if exists.
+                        controller.claimNode(nodeId = it)
+//                            ?: NetworkController.log.warnAndNull("nodeId $it provided in JSON topology file " +
+//                                "does not correspond to any node id of the network defined in the 'networkFile' property (or duplicate ids are provided)." +
+//                                "Falling back to first unclaimed host node (might cause a chain of claiming each other node ids)")
+                    }
+                        // The network interface of any unclaimed host node in the network.
+                        ?: controller.claimNextHostNode()
+                        // Network controller not null (network simulation required), but no unclaimed host available.
+                        ?: throw RuntimeException("'networkFile' property defined in topology file, " +
+                            "however not enough host nodes available. Either a different network with a higher " +
+                            "number of host nodes has to be provided, or the number of hosts shall be lowered")
+                } // networkController == null => not network interface and no network simulation.
+
+            val nodeId: Long = networkInterface?.nodeId ?: (hostId++).toLong()
+            val hostName: String = name ?: "Host-${nodeId.toInt()}"
+
+            add(
+                HostSpec(
+                    UUID(random.nextLong(), nodeId),
+                    hostName,
+                    mapOf("cluster" to clusterId),
+                    machineModel,
+                    SimPsuFactories.simple(powerModel),
+                    netIface = networkInterface
+                )
+            )
+        }
     }
-
-    val hostSpec =
-        HostSpec(
-            UUID(random.nextLong(), (hostId).toLong()),
-            hostName,
-            mapOf("cluster" to clusterId),
-            machineModel,
-            SimPsuFactories.simple(powerModel),
-        )
-    hostId++
-
-    return hostSpec
 }

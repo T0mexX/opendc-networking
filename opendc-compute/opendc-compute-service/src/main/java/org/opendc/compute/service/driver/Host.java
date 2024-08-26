@@ -25,11 +25,15 @@ package org.opendc.compute.service.driver;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.compute.api.Server;
 import org.opendc.compute.service.driver.telemetry.GuestCpuStats;
 import org.opendc.compute.service.driver.telemetry.GuestSystemStats;
 import org.opendc.compute.service.driver.telemetry.HostCpuStats;
 import org.opendc.compute.service.driver.telemetry.HostSystemStats;
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot;
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot;
 
 /**
  * Base interface for representing compute resources that host virtualized {@link Server} instances.
@@ -134,4 +138,17 @@ public interface Host {
      * @throws IllegalArgumentException if the server is not present on the host.
      */
     GuestCpuStats getCpuStats(Server server);
+
+    /**
+     * @return  the network statistics of the host if simulation includes networking, `null` otherwise.
+     */
+    @Nullable NodeSnapshot getNetworkStats();
+
+    /**
+     * @param server    The {@link Server} to obtain the network statistics of.
+     * @throws IllegalArgumentException if the server is not present on the host.
+     *
+     * @return  The network statistics of the server if simulation includes networking, `null` otherwise.
+     */
+    @Nullable NetIfaceSnapshot getNetworkStats(Server server);
 }

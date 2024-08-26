@@ -27,7 +27,7 @@ import org.opendc.simulator.compute.SimMachine;
 /**
  * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
+public abstract class SimNetworkAdapter  implements SimPeripheral {
     /**
      * Return the unidirectional bandwidth of the network adapter (in Mbps).
      */

@@ -102,6 +102,7 @@ public class NetFlow internal constructor(
     /**
      * Non suspending overload for java interoperability.
      */
+    @JvmName("setDemand") // Makes it visible from java (normally inline classes related methods aren't
     public fun setDemand(newDemand: DataRate) {
         runBlocking { setDemandSus(newDemand) }
     }

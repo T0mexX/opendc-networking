@@ -104,6 +104,3 @@ public interface ServerTableReader : Exportable {
      */
     public val cpuLostTime: Long
 }
-
-// Loads the default export fields for deserialization whenever this file is loaded.
-private val _ignore = DfltServerExportColumns

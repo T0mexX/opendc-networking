@@ -27,7 +27,9 @@ import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import kotlin.coroutines.CoroutineContext;
+import org.jetbrains.annotations.Nullable;
 import org.opendc.common.Dispatcher;
+import org.opendc.simulator.network.api.NetworkController;
 
 /**
  * A {@link FlowEngine} simulates a generic flow network.
@@ -58,17 +60,23 @@ public final class FlowEngine implements Runnable {
 
     private final Dispatcher dispatcher;
     private final InstantSource clock;
+    private final @Nullable NetworkController networkController;
 
     /**
      * Create a new {@link FlowEngine} instance using the specified {@link CoroutineContext} and {@link InstantSource}.
      */
     public static FlowEngine create(Dispatcher dispatcher) {
-        return new FlowEngine(dispatcher);
+ 		 // No NetworkController => no network simulation.
+        return new FlowEngine(dispatcher, null);
+    }
+    public static FlowEngine create(Dispatcher dispatcher, @Nullable NetworkController netController) {
+        return new FlowEngine(dispatcher, netController);
     }
 
-    FlowEngine(Dispatcher dispatcher) {
+    FlowEngine(Dispatcher dispatcher, @Nullable NetworkController networkController) {
         this.dispatcher = dispatcher;
         this.clock = dispatcher.getTimeSource();
+        this.networkController = networkController;
     }
 
     /**
@@ -149,6 +157,12 @@ public final class FlowEngine implements Runnable {
     private void doRunEngine(long now) {
         final FlowStageQueue queue = this.queue;
         final FlowTimerQueue timerQueue = this.timerQueue;
+
+        // If network controller set, synchronize network with the
+        // current time of the simulation (the SimulationDispatcher time-source
+        // has to be set in advance with networkController::setInstantSource)
+        // The invocation blocks the thread until the network flows are stabilized.
+        if (networkController != null) networkController.sync(/* printSnapShot */ true);
 
         try {
             // Mark the engine as active to prevent concurrent calls to this method
