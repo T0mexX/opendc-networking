@@ -158,15 +158,16 @@ public final class FlowEngine implements Runnable {
         final FlowStageQueue queue = this.queue;
         final FlowTimerQueue timerQueue = this.timerQueue;
 
-        // If network controller set, synchronize network with the
-        // current time of the simulation (the SimulationDispatcher time-source
-        // has to be set in advance with networkController::setInstantSource)
-        // The invocation blocks the thread until the network flows are stabilized.
-        if (networkController != null) networkController.sync(/* printSnapShot */ true);
+
 
         try {
             // Mark the engine as active to prevent concurrent calls to this method
             active = true;
+            // If network controller set, synchronize network with the
+            // current time of the simulation (the SimulationDispatcher time-source
+            // has to be set in advance with networkController::setInstantSource)
+            // The invocation blocks the thread until the network flows are stabilized.
+            if (networkController != null) networkController.sync(/* printSnapShot */ true);
 
             // Execute all scheduled updates at current timestamp
             while (true) {

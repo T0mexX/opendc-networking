@@ -26,6 +26,7 @@ import kotlinx.serialization.Serializable
 import org.opendc.common.logger.infoNewLine
 import org.opendc.common.logger.logger
 import org.opendc.compute.telemetry.export.parquet.ComputeExportConfig
+import org.opendc.simulator.network.export.NetworkExportConfig
 import java.util.UUID
 
 @Serializable
@@ -34,6 +35,7 @@ public data class ScenarioSpec(
     var name: String = "",
     val outputFolder: String = "output",
     val computeExportConfig: ComputeExportConfig,
+    val networkExportConfig: NetworkExportConfig? = null,
     val topology: ScenarioTopologySpec,
     val workload: WorkloadSpec,
     val allocationPolicy: AllocationPolicySpec = AllocationPolicySpec(),
@@ -72,6 +74,7 @@ public data class ScenariosSpec(
     val checkpointModels: Set<CheckpointModelSpec?> = setOf(null),
     val carbonTracePaths: Set<String?> = setOf(null),
     val computeExportConfig: ComputeExportConfig = ComputeExportConfig.ALL_COLUMNS,
+    val networkExportConfig: NetworkExportConfig? = null
 ) {
     init {
         require(runs > 0) { "The number of runs should always be positive" }
@@ -111,6 +114,7 @@ public data class ScenariosSpec(
                         name,
                         outputFolder,
                         computeExportConfig = computeExportConfig,
+                        networkExportConfig = networkExportConfig,
                         topologyList[(i / topologyDiv) % topologyList.size],
                         workloadList[(i / workloadDiv) % workloadList.size],
                         allocationPolicyList[(i / allocationDiv) % allocationPolicyList.size],

@@ -34,7 +34,6 @@ import org.opendc.compute.simulator.provisioner.setUpNetwork
 import org.opendc.compute.simulator.provisioner.setupComputeService
 import org.opendc.compute.simulator.provisioner.setupHosts
 import org.opendc.compute.telemetry.export.parquet.ParquetComputeMonitor
-import org.opendc.compute.topology.clusterTopology
 import org.opendc.compute.topology.fromPath
 import org.opendc.compute.topology.specs.HostSpec
 import org.opendc.compute.topology.specs.TopologySpec
@@ -123,8 +122,6 @@ public fun runScenario(
             val topologySpecs: TopologySpec = TopologySpec.fromPath(scenario.topologySpec.pathToFile)
             val hostsSpecs: List<HostSpec> = topologySpecs.toHostSpecs(random = Random(seed))
             val networkController: NetworkController? = topologySpecs.networkController
-            networkController?.setInstantSource(timeSource)
-            dispatcher
 
             provisioner.runSteps(
                 setupComputeService(
@@ -132,7 +129,11 @@ public fun runScenario(
                     { createComputeScheduler(scenario.allocationPolicySpec.policyType, Random(it.seeder.nextLong())) },
                 ),
                 setupHosts(serviceDomain, hostsSpecs, optimize = true, networkController = networkController),
-                setUpNetwork(networkController = networkController),
+                setUpNetwork(
+                    networkController = networkController,
+                    networkExportConfig = scenario.networkExportConfig,
+                    seedOutputFolder = File("${scenario.outputFolder}/raw-output/$index/seed=$seed"),
+                ),
             )
 
             val workloadLoader = ComputeWorkloadLoader(File(scenario.workloadSpec.pathToFile))

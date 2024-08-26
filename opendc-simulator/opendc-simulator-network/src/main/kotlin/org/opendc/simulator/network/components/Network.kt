@@ -52,7 +52,7 @@ public sealed class Network : WithSpecs<Network> {
     @Transient
     internal val validator: NetworkStabilityValidator = NetworkStabilityValidator()
 
-    private val networkScope =
+    internal val networkScope =
         CoroutineScope(
             Dispatchers.Default +
                 SupervisorJob() +

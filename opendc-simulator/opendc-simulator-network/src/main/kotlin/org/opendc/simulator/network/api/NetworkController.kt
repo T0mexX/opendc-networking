@@ -52,6 +52,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
+import kotlin.time.measureTime
 
 /**
  * Interface through which control the network (from external modules).
@@ -99,12 +100,9 @@ public class NetworkController(
         ): NetworkController = fromFile(File(path), instantSource)
     }
 
-    private val netExportHandler: NetExportHandler? =
+    private var netExportHandler: NetExportHandler? =
         exportConfig?.let {
-            NetExportHandler(
-                config = it,
-                runName = runName,
-            )
+            NetExportHandler(config = it)
         }
 
     /**
@@ -137,6 +135,16 @@ public class NetworkController(
         instantSrc = NetworkInstantSrc(instantSource)
     }
 
+    public fun setExportConfig(exportConfig: NetworkExportConfig) {
+        netExportHandler?.let {
+            close()
+            log.warn("replacing current network export handler $it with new one")
+        }
+
+        netExportHandler =
+            NetExportHandler(config = exportConfig)
+    }
+
     /**
      * The current instant of the network time source.
      */
@@ -147,7 +155,7 @@ public class NetworkController(
      * The [Instant] when the last [advanceBy] or [sync] was called.
      * It is used by sync to determine the time span to advance the network by.
      */
-    private var lastUpdate: Instant = Instant.EPOCH
+    internal var lastUpdate: Time = Time.ZERO
 
     /**
      * @see[NetEnRecorder]
@@ -185,7 +193,7 @@ public class NetworkController(
     private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
 
     init {
-        instantSource?.let { lastUpdate = it.instant() }
+        instantSource?.let { lastUpdate = Time.ofInstantFromEpoch(it.instant()) }
 
         network.launch()
         log.info(network.fmtNodes())
@@ -414,12 +422,13 @@ public class NetworkController(
         logSnapshot: Boolean = false,
         consistencyCheck: Boolean = false,
     ) {
+        val syncTo = instantSrc.time
         if (instantSrc.isExternalSource) {
             runBlocking(network.validator) { network.awaitStability() }
             if (consistencyCheck) runBlocking { checkFlowConsistency() }
             if (logSnapshot) log.infoNewLn(snapshot().fmt())
 
-            val timeSpan = Time.ofMillis(instantSrc.millis() - lastUpdate.toEpochMilli())
+            val timeSpan = syncTo - lastUpdate
             if (timeSpan == Time.ZERO) return
             runBlocking(network.validator) { advanceBy(timeSpan, suppressWarn = true) }
         } else {
@@ -447,13 +456,15 @@ public class NetworkController(
     ) {
         suspend fun advance(jump: Time) {
             network.awaitStability()
-            if (instantSrc.isInternalSource) {
-                instantSrc.advanceTime(jump)
-            }
+            network.validator.checkIsStableWhile {
+                if (instantSrc.isInternalSource) {
+                    instantSrc.advanceTime(jump)
+                }
 
-            network.advanceBy(jump)
-            energyRecorder.advanceBy(jump)
-            lastUpdate = instantSrc.instant()
+                network.advanceBy(jump)
+                energyRecorder.advanceBy(jump)
+                lastUpdate += jump
+            }
         }
 
         if (instantSrc.isExternalSource && suppressWarn.not()) {

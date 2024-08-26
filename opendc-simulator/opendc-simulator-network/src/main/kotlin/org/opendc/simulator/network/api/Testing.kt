@@ -70,7 +70,7 @@ private fun idk() {
 //                NetworkExportConfig(
 //                    outputFolder = File("resources/bo"),
 //                    networkExportColumns = Exportable.getAllLoadedColumns(),
-//                    nodeExportColumn = Exportable.getAllLoadedColumns(),
+//                    nodeExportColumns = Exportable.getAllLoadedColumns(),
 //                    exportInterval = Time.ofMin(5),
 //                ),
 //        )
