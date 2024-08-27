@@ -231,6 +231,7 @@ public class NodeSnapshot internal constructor(
         ): NodeSnapshot {
             withStableNetwork?.let {
                 runBlocking {
+                    it.awaitStability()
                     it.validator.checkIsStableWhile { snapshot(instant = instant) }
                 }
             }
@@ -258,7 +259,7 @@ public class NodeSnapshot internal constructor(
             )
         }
 
-        public fun NetworkController.snapshotOf(nodeId: NodeId): NodeSnapshot? = network.nodesById[nodeId]?.snapshot(currentInstant)
+        public fun NetworkController.snapshotOf(nodeId: NodeId): NodeSnapshot? = network.nodesById[nodeId]?.snapshot(currentInstant, withStableNetwork = network)
     }
 }
 
