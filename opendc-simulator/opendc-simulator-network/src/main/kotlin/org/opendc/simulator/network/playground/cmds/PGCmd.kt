@@ -36,7 +36,13 @@ import org.opendc.simulator.network.utils.logger
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
+/**
+ * A command executable from CLI that allows to interact with the network.
+ */
 internal sealed class PGCmd(val name: String) {
+    /**
+     * The regex used to match CLI input to playground commands.
+     */
     abstract val regex: Regex
 
     protected abstract fun CoroutineScope.execCmd(result: MatchResult)

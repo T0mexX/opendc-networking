@@ -27,6 +27,19 @@ import kotlinx.coroutines.launch
 import org.opendc.simulator.network.playground.PGEnv
 import org.opendc.simulator.network.utils.infoNewLn
 
+/**
+ * Logs the energy report of the network.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > energy report
+ * 16:04:47.178 [INFO] ENERGY_REPORT -
+ * | ==== Energy Report ====
+ * | Current Power Usage: 135.400000 Watts
+ * | Total Energy Consumed: 1354.000000 Joule
+ * ```
+ */
 internal data object EnReport : PGCmd("ENERGY_REPORT") {
     override val regex = Regex("\\s*(?:energy|en|e)(?:|report|rep|r)\\s*")
 

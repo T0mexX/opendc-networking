@@ -27,9 +27,25 @@ import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.CustomNetwork
+import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.NewLink.regex
 
+/**
+ * Creates a new (core)switch with certain specs.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ *
+ * // switch
+ * > switch 0 /* node id */ - 1Gbps /* port speed */ 4 /* num of ports */
+ * 6:42:29.719 [INFO] NEW_SWITCH - successfully added [Switch: id=10] to network
+ *
+ * // core switch (connected to internet)
+ * > core switch 0 /* node id */ - 1Gbps /* port speed */ 4 /* num of ports */
+ */
 internal data object NewSwitch : PGCmd("NEW_SWITCH") {
     override val regex = Regex("\\s*(c|core|)(?:s|switch)\\s+(\\d+)\\s+([^ ]+)\\s+([^ ]+)\\s*")
 

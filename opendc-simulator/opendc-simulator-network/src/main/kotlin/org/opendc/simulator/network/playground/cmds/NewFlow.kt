@@ -28,9 +28,20 @@ import kotlinx.coroutines.launch
 import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
+import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.Export.regex
 
+/**
+ * Starts a new flow between 2 [Node]s, with a certain demand.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > flow 0 /* sender node id */ -> 3 /* receiver node id */ 10Kbps /* demand */
+ * 16:35:28.539 [INFO] NEW_FLOW - successfully create org.opendc.simulator.network.flow.NetFlow@4cfe988d
+ */
 internal data object NewFlow : PGCmd("NEW_FLOW") {
     override val regex = Regex("\\s*(?:flow|f)\\s+(\\d+)\\s*(?:->| )\\s*(\\d+)\\s+([^ ]+)\\s*")
 

@@ -32,6 +32,15 @@ import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.connect
 import org.opendc.simulator.network.playground.PGEnv
 
+/**
+ * Creates a new link with a certain bandwidth between 2 [Node]s.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > link 0 /* first node id */ - 3 /* second node id */ 1Gbps /* bandwidth */
+ * 16:40:25.123 [INFO] NEW_LINK - link successfully created
+ */
 internal data object NewLink : PGCmd("NEW_LINK") {
     override val regex = Regex("\\s*(?:l|link)\\s+(\\d+)(?:\\s+|\\s*-\\s*)(\\d+)(?:|\\s+([^ ]+))\\s*")
 

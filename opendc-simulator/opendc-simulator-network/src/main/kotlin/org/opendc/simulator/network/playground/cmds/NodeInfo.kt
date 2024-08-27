@@ -28,8 +28,22 @@ import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.NewSwitch.regex
 import org.opendc.simulator.network.utils.infoNewLn
 
+/**
+ * Displays [Node] information.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > node 0
+ * 16:46:14.078 [INFO] NODE_INFO -
+ * | Type = HostNode
+ * | numPorts = 1000
+ * | portSpeed = 10.485760 Mbps
+ * | numConnectedNodes = 2
+ */
 internal data object NodeInfo : PGCmd("NODE_INFO") {
     override val regex = Regex("\\s*(?:n|node)\\s+(\\d+)\\s*")
 

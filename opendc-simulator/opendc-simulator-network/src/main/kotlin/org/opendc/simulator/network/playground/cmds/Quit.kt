@@ -23,8 +23,19 @@
 package org.opendc.simulator.network.playground.cmds
 
 import kotlinx.coroutines.CoroutineScope
+import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.playground.cmds.NodeInfo.regex
 import kotlin.system.exitProcess
 
+/**
+ * Exits process.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > quit
+ * ```
+ */
 internal data object Quit : PGCmd("QUIT") {
     override val regex = Regex("\\s*(?:q|quit)\\s*")
 

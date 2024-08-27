@@ -26,9 +26,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.opendc.simulator.network.components.Network
+import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.NodeInfo.regex
 
+/**
+ * Stops a network flow with certain [FlowId].
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > rm flow 1 /* flow id */
+ * 16:49:13.409 [INFO] RM_FLOW - flow successfully stopped
+ */
 internal data object RmFlow : PGCmd("RM_FLOW") {
     override val regex = Regex("\\s*rm\\s+(?:f|flow)\\s+(\\d+)\\s*")
 

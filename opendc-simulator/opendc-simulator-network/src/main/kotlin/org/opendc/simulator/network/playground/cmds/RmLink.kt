@@ -30,9 +30,19 @@ import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.disconnect
+import org.opendc.simulator.network.components.link.Link
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.RmFlow.regex
 
-@OptIn(ExperimentalCoroutinesApi::class)
+/**
+ * Removes a [Link] between 2 [Node]s.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > rm link 1 /* first node id */ 2 /* second node id */
+ * 16:52:10.377 [INFO] RM_LINK - link successfully removed
+ */
 internal data object RmLink : PGCmd("RM_LINK") {
     override val regex = Regex("\\s*rm\\s+(?:l|link)\\s+(\\d+)\\s*[- ]\\s*(\\d+)\\s*")
 

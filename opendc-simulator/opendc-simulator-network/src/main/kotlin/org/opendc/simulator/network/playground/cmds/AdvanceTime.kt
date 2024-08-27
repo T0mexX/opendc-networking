@@ -30,6 +30,15 @@ import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.playground.PGEnv
 import org.opendc.simulator.network.playground.PGTimeSource
 
+/**
+ * Advances the playground time, updating time-dependent information.
+ *
+ * ```console
+ * // Example
+ * > advance by 10sec
+ * 16:43:43.607 [INFO] ADVANCE_TIME - advanced time by PT10S. Time elapsed since start: PT10S
+ * ```
+ */
 internal data object AdvanceTime : PGCmd("ADVANCE_TIME") {
     override val regex = Regex("\\s*(?:advance by|advance|adv)\\s+(.+)\\s*", RegexOption.IGNORE_CASE)
 

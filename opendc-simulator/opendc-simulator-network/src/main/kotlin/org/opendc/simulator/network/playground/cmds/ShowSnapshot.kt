@@ -29,9 +29,25 @@ import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapsho
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.ShowFlows.regex
 import org.opendc.simulator.network.utils.infoNewLn
 import java.time.Instant
 
+/**
+ * Logs either a [Network] snapshot or a [Node] snapshot.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ *
+ * // network snapshot (not yet implemented)
+ * > snapshot
+ *
+ * // node snapshot
+ * > snapshot 1 /* node id */16:57:12.341 [DefaultDispatcher-worker-3] [INFO] SHOW_SNAPSHOT -
+ * | node                     instant                       flows in                   flows out                  generating n flows         consuming n flows          curr min flow tput %       curr max flow tput %       curr avrg flow tput %      curr tput (all flows) (%)  curr node port usage %     curr pwr use               avrg pwr over time         tot energy cons
+ * | [Switch: id=1]           2024-08-27T14:57:12.3307Z     2                          2                          0                          0                          100.00%                    100.00%                    100.00%                    0.50025 Mbps (100.0%)      4.77076%                   67.89372 Watts             67.89364 Watts             0.67894 KJoule
+ */
 internal data object ShowSnapshot : PGCmd("SHOW_SNAPSHOT") {
     override val regex = Regex("\\s*(?:snapshot|snap)(?:|\\s+(\\d*))\\s*")
 

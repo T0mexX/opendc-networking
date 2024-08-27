@@ -28,9 +28,20 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.CustomNetwork
+import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.components.link.Link
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.RmLink.regex
 
-@OptIn(ExperimentalCoroutinesApi::class)
+/**
+ * Removes a [Node] with a certain [NodeId].
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > rm node 1 /* node id */
+ * 16:52:10.377 [INFO] RM_NODE - node successfully removed
+ */
 internal data object RmNode : PGCmd("RM_NODE") {
     override val regex = Regex("\\s*rm\\s+(?:n|node)\\s+(\\d+)\\s*")
 

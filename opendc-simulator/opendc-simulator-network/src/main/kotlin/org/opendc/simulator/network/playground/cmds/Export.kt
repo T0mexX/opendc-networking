@@ -25,12 +25,23 @@ package org.opendc.simulator.network.playground.cmds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.encodeToString
+import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.EnReport.regex
 import java.io.File
 import java.io.IOException
 import kotlin.io.path.createParentDirectories
 
+/**
+ * Exports the [Network] to directory specified by argument in JSON format.
+ * The file can then be used to run network and compute-network simulation on that topology.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * 16:32:34.009 [INFO] EXPORT - network successfully exported to /home/t0m3x/foo.json
+ */
 internal data object Export : PGCmd("EXPORT") {
     override val regex = Regex("\\s*(?:export|exp)\\s+(.+)\\s*")
 
@@ -44,7 +55,7 @@ internal data object Export : PGCmd("EXPORT") {
                 targetFile.toPath().normalize().createParentDirectories()
             }
 
-            targetFile.writeText(json.encodeToString(network))
+            targetFile.writeText(json.encodeToString(network.toSpecs()))
         } catch (e: IOException) {
             val cancExc =
                 CancellationException(

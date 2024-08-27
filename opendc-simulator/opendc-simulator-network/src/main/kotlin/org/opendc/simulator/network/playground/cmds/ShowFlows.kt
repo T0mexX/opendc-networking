@@ -27,9 +27,25 @@ import kotlinx.coroutines.launch
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.components.link.Link
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.playground.cmds.RmLink.regex
 import org.opendc.simulator.network.utils.infoNewLn
 
+/**
+ * Logs information regarding the [NetFlow] currently present in the [Network]
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > flows
+ * 16:52:10.377 [INFO] SHOW_FLOWS -
+ * | ==== Flows ====
+ * | id   sender    dest      demand              throughput
+ * | 0    0         3         1.000 Mbps          1.000 Mbps
+ * | 2    0         3         500.000 bps         500.000 bps
+ */
 internal data object ShowFlows : PGCmd("SHOW_FLOWS") {
     override val regex = Regex("\\s*(?:flows|f)(?:|\\s+(\\d*))\\s*")
 
