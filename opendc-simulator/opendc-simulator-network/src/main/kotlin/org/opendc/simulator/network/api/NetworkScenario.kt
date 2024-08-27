@@ -35,7 +35,7 @@ import me.tongfei.progressbar.ProgressBarBuilder
 import me.tongfei.progressbar.ProgressBarStyle
 import org.opendc.common.logger.infoNewLine
 import org.opendc.common.units.Time
-import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.api.workload.SimNetWorkload
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.export.NetworkExportConfig

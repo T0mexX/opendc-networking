@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.network.api.simworkloads
+package org.opendc.simulator.network.api.workload
 
 import kotlinx.serialization.Serializable
 import org.opendc.common.units.DataRate

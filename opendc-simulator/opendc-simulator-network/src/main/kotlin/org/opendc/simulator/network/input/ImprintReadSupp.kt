@@ -30,7 +30,7 @@ import org.apache.parquet.schema.MessageType
 import org.apache.parquet.schema.Type
 import org.apache.parquet.schema.Types
 import org.opendc.common.logger.infoNewLine
-import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
+import org.opendc.simulator.network.api.workload.SimNetWorkload
 
 internal class ImprintReadSupp : ReadSupport<NetEventImprint>() {
     private lateinit var readingSchema: MessageType
