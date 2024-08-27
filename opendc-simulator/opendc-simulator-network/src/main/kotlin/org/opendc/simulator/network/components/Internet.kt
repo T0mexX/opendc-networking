@@ -32,6 +32,7 @@ import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.port.PortImpl
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
+import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
@@ -39,7 +40,7 @@ import org.opendc.simulator.network.policies.forwarding.StaticECMP
 internal class Internet(
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ) : EndPointNode {
-    override val fairnessPolicy: FairnessPolicy = MaxMinPerPort
+    override val fairnessPolicy: FairnessPolicy = FirstComeFirstServed
     override val updtChl = UpdateChl()
 
     override val id: NodeId = INTERNET_ID

@@ -29,6 +29,7 @@ import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
+import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
@@ -42,7 +43,7 @@ internal class CoreSwitch(
     id: NodeId,
     portSpeed: DataRate,
     numOfPorts: Int,
-    fairnessPolicy: FairnessPolicy = MaxMinPerPort,
+    fairnessPolicy: FairnessPolicy = FirstComeFirstServed,
     portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ) : Switch(id, portSpeed, numOfPorts, fairnessPolicy, portSelectionPolicy), EndPointNode {
     override suspend fun consumeUpdt() {

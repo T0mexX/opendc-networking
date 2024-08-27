@@ -44,7 +44,6 @@ import org.opendc.simulator.network.utils.logger
 internal class FlowHandler(internal val ports: Collection<Port>) {
     private companion object {
         val log by logger()
-        var bo = 0
     }
 
     /**
