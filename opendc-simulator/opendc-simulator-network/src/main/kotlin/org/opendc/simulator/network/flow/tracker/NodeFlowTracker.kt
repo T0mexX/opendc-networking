@@ -28,6 +28,7 @@ import kotlinx.coroutines.sync.withLock
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.tracker.TrackerMode.Companion.setUp
+import org.opendc.simulator.network.utils.RWLock
 import org.opendc.simulator.network.utils.logger
 import java.util.TreeSet
 import java.util.concurrent.ConcurrentHashMap
@@ -41,7 +42,7 @@ internal class NodeFlowTracker(
     vararg modes: TrackerMode,
 ) {
     private val treesByMode = ConcurrentHashMap<TrackerMode, TreeSet<OutFlow>>()
-    private val treeLock = Mutex()
+    private val treeLock = RWLock(readPermits = 10)
 
     init {
         modes.forEach { trackMode ->
@@ -51,26 +52,32 @@ internal class NodeFlowTracker(
         }
     }
 
-    operator fun plus(mode: TrackerMode) {
-        treesByMode.computeIfAbsent(mode) { mode.setUp(allOutgoingFlows) }
-    }
+    suspend operator fun plus(mode: TrackerMode) =
+        treeLock.withWLock {
+            treesByMode.computeIfAbsent(mode) { mode.setUp(allOutgoingFlows) }
+        }
 
-    operator fun minus(mode: TrackerMode) {
-        treesByMode.remove(mode) ?: log.warn("unable to remove tracker mode $mode, mode not set")
-    }
+    suspend operator fun minus(mode: TrackerMode) =
+        treeLock.withWLock {
+            treesByMode.remove(mode) ?: log.warn("unable to remove tracker mode $mode, mode not set")
+        }
 
     /**
      * @return [List] that contains [OutFlow]s that are tracked
      * based on [mode], sorted by the comparator defined in [mode]
      */
-    operator fun get(mode: TrackerMode = treesByMode.keys.first()): List<OutFlow> {
-        this + mode
-        return treesByMode[mode]?.toList()!!
-    }
+    operator fun get(mode: TrackerMode = treesByMode.keys.first()): List<OutFlow> =
+        runBlocking {
+            this@NodeFlowTracker + mode
+            treeLock.withRLock {
+                treesByMode[mode]?.toList()!!
+            }
+        }
 
-    fun remove(outFlow: OutFlow) {
-        treesByMode.values.forEach { it.remove(outFlow) }
-    }
+    suspend fun remove(outFlow: OutFlow) =
+        treeLock.withWLock {
+            treesByMode.values.forEach { it.remove(outFlow) }
+        }
 
     /**
      * @return the smaller [OutFlow] (based on the [mode]) among
@@ -81,12 +88,12 @@ internal class NodeFlowTracker(
         mode: TrackerMode = treesByMode.keys.first(),
     ): OutFlow? =
         runBlocking {
-            treeLock.withLock {
+            treeLock.withRLock {
                 this@NodeFlowTracker + mode
                 val treeSet: TreeSet<OutFlow> = treesByMode[mode]!!
                 var curr = outFlow
                 do {
-                    curr = treeSet.higher(curr) ?: return@withLock null
+                    curr = treeSet.higher(curr) ?: return@withRLock null
                 } while (curr.totRateOut.approxLarger(outFlow.totRateOut).not())
 
                 curr
@@ -103,36 +110,46 @@ internal class NodeFlowTracker(
      */
     fun OutFlow.handlePropChange(fieldChanger: () -> Unit) =
         runBlocking {
-            treeLock.withLock {
-                fun OutFlow.isNew(): Boolean = demand.isZero() && totRateOut.isZero()
+            treeLock.withRLock {
+                rmIfNeeded()
 
-                treesByMode.forEach { (mode, tree) ->
-                    with(mode) {
-                        // If condition is true, then element should be in the sortedSet and be removed.
-                        // After this 'if' clause the OutFlow should never be in the tree.
-                        // The removal of the flow has to be executed before field is updated.
-                        if (shouldBeTracked()) {
-                            tree.remove(this@handlePropChange).let {
-                                if (isNew().not() && !it) {
-                                    log.warn(
-                                        "outflow ${this@handlePropChange} should have been in the sortedSet but wasn't",
-                                    )
-                                }
+                // Updates OutFlow field (either demand or totRateOut)
+                fieldChanger()
+
+                addIfNeeded()
+            }
+        }
+
+    private suspend fun OutFlow.rmIfNeeded() =
+        treeLock.withRLock {
+            fun OutFlow.isNew(): Boolean = demand.isZero() && totRateOut.isZero()
+
+            treesByMode.forEach { (mode, tree) ->
+                with(mode) {
+                    // If condition is true, then element should be in the sortedSet and be removed.
+                    // After this 'if' clause the OutFlow should never be in the tree.
+                    // The removal of the flow has to be executed before field is updated.
+                    if (shouldBeTracked()) {
+                        tree.remove(this@rmIfNeeded).let {
+                            if (isNew().not() && !it) {
+                                log.warn(
+                                    "outflow ${this@rmIfNeeded} should have been in the sortedSet but wasn't",
+                                )
                             }
                         }
                     }
                 }
             }
+        }
 
-            // Updates OutFlow field (either demand or totRateOut)
-            fieldChanger()
-
+    private suspend fun OutFlow.addIfNeeded() =
+        treeLock.withRLock {
             treesByMode.forEach { (mode, tree) ->
                 with(mode) {
                     // If condition is true, then element should be added to the treeSet,
                     // since it is eligible for data rate increases.
                     if (shouldBeTracked()) {
-                        tree.add(this@handlePropChange)
+                        tree.add(this@addIfNeeded)
                     }
                 }
             }
