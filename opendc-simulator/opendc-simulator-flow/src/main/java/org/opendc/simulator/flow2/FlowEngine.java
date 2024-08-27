@@ -23,6 +23,7 @@
 package org.opendc.simulator.flow2;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
@@ -163,6 +164,7 @@ public final class FlowEngine implements Runnable {
         try {
             // Mark the engine as active to prevent concurrent calls to this method
             active = true;
+
             // If network controller set, synchronize network with the
             // current time of the simulation (the SimulationDispatcher time-source
             // has to be set in advance with networkController::setInstantSource)

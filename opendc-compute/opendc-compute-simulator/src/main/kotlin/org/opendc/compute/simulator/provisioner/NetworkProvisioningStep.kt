@@ -16,7 +16,6 @@ public class NetworkProvisioningStep(
 ): ProvisioningStep {
     private val netExportConfig: NetworkExportConfig? =
         netExportConfig?.let { config ->
-            println(seedOutputFolder)
             config.outputFolder?.let {
                 println(it)
                 config

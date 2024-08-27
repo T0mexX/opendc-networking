@@ -38,6 +38,9 @@ import org.opendc.compute.telemetry.table.HostTableReader
 import org.opendc.compute.telemetry.table.ServerInfo
 import org.opendc.compute.telemetry.table.ServerTableReader
 import org.opendc.compute.telemetry.table.ServiceTableReader
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot
+import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot
 import java.time.Duration
 import java.time.Instant
 
@@ -203,6 +206,7 @@ public class ComputeMetricReader(
             _timestampAbsolute = now + startTime
 
             val stats = service.getSchedulerStats()
+
             _hostsUp = stats.hostsAvailable
             _hostsDown = stats.hostsUnavailable
             _serversTotal = stats.serversTotal
@@ -253,6 +257,7 @@ public class ComputeMetricReader(
             _downtime = table.downtime
             _bootTime = table.bootTime
             _bootTimeAbsolute = table.bootTimeAbsolute
+            networkSnapshot = table.networkSnapshot
         }
 
         private val _host = host
@@ -354,7 +359,7 @@ public class ComputeMetricReader(
             get() = _bootTimeAbsolute
         private var _bootTimeAbsolute: Instant? = null
 
-
+        override var networkSnapshot: NodeSnapshot? = null
 
         /**
          * Record the next cycle.
@@ -362,6 +367,7 @@ public class ComputeMetricReader(
         fun record(now: Instant) {
             val hostCpuStats = _host.getCpuStats()
             val hostSysStats = _host.getSystemStats()
+            networkSnapshot = _host.getNetworkStats()
 
             _timestamp = now
             _timestampAbsolute = now + startTime
@@ -450,6 +456,7 @@ public class ComputeMetricReader(
             _provisionTime = table.provisionTime
             _bootTime = table.bootTime
             _bootTimeAbsolute = table.bootTimeAbsolute
+            networkSnapshot = table.networkSnapshot
         }
 
         private val _server = server
@@ -529,6 +536,9 @@ public class ComputeMetricReader(
             get() = _bootTimeAbsolute
         private var _bootTimeAbsolute: Instant? = null
 
+        override var networkSnapshot: NetIfaceSnapshot? = null
+            private set
+
         /**
          * Record the next cycle.
          */
@@ -541,6 +551,7 @@ public class ComputeMetricReader(
 
             val cpuStats = _host?.getCpuStats(_server)
             val sysStats = _host?.getSystemStats(_server)
+            networkSnapshot = _host?.getNetworkStats(_server)
 
             _timestamp = now
             _timestampAbsolute = now + startTime
@@ -573,6 +584,7 @@ public class ComputeMetricReader(
             previousCpuStealTime = _cpuStealTime
             previousCpuLostTime = _cpuLostTime
 
+            networkSnapshot = null
             _host = null
             _cpuLimit = 0.0
         }

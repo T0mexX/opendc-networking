@@ -81,6 +81,7 @@ public class ParquetComputeMonitor(
             )
 
         /**
+         * (Same signature that was used before)
          * Constructor that loads default [ExportColumn]s defined in
          * [DfltHostExportColumns], [DfltServerExportColumns], [DfltServiceExportColumns]
          * in case optional parameters are omitted and all fields need to be retrieved.
@@ -93,30 +94,27 @@ public class ParquetComputeMonitor(
             base: File,
             partition: String,
             bufferSize: Int,
-            hostExportColumns: Collection<ExportColumn<HostTableReader>>? = null,
-            serverExportColumns: Collection<ExportColumn<ServerTableReader>>? = null,
-            serviceExportColumns: Collection<ExportColumn<ServiceTableReader>>? = null,
+            hostExportColumns: Collection<ExportColumn<HostTableReader>> = DfltHostExportColumns.ALL,
+            serverExportColumns: Collection<ExportColumn<ServerTableReader>> = DfltServerExportColumns.ALL,
+            serviceExportColumns: Collection<ExportColumn<ServiceTableReader>> = DfltServiceExportColumns.ALL,
         ): ParquetComputeMonitor {
-            // Loads the fields in case they need to be retrieved if optional params are omitted.
-            ComputeExportConfig.loadDfltColumns()
-
             return ParquetComputeMonitor(
                 hostExporter =
                     Exporter(
                         outputFile = File(base, "$partition/host.parquet").also { it.parentFile.mkdirs() },
-                        columns = hostExportColumns ?: Exportable.getAllLoadedColumns(),
+                        columns = hostExportColumns,
                         bufferSize = bufferSize,
                     ),
                 serverExporter =
                     Exporter(
                         outputFile = File(base, "$partition/server.parquet").also { it.parentFile.mkdirs() },
-                        columns = serverExportColumns ?: Exportable.getAllLoadedColumns(),
+                        columns = serverExportColumns,
                         bufferSize = bufferSize,
                     ),
                 serviceExporter =
                     Exporter(
                         outputFile = File(base, "$partition/service.parquet").also { it.parentFile.mkdirs() },
-                        columns = serviceExportColumns ?: Exportable.getAllLoadedColumns(),
+                        columns = serviceExportColumns,
                         bufferSize = bufferSize,
                     ),
             )

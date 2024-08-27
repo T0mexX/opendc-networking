@@ -22,7 +22,7 @@
 
 package org.opendc.compute.telemetry.table
 
-import org.opendc.compute.telemetry.export.parquet.DfltServerExportColumns
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot
 import org.opendc.trace.util.parquet.exporter.Exportable
 import java.time.Instant
 
@@ -103,4 +103,9 @@ public interface ServerTableReader : Exportable {
      * The duration (in seconds) of CPU time that was lost due to interference.
      */
     public val cpuLostTime: Long
+
+    /**
+     * The snapshot of the host-node network state.
+     */
+    public val networkSnapshot: NetIfaceSnapshot?
 }

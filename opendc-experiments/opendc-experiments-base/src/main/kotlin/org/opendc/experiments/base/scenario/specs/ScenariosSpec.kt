@@ -73,7 +73,7 @@ public data class ScenariosSpec(
     val failureModels: Set<FailureModelSpec?> = setOf(null),
     val checkpointModels: Set<CheckpointModelSpec?> = setOf(null),
     val carbonTracePaths: Set<String?> = setOf(null),
-    val computeExportConfig: ComputeExportConfig = ComputeExportConfig.ALL_COLUMNS,
+    val computeExportConfig: ComputeExportConfig = ComputeExportConfig.ALL_DFLT,
     val networkExportConfig: NetworkExportConfig? = null
 ) {
     init {
