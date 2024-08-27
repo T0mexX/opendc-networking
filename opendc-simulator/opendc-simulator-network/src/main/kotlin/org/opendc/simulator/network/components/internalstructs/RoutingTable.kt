@@ -26,6 +26,7 @@ import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.utils.RWLock
+import kotlin.properties.Delegates
 
 /**
  * Represents the routing table for the [Node] associated with the [ownerId] param.
@@ -126,29 +127,32 @@ internal class RoutingTable(private val ownerId: NodeId) {
     suspend fun mergeRoutingVector(
         routingVector: Map<NodeId, Int>,
         vectOwner: Node,
-    ) = rwLock.withWLock {
-        isTableChanged = false
-        val routVectBefore = this.getVect()
-        addOrReplacePath(PossiblePath(vectOwner.id, numOfHops = 1, nextHop = vectOwner))
+    ) {
+        val routVectBefore = rwLock.withRLock { getVect() }
+        rwLock.withWLock {
+            isTableChanged = false
+            addOrReplacePath(PossiblePath(vectOwner.id, numOfHops = 1, nextHop = vectOwner))
 
-        val destToRemove: Set<NodeId> = table.keys.toSet() - routingVector.keys.toSet() - vectOwner.id
-        destToRemove.forEach { rmPath(destId = it, nextHopId = vectOwner.id) }
+            val destToRemove: Set<NodeId> = table.keys.toSet() - routingVector.keys.toSet() - vectOwner.id
+            destToRemove.forEach { rmPath(destId = it, nextHopId = vectOwner.id) }
 
-        routingVector
-            .forEach { (destId, numOfHops) ->
-                addOrReplacePath(
-                    PossiblePath(
-                        destinationId = destId,
-                        numOfHops = numOfHops + 1,
-                        nextHop = vectOwner,
-                    ),
-                )
-            }
+            routingVector
+                .forEach { (destId, numOfHops) ->
+                    addOrReplacePath(
+                        PossiblePath(
+                            destinationId = destId,
+                            numOfHops = numOfHops + 1,
+                            nextHop = vectOwner,
+                        ),
+                    )
+                }
+        }
 
-        val routVectAfter = this.getVect()
-        isVectChanged = routVectAfter != routVectBefore
-
-        table
+        return rwLock.withRLock {
+            val routVectAfter = this.getVect()
+            isVectChanged = routVectAfter != routVectBefore
+            table
+        }
     }
 
     /**

@@ -25,22 +25,38 @@ package org.opendc.simulator.network.utils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 
+/**
+ * A read-write suspend lock implementation using a [Semaphore].
+ * When someone is attempting to lock the resource for write, all
+ * other attempts (read or write) are negated until the resource is
+ * acquired for write (all semaphore permits are acquired by the same entity).
+ */
 internal class RWLock(private val readPermits: Int = 5) {
-    private val sem = Semaphore(Int.MAX_VALUE)
+    /**
+     * Semaphore used internally for the lock implementation.
+     * A write lock is acquired when all semaphore permits are acquired by the same caller.
+     * A lock is acquired by just acquiring one permit of the semaphore.
+     */
+    private val sem = Semaphore(permits = readPermits)
 
+    /**
+     * When this mutex is locked, any attempt to lock the resource
+     * (read or write) will be negated until the one that locked
+     * this mutex acquires the resource for write.
+     */
     private var attemptingWMutex = Mutex()
 
     // lockRead and unlockRead not provided since it would allow
     // unlocking without locking, and preventing it would decrease performance
     // use withReadLock instead
 
-    suspend fun lockWrite(owner: Any? = null) {
+    private suspend fun lockWrite(owner: Any? = null) {
         attemptingWMutex.lock(owner)
         repeat(readPermits) { sem.acquire() }
         return
     }
 
-    fun unlockWrite(owner: Any? = null) {
+    private fun unlockWrite(owner: Any? = null) {
         attemptingWMutex.unlock(owner)
         repeat(readPermits) { sem.release() }
         return
