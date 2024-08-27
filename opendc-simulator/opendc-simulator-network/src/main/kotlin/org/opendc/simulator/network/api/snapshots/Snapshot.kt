@@ -31,8 +31,19 @@ import org.opendc.simulator.network.utils.Flags
 public abstract class Snapshot<T> {
     protected abstract val dfltColWidth: Int
 
+    /**
+     * @param[flags]    flags representing which property
+     * need to be included in the formatted string.
+     * @return the formatted string representing the snapshot information,
+     * as either 1 or 2 lines with a column for each property.
+     */
     public abstract fun fmt(flags: Flags<T> = Flags.all()): String
 
+    /**
+     * @param[flags]    flags representing which property
+     * need to be included in the formatted string.
+     * @return a string containing only the headers of the snapshot.
+     */
     public abstract fun fmtHdr(flags: Flags<T> = Flags.all()): String
 
     protected fun StringBuilder.appendPad(

@@ -171,7 +171,6 @@ public data class SimNetWorkload private constructor(
         | num of network events: ${events.size}
         """.trimIndent()
 
-
 //    @OptIn(ExperimentalSerializationApi::class)
 //    public fun execOn(
 //        networkFile: File,
@@ -225,10 +224,10 @@ public data class SimNetWorkload private constructor(
             vmsRange: IntRange = 1..1250,
         ): SimNetWorkload {
             val tblReader: TableReader =
-                    Table.concatWithName(
-                        tables = trace.vmTablesInRange(vmsRange),
-                        name = "table for vms in range $vmsRange"
-                    ).getReader()
+                Table.concatWithName(
+                    tables = trace.vmTablesInRange(vmsRange),
+                    name = "table for vms in range $vmsRange",
+                ).getReader()
 
             val idRd = tblReader.addColumnReader(BitBrains.VM_ID, process = { it.toLong() })!!
             val netTxRd = tblReader.addColumnReader(BitBrains.NET_TX, process = { DataRate.ofKBps(it) })!!

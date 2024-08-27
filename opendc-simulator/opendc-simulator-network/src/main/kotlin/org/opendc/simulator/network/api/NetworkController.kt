@@ -22,14 +22,10 @@
 
 package org.opendc.simulator.network.api
 
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
-import me.tongfei.progressbar.ProgressBar
-import me.tongfei.progressbar.ProgressBarBuilder
-import me.tongfei.progressbar.ProgressBarStyle
 import org.opendc.common.units.DataRate
 import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
@@ -43,7 +39,6 @@ import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.Specs
-import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
 import org.opendc.simulator.network.export.NetExportHandler
 import org.opendc.simulator.network.export.NetworkExportConfig
 import org.opendc.simulator.network.flow.FlowId
@@ -51,7 +46,6 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.infoNewLn
 import org.opendc.simulator.network.utils.logger
-import org.opendc.simulator.network.utils.withNotNull
 import org.slf4j.Logger
 import java.io.File
 import java.time.Duration

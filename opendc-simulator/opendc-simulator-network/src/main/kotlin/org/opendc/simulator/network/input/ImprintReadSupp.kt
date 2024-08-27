@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.input
 
 import org.apache.hadoop.conf.Configuration
@@ -10,8 +32,9 @@ import org.apache.parquet.schema.Types
 import org.opendc.common.logger.infoNewLine
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 
-internal class NetEventReadSupp : ReadSupport<NetEventImprint>() {
+internal class ImprintReadSupp : ReadSupport<NetEventImprint>() {
     private lateinit var readingSchema: MessageType
+
     override fun init(context: InitContext): ReadContext {
         // Builds the reading schema, with all the compatible columns
         // that are found in the file schema
@@ -20,7 +43,7 @@ internal class NetEventReadSupp : ReadSupport<NetEventImprint>() {
 
         // Check mandatory fields are contained in the file schema.
         mandatoryColumns.forEach {
-            check(it presentIn  fileFields) {
+            check(it presentIn fileFields) {
                 "column $it should be in schema but was not found\nschema found: $fileFields"
             }
             msgBuilder.addField(it)
@@ -28,19 +51,20 @@ internal class NetEventReadSupp : ReadSupport<NetEventImprint>() {
 
         // Checks which non-mandatory columns are contained in the file schema.
         notMandatoryColumns.forEach {
-            if (it presentIn  fileFields)
+            if (it presentIn fileFields) {
                 msgBuilder.addField(it)
+            }
         }
 
         readingSchema = msgBuilder.named("net_wl_reading_schema")
 
         SimNetWorkload.LOG.infoNewLine(
-            "| === network workload reading schema ===\n${readingSchema}"
+            "| === network workload reading schema ===\n$readingSchema"
                 .trimEnd()
                 .replace(
                     oldValue = "\n",
                     newValue = "\n| ",
-                )
+                ),
         )
 
         return ReadContext(readingSchema)
@@ -50,7 +74,7 @@ internal class NetEventReadSupp : ReadSupport<NetEventImprint>() {
         configuration: Configuration?,
         keyValueMetaData: MutableMap<String, String>?,
         fileSchema: MessageType,
-        readContext: ReadContext
+        readContext: ReadContext,
     ): RecordMaterializer<NetEventImprint> = ImprintMaterializer(readContext.requestedSchema)
 }
 
@@ -65,4 +89,3 @@ private infix fun Type.presentIn(list: List<Type>): Boolean =
                 it.asPrimitiveType().primitiveTypeName == this.asPrimitiveType().primitiveTypeName &&
                 it.repetition.isMoreRestrictiveThan(this.repetition)
         }
-

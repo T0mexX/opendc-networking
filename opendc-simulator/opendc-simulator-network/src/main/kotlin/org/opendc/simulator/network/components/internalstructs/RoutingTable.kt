@@ -26,7 +26,6 @@ import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.utils.RWLock
-import kotlin.properties.Delegates
 
 /**
  * Represents the routing table for the [Node] associated with the [ownerId] param.

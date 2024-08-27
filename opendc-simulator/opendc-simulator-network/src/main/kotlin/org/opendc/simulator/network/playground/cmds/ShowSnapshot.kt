@@ -56,7 +56,13 @@ internal data object ShowSnapshot : PGCmd("SHOW_SNAPSHOT") {
         val node: Node = network.getNodeElseCanc(nodeId)
 
         launch {
-            log.infoNewLn(node.snapshot(instant = Instant.now(), withStableNetwork = network).fmt())
+            log.infoNewLn(
+                node.snapshot(
+                    instant = Instant.now(),
+                    withStableNetwork = network,
+                    noCache = true,
+                ).fmt(),
+            )
         }
     }
 

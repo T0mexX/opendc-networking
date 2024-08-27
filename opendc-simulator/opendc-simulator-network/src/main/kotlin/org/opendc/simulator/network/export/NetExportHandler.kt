@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.export
 
 import org.opendc.common.units.Time
@@ -15,7 +37,7 @@ import java.util.UUID
 internal class NetExportHandler(
     private val config: NetworkExportConfig,
     private val runName: String = "unnamed-run-${UUID.randomUUID().toString().substring(0, 4)}",
-): AutoCloseable {
+) : AutoCloseable {
     private var startTime: Time? = config.startTime
     internal var nextExportDeadline: Time? = startTime?.plus(config.exportInterval)
         private set
@@ -94,8 +116,9 @@ internal class NetExportHandler(
             startTime = instantSrc.time
             nextExportDeadline = instantSrc.time + config.exportInterval
 
-            LOG.warn("start time for network export was set automatically on first " +
-                "invocation of export functions. The current time might not be the desired start time."
+            LOG.warn(
+                "start time for network export was set automatically on first " +
+                    "invocation of export functions. The current time might not be the desired start time.",
             )
 
             nextExportDeadline!!

@@ -24,7 +24,6 @@ package org.opendc.simulator.network.playground.cmds
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.opendc.common.logger.infoNewLine
 import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.NetEnRecorder
 import org.opendc.simulator.network.components.Network

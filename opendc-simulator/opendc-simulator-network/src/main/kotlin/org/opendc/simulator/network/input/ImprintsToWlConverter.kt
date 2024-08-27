@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.input
 
 import org.opendc.simulator.network.api.NodeId
@@ -8,11 +30,9 @@ import org.opendc.simulator.network.api.simworkloads.NetworkEvent.FlowStop
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.flow.FlowId
-import kotlin.system.exitProcess
-
 
 internal class ImprintsToWlConverter private constructor(
-    imprints: Collection<NetEventImprint>
+    imprints: Collection<NetEventImprint>,
 ) {
     private val imprints: Collection<NetEventImprint> = imprints.sortedBy { it.deadline }
 
@@ -37,11 +57,12 @@ internal class ImprintsToWlConverter private constructor(
         println("start: ${events.first().deadline.toInstantFromEpoch()}")
         println("end: ${events.last().deadline.toInstantFromEpoch()}")
 
-        val hostIds = buildSet { // TODO: remove this feature from workload and just
-            events.forEach { event ->
-                addAll(event.involvedIds().filterNot { it == INTERNET_ID })
+        val hostIds =
+            buildSet { // TODO: remove this feature from workload and just
+                events.forEach { event ->
+                    addAll(event.involvedIds().filterNot { it == INTERNET_ID })
+                }
             }
-        }
 
         return SimNetWorkload(
             events = events,
@@ -53,8 +74,11 @@ internal class ImprintsToWlConverter private constructor(
      * Converts a single [NetEventImprint] to a [NetworkEvent], having the knowledge of the previous events.
      */
     private fun NetEventImprint.convert() {
-        if (flowId == null) flowIdNull()
-        else flowIdNotNull()
+        if (flowId == null) {
+            flowIdNull()
+        } else {
+            flowIdNotNull()
+        }
     }
 
     /**
@@ -69,7 +93,9 @@ internal class ImprintsToWlConverter private constructor(
             flowStart.addFlowRateChange()
 
             duration?.let {
-                SimNetWorkload.LOG.warn("duration of flow specified on flow update instead of start, flow end schedule at update.deadline + duration")
+                SimNetWorkload.LOG.warn(
+                    "duration of flow specified on flow update instead of start, flow end schedule at update.deadline + duration",
+                )
                 flowStart.addFlowStop().also { encounteredFEndsByNodesInvolved[nodesInvolved] = it }
                 encounteredFStartByNodesInvolved.remove(nodesInvolved)
             }
@@ -139,7 +165,6 @@ internal class ImprintsToWlConverter private constructor(
                 flowStart.addFlowStop().also { encounteredFlowEndByIds[flowId] = it }
             }
         }
-
     }
 
     context (NetEventImprint)
@@ -151,7 +176,7 @@ internal class ImprintsToWlConverter private constructor(
                     from = transmitterId,
                     to = destId,
                     desiredDataRate = netTx,
-                    flowId = fId
+                    flowId = fId,
                 )
             } ?: FlowStart(
                 deadline = deadline,
@@ -165,7 +190,7 @@ internal class ImprintsToWlConverter private constructor(
     private fun NetworkEvent.addFlowStop(): FlowStop =
         FlowStop(
             deadline = this@NetEventImprint.deadline + duration!!,
-            targetFlowGetter = { this.targetFlow }
+            targetFlowGetter = { this.targetFlow },
         ).also { converted += it }
 
     context (NetEventImprint)
@@ -173,7 +198,7 @@ internal class ImprintsToWlConverter private constructor(
         FlowChangeRate(
             deadline = this@NetEventImprint.deadline,
             newRate = netTx,
-            targetFlowGetter = { this.targetFlow }
+            targetFlowGetter = { this.targetFlow },
         ).also { converted += it }
 
     companion object {

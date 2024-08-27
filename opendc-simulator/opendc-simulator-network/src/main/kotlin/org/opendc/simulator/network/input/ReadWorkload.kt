@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.simulator.network.input
 
 import org.apache.parquet.schema.LogicalTypeAnnotation
@@ -8,18 +30,18 @@ import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.input.ImprintsToWlConverter.Companion.toWl
 import org.opendc.trace.util.parquet.LocalParquetReader
 import java.io.File
-import java.lang.RuntimeException
 
 public fun readNetworkWl(path: String): SimNetWorkload = readNetworkWl(File(path))
 
 public fun readNetworkWl(file: File): SimNetWorkload =
     try {
-        val reader = LocalParquetReader(file = file, readSupport = NetEventReadSupp())
-        val imprints: List<NetEventImprint>  = buildList {
-            while (true) {
-                reader.read()?.let { add(it) } ?: break
+        val reader = LocalParquetReader(file = file, readSupport = ImprintReadSupp())
+        val imprints: List<NetEventImprint> =
+            buildList {
+                while (true) {
+                    reader.read()?.let { add(it) } ?: break
+                }
             }
-        }
 
         imprints.toWl()
     } catch (e: Exception) {
@@ -83,13 +105,11 @@ internal val DURATION_FIELD =
         .optional(INT64)
         .named("duration")
 
-
 /**
  * Columns that need to be in the file schema (it does not
  * mean that the fields are required for each entry).
  */
 internal val mandatoryColumns = listOf(TRANSMITTER_ID_FIELD, NET_TX_FIELD, TIMESTAMP_FIELD)
-
 
 /**
  * Columns that do not need to be in the file schema (it does not

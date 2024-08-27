@@ -26,21 +26,17 @@ import kotlinx.coroutines.runBlocking
 import org.opendc.common.units.DataRate
 import org.opendc.common.units.Energy
 import org.opendc.common.units.Percentage
-import org.opendc.common.units.Percentage.Companion.percentageOf
 import org.opendc.common.units.Power
 import org.opendc.common.units.Unit.Companion.sumOfUnit
-import org.opendc.common.utils.ifNaN
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.HDR
 import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.HDR
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.HostNode
-import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Network.Companion.getNodesById
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.Flag
 import org.opendc.simulator.network.utils.Flags
-import org.opendc.simulator.network.utils.ratioToPerc
 import org.opendc.trace.util.parquet.exporter.Exportable
 import java.time.Instant
 
@@ -198,8 +194,20 @@ public class NetworkSnapshot private constructor(
          */
         public val ALL_NO_HDR: Flags<NetworkSnapshot> = Flags.all<NetworkSnapshot>() - HDR
 
-        public fun NetworkController.snapshot(): NetworkSnapshot {
-            val network: Network = this.network
+        private var lastSnapshot: NetworkSnapshot? = null
+
+        /**
+         * Retrieves a snapshot of [this].
+         * @param[noCache] if `true` prevents the use of cache. Cache use needs to
+         * be avoided when the timestamp of the snapshot is the same but events have been processed at this instant.
+         */
+        public fun NetworkController.snapshot(noCache: Boolean = false): NetworkSnapshot {
+            if (noCache.not()) {
+                lastSnapshot?.let {
+                    if (it.instant == currentInstant) return it
+                }
+            }
+
             val flows: Collection<NetFlow> = network.flowsById.values
             val activeFlows: Collection<NetFlow> = flows.filterNot { it.demand.isZero() }
             val totDemand: DataRate = flows.sumOfUnit { it.demand }
@@ -215,18 +223,19 @@ public class NetworkSnapshot private constructor(
                 numCoreSwitches = network.getNodesById<CoreSwitch>().size,
                 numActiveFlows = activeFlows.size,
                 totTput = totThroughput,
-                totTputPerc = if (flows.isEmpty()) null else totThroughput roundedPercentageOf  totDemand,
-                avrgTputPerc = let {
-                    if (activeFlows.isEmpty()) {
-                        null
-                    } else {
-                        activeFlows.sumOfUnit { it.throughput roundedPercentageOf  it.demand } / activeFlows.size
-                    }
-                },
+                totTputPerc = if (flows.isEmpty()) null else totThroughput roundedPercentageOf totDemand,
+                avrgTputPerc =
+                    let {
+                        if (activeFlows.isEmpty()) {
+                            null
+                        } else {
+                            activeFlows.sumOfUnit { it.throughput roundedPercentageOf it.demand } / activeFlows.size
+                        }
+                    },
                 currPwrUse = energyRecorder.currPwrUsage,
                 avrgPwrUseOverTime = energyRecorder.avrgPwrUsage,
                 totEnConsumed = energyRecorder.totalConsumption,
-            )
+            ).also { lastSnapshot = it }
         }
     }
 }

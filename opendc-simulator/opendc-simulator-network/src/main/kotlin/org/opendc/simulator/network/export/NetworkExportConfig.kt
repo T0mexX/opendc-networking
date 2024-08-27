@@ -105,7 +105,7 @@ public data class NetworkExportConfig(
                     )
                     element(
                         "outputFolder",
-                        serialDescriptor<String>()
+                        serialDescriptor<String>(),
                     )
                     element(
                         "exportInterval",
@@ -132,10 +132,13 @@ public data class NetworkExportConfig(
                     networkExportColumns = elem["networkExportColumns"].toFieldList(),
                     nodeExportColumn = elem["nodeExportColumns"].toFieldList(),
                     outputFolder = outputFolder,
-                    exportInterval = Json.decodeFromString(
-                        elem["exportInterval"]?.toString()?.trim('"')
-                            ?: throw RuntimeException("`exportInterval` in `networkExportConfig` is needed in order to export network information")
-                    ),
+                    exportInterval =
+                        Json.decodeFromString(
+                            elem["exportInterval"]?.toString()?.trim('"')
+                                ?: throw RuntimeException(
+                                    "`exportInterval` in `networkExportConfig` is needed in order to export network information",
+                                ),
+                        ),
                 )
             }
 

@@ -89,7 +89,7 @@ internal class NodeFlowTracker(
      */
     fun nextHigherThan(
         outFlow: OutFlow,
-        mode: TrackerMode
+        mode: TrackerMode,
     ): OutFlow? =
         runBlocking {
             treeLock.withRLock {

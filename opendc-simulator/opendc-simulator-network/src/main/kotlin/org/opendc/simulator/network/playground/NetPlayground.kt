@@ -37,13 +37,13 @@ import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.playground.cmds.AdvanceTime
+import org.opendc.simulator.network.playground.cmds.EnReport
 import org.opendc.simulator.network.playground.cmds.Export
 import org.opendc.simulator.network.playground.cmds.NewFlow
 import org.opendc.simulator.network.playground.cmds.NewLink
 import org.opendc.simulator.network.playground.cmds.NewSwitch
 import org.opendc.simulator.network.playground.cmds.NodeInfo
 import org.opendc.simulator.network.playground.cmds.PGCmd
-import org.opendc.simulator.network.playground.cmds.EnReport
 import org.opendc.simulator.network.playground.cmds.Quit
 import org.opendc.simulator.network.playground.cmds.RmFlow
 import org.opendc.simulator.network.playground.cmds.RmLink
@@ -121,11 +121,12 @@ private class NetworkPlayground : CliktCommand() {
             }
 
         val energyRecorder = NetEnRecorder(network)
-        env = PGEnv(
-            network = network,
-            energyRecorder = energyRecorder,
-            pgTimeSource = PGTimeSource(Instant.now())
-        )
+        env =
+            PGEnv(
+                network = network,
+                energyRecorder = energyRecorder,
+                pgTimeSource = PGTimeSource(Instant.now()),
+            )
 
         playgroundScope =
             CoroutineScope(
@@ -134,7 +135,7 @@ private class NetworkPlayground : CliktCommand() {
                     supervisorJob +
                     exceptionHandler +
                     env +
-                    network.validator
+                    network.validator,
             )
     }
 

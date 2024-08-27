@@ -51,6 +51,9 @@ private fun <T> T.smallerThan(
     comp: Comparator<T>,
 ): Boolean = comp.compare(this, other) < 0
 
-internal fun <T> withNotNull(with: T, block: T.() -> Unit) {
+internal fun <T> withNotNull(
+    with: T,
+    block: T.() -> Unit,
+) {
     with?.let(block)
 }

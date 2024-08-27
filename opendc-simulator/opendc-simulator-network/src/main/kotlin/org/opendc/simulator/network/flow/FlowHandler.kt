@@ -59,8 +59,8 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
      * Needs to be kept updated by owner [Node] through [generateFlow] and [stopGeneratedFlow].
      * If the node is not [EndPointNode] this property shall be ignored.
      */
-    val generatingFlows: Map<FlowId, NetFlow> get() = _generatedFlows
-    private val _generatedFlows = mutableMapOf<FlowId, NetFlow>()
+    val generatingFlows: Map<FlowId, NetFlow> get() = _generatingFlows
+    private val _generatingFlows = mutableMapOf<FlowId, NetFlow>()
 
     /**
      * [NetFlow]s whose destination is the node to which this flow handler belongs.
@@ -121,11 +121,11 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
     suspend fun Node.generateFlow(newFlow: NetFlow) {
         val updt =
             RateUpdt(
-                _generatedFlows.putIfAbsent(newFlow.id, newFlow)
+                _generatingFlows.putIfAbsent(newFlow.id, newFlow)
                     // If flow with same id already present
                     ?. let { currFlow ->
                         log.error("adding generated flow whose id is already present. Replacing...")
-                        _generatedFlows[newFlow.id] = newFlow
+                        _generatingFlows[newFlow.id] = newFlow
                         mapOf(newFlow.id to (newFlow.demand - currFlow.demand))
                         // Else
                     } ?: mapOf(newFlow.id to newFlow.demand),
@@ -153,7 +153,7 @@ internal class FlowHandler(internal val ports: Collection<Port>) {
 
     suspend fun Node.stopGeneratedFlow(fId: FlowId) {
         val removedFlow =
-            _generatedFlows.remove(fId)
+            _generatingFlows.remove(fId)
                 ?: let {
                     log.error(
                         "unable to stop generated flow with id $fId in node $this, " +

@@ -26,20 +26,14 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
 import org.opendc.common.units.DataRate
-import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
 import org.opendc.simulator.network.components.FatTreeNetwork
 import org.opendc.simulator.network.components.HostNode
-import org.opendc.simulator.network.components.Network
-import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
-import org.opendc.simulator.network.export.NetworkExportConfig
 import org.opendc.simulator.network.export.network.DfltNetworkExportColumns
 import org.opendc.simulator.network.export.node.DfltNodeExportColumns
 import org.opendc.trace.preset.BitBrains
-import org.opendc.trace.util.parquet.exporter.Exportable
 import java.io.File
-
 
 internal fun main() {
     idk()

@@ -36,8 +36,6 @@ import me.tongfei.progressbar.ProgressBarStyle
 import org.opendc.common.logger.infoNewLine
 import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.simworkloads.SimNetWorkload
-import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snapshot
-import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapshot
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.export.NetworkExportConfig
@@ -88,10 +86,11 @@ public data class NetworkScenario(
         val network: Network = networkSpecs.build()
         val runWl: SimNetWorkload = wl.copy()
         val pb: ProgressBar = getProgressBar()
-        val netController: NetworkController = NetworkController(
-            network = network,
-            exportConfig = exportConfiguration,
-        )
+        val netController: NetworkController =
+            NetworkController(
+                network = network,
+                exportConfig = exportConfiguration,
+            )
 
         init {
             if (virtualMapping) runWl.performVirtualMappingOn(netController)
@@ -103,10 +102,10 @@ public data class NetworkScenario(
             netController.execWl(runWl)
         }
 
-        private fun NetworkController.execWl(runWl: SimNetWorkload)  =
+        private fun NetworkController.execWl(runWl: SimNetWorkload) =
             runBlocking(network.validator) {
                 delay(1000)
-                with(runWl) wl@ {
+                with(runWl) wl@{
                     while (runWl.hasNext()) {
                         val nextWlDeadline = runWl.peek().deadline
                         // Executes all network events up until `nextDeadline`
@@ -150,7 +149,7 @@ public data class NetworkScenario(
 //                nodeExporter?.write(
 //                    it.snapshot(
 //                        instant = netController.currentInstant,
-////                        withStableNetwork = network,
+// //                        withStableNetwork = network,
 //                    ),
 //                )
 //            }
@@ -163,7 +162,7 @@ public data class NetworkScenario(
         }
     }
 
-    internal class NetScenarioSerializer: KSerializer<NetworkScenario> {
+    internal class NetScenarioSerializer : KSerializer<NetworkScenario> {
         @Serializable
         private data class NetScenarioSurrogate(
             val networkSpecsPath: String,
@@ -187,7 +186,10 @@ public data class NetworkScenario(
             )
         }
 
-        override fun serialize(encoder: Encoder, value: NetworkScenario) {
+        override fun serialize(
+            encoder: Encoder,
+            value: NetworkScenario,
+        ) {
             throw OperationNotSupportedException()
         }
     }
@@ -196,5 +198,3 @@ public data class NetworkScenario(
         private val LOG by logger()
     }
 }
-
-

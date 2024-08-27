@@ -38,7 +38,11 @@ public abstract class NetworkEvent : Comparable<NetworkEvent> {
 
     internal abstract val deadline: Time
     internal val targetFlow: NetFlow get() = targetFlowGetter()
-    protected open var targetFlowGetter: () -> NetFlow = { throw RuntimeException("target flow for network event $this is not defined yet") }
+    protected open var targetFlowGetter: () -> NetFlow = {
+        throw RuntimeException(
+            "target flow for network event $this is not defined yet",
+        )
+    }
 
     internal open fun involvedIds(): Set<NodeId> = setOf()
 
@@ -121,7 +125,7 @@ public abstract class NetworkEvent : Comparable<NetworkEvent> {
     ) : NetworkEvent() {
         override suspend fun NetworkController.exec() {
             this.stopFlow(
-                flowId = targetFlow.id
+                flowId = targetFlow.id,
             )
         }
     }

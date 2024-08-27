@@ -27,21 +27,18 @@ import org.opendc.common.units.DataRate
 import org.opendc.common.units.Percentage
 import org.opendc.common.units.Unit.Companion.sumOfUnit
 import org.opendc.simulator.network.api.NetworkInterface
-import org.opendc.simulator.network.api.snapshots.Snapshot.Companion.roundedPercentageOf
+import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.Flag
 import org.opendc.simulator.network.utils.Flags
-import org.opendc.simulator.network.utils.ratioToPerc
 import org.opendc.trace.util.parquet.exporter.Exportable
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 
 public class NetIfaceSnapshot private constructor(
     public val netIface: NetworkInterface,
     public val instant: Instant,
-//    public val numIncomingFlows: Int,
-//    public val numOutgoingFlows: Int,
     public val numGeneratedFlows: Int,
-//    public val numConsumedFlows: Int,
     public val currMinFlowTputPerc: Percentage?,
     public val currMaxFlowTputPerc: Percentage?,
     public val currAvrgFlowTputPerc: Percentage?,
@@ -50,12 +47,6 @@ public class NetIfaceSnapshot private constructor(
 ) : Snapshot<NetIfaceSnapshot>(), Exportable {
     override val dfltColWidth: Int = 27
 
-    /**
-     * @param[flags]    flags representing which property
-     * need to be included in the formatted string.
-     * @return the formatted string representing the snapshot information,
-     * as either 1 or 2 lines with a column for each property.
-     */
     override fun fmt(flags: Flags<NetIfaceSnapshot>): String {
         val headersLine = flags.ifSet(HDR, dflt = "") { fmtHdr(flags) }
 
@@ -65,14 +56,13 @@ public class NetIfaceSnapshot private constructor(
                 flags.ifSet(INSTANT) { appendPad(instant, pad = 30) }
                 flags.ifSet(OWNER) { appendPad(netIface.owner) }
                 flags.ifSet(NODE_ID) { appendPad(netIface.nodeId) }
-//            flags.ifSet(NUM_FLOWS_IN) { appendPad(numIncomingFlows) }
-//            flags.ifSet(NUM_FLOWS_OUT) { appendPad(numOutgoingFlows) }
                 flags.ifSet(NUM_GEN_FLOWS) { appendPad(numGeneratedFlows) }
-//            flags.ifSet(NUM_CONS_FLOWS) { appendPad(numConsumedFlows) }
                 flags.ifSet(MIN_TPUT_PERC) { appendPad(currMinFlowTputPerc?.fmtValue("%.2f")) }
                 flags.ifSet(MAX_TPUT_PERC) { appendPad(currMaxFlowTputPerc?.fmtValue("%.2f")) }
                 flags.ifSet(AVRG_TPUT_PERC) { appendPad(currAvrgFlowTputPerc?.fmtValue("%.2f")) }
-                flags.ifSet(TOT_TPUT) { appendPad("${currTputAllFlows.fmtValue("%.5f")} (${currTputPercAllFlows?.fmtValue("%.1f") ?: "N/A"})") }
+                flags.ifSet(
+                    TOT_TPUT,
+                ) { appendPad("${currTputAllFlows.fmtValue("%.5f")} (${currTputPercAllFlows?.fmtValue("%.1f") ?: "N/A"})") }
             }
 
         return headersLine + secondLine
@@ -84,10 +74,7 @@ public class NetIfaceSnapshot private constructor(
             flags.ifSet(INSTANT) { appendPad("instant", pad = 30) }
             flags.ifSet(OWNER) { appendPad("interface owner") }
             flags.ifSet(NODE_ID) { appendPad("node id") }
-//            flags.ifSet(NUM_FLOWS_IN) { appendPad("flows in") }
-//            flags.ifSet(NUM_FLOWS_OUT) { appendPad("flows out") }
             flags.ifSet(NUM_GEN_FLOWS) { appendPad("generating n flows") }
-//            flags.ifSet(NUM_CONS_FLOWS) { appendPad("consuming n flows") }
             flags.ifSet(MIN_TPUT_PERC) { appendPad("curr min flow tput %") }
             flags.ifSet(MAX_TPUT_PERC) { appendPad("curr max flow tput %") }
             flags.ifSet(AVRG_TPUT_PERC) { appendPad("curr avrg flow tput %") }
@@ -99,12 +86,7 @@ public class NetIfaceSnapshot private constructor(
 
     public companion object {
         public val INSTANT: Flag<NetIfaceSnapshot> = Flag()
-
-//        public val NUM_FLOWS_IN: Flag<NetIfaceSnapshot> = Flag(1 shl 1)
-//        public val NUM_FLOWS_OUT: Flag<NetIfaceSnapshot> = Flag(1 shl 2)
         public val NUM_GEN_FLOWS: Flag<NetIfaceSnapshot> = Flag()
-
-//        public val NUM_CONS_FLOWS: Flag<NetIfaceSnapshot> = Flag(1 shl 4)
         public val MIN_TPUT_PERC: Flag<NetIfaceSnapshot> = Flag()
         public val MAX_TPUT_PERC: Flag<NetIfaceSnapshot> = Flag()
         public val AVRG_TPUT_PERC: Flag<NetIfaceSnapshot> = Flag()
@@ -114,7 +96,27 @@ public class NetIfaceSnapshot private constructor(
         public val HDR: Flag<NetIfaceSnapshot> = Flag()
         public val ALL_NO_HDR: Flags<NetIfaceSnapshot> = Flags.all<NetIfaceSnapshot>() - HDR
 
-        public fun NetworkInterface.snapshot(withStableNetwork: Boolean = true): NetIfaceSnapshot {
+        private val cache = ConcurrentHashMap<NodeId, NetIfaceSnapshot>()
+
+        /**
+         * Retrieves a snapshot of [this].
+         * @param[withStableNetwork]    if `true` waits until the network is stable to take the
+         * snapshot (and throws if network becomes unstable while computing it).
+         * @param[noCache]              if `true` prevents the use of cache. Cache use needs to
+         * be avoided when the timestamp of the snapshot is the same but events have been processed at this instant.
+         */
+        public fun NetworkInterface.snapshot(
+            withStableNetwork: Boolean = true,
+            noCache: Boolean = false,
+        ): NetIfaceSnapshot {
+            // If snapshot with same timestamp in cache
+            if (noCache.not())
+                {
+                    cache[nodeId]?.let {
+                        if (it.instant == netController.currentInstant) return it
+                    }
+                }
+
             val network = netController.network
             if (withStableNetwork) {
                 runBlocking {
@@ -128,27 +130,28 @@ public class NetIfaceSnapshot private constructor(
             val activeFlows = flows.filterNot { it.demand.isZero() }
 
             // Sum of all flows throughput.
-            val totTput: DataRate = DataRate.ofKbps(flows.sumOf { it.throughput.toKbps() })
+            val totTput: DataRate = flows.sumOfUnit { it.throughput }
 
             // Sum of all flows demands.
-            val totDemand: DataRate = DataRate.ofKbps(flows.sumOf { it.demand.toKbps() })
+            val totDemand: DataRate = flows.sumOfUnit { it.demand }
 
             return NetIfaceSnapshot(
                 netIface = this,
                 instant = netController.currentInstant,
                 numGeneratedFlows = activeFlows.size,
-                currMinFlowTputPerc = activeFlows.firstOrNull()?.let { it.throughput roundedPercentageOf  it.demand },
-                currMaxFlowTputPerc = activeFlows.lastOrNull()?.let { it.throughput roundedPercentageOf  it.demand },
-                currAvrgFlowTputPerc = let {
-                    if (activeFlows.isEmpty()) {
-                        null
-                    } else {
-                        activeFlows.sumOfUnit { it.throughput roundedPercentageOf  it.demand } / flows.size
-                    }
-                },
+                currMinFlowTputPerc = activeFlows.firstOrNull()?.let { it.throughput roundedPercentageOf it.demand },
+                currMaxFlowTputPerc = activeFlows.lastOrNull()?.let { it.throughput roundedPercentageOf it.demand },
+                currAvrgFlowTputPerc =
+                    let {
+                        if (activeFlows.isEmpty()) {
+                            null
+                        } else {
+                            activeFlows.sumOfUnit { it.throughput roundedPercentageOf it.demand } / flows.size
+                        }
+                    },
                 currTputAllFlows = totTput,
-                currTputPercAllFlows = if (activeFlows.isEmpty()) null else totTput roundedPercentageOf  totDemand,
-            )
+                currTputPercAllFlows = if (activeFlows.isEmpty()) null else totTput roundedPercentageOf totDemand,
+            ).also { cache[nodeId] = it }
         }
     }
 }

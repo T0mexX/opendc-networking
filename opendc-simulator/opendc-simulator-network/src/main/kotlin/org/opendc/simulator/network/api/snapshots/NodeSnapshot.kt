@@ -26,10 +26,8 @@ import kotlinx.coroutines.runBlocking
 import org.opendc.common.units.DataRate
 import org.opendc.common.units.Energy
 import org.opendc.common.units.Percentage
-import org.opendc.common.units.Percentage.Companion.percentageOf
 import org.opendc.common.units.Power
 import org.opendc.common.units.Unit.Companion.sumOfUnit
-import org.opendc.common.utils.roundToIfWithinEpsilon
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
@@ -40,10 +38,9 @@ import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.tracker.AllByUnsatisfaction
 import org.opendc.simulator.network.utils.Flag
 import org.opendc.simulator.network.utils.Flags
-import org.opendc.simulator.network.utils.ratioToPerc
 import org.opendc.trace.util.parquet.exporter.Exportable
 import java.time.Instant
-import kotlin.time.measureTime
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A snapshot containing information of [node] collected at [instant].
@@ -225,10 +222,29 @@ public class NodeSnapshot internal constructor(
          */
         public val ALL_NO_HDR: Flags<NodeSnapshot> = Flags.all<NodeSnapshot>() - HDR
 
+        private val cache = ConcurrentHashMap<NodeId, NodeSnapshot>()
+
+        /**
+         * Retrieves a snapshot of [this].
+         * @param[instant]              the instant of the snapshot (needs to be provided externally).
+         * @param[withStableNetwork]    if `true` waits until the network is stable to take the
+         * snapshot (and throws if network becomes unstable while computing it).
+         * @param[noCache]              if `true` prevents the use of cache. Cache use needs to
+         * be avoided when the timestamp of the snapshot is the same but events have been processed at this instant.
+         */
         internal fun Node.snapshot(
             instant: Instant,
             withStableNetwork: Network? = null,
+            noCache: Boolean = false,
         ): NodeSnapshot {
+            // If snapshot with same timestamp in cache
+            if (noCache.not())
+                {
+                    cache[id]?.let {
+                        if (it.instant == instant) return it
+                    }
+                }
+
             withStableNetwork?.let {
                 runBlocking {
                     it.awaitStability()
@@ -238,8 +254,8 @@ public class NodeSnapshot internal constructor(
 
             val fh: FlowHandler = this.flowHandler
             val flows: List<OutFlow> = fh.nodeFlowTracker[AllByUnsatisfaction]
-
             val totNodeTput: DataRate = DataRate.ofKbps(flows.sumOf { it.totRateOut.toKbps() })
+
             return NodeSnapshot(
                 node = this,
                 instant = instant,
@@ -249,22 +265,34 @@ public class NodeSnapshot internal constructor(
                 numConsumedFlows = fh.consumingFlows.size,
                 currMinFlowTputPerc = flows.firstOrNull()?.let { it.totRateOut roundedPercentageOf it.demand },
                 currMaxFlowTputPerc = flows.lastOrNull()?.let { it.totRateOut roundedPercentageOf it.demand },
-                currAvrgFlowTputPerc = if (flows.isEmpty()) null else flows.sumOfUnit { it.totRateOut roundedPercentageOf  it.demand } / flows.size,
-                currNodeTputPercAllFlows = if (flows.isEmpty()) null else flows.sumOf { it.totRateOut.toKbps() } roundedPercentageOf  flows.sumOf { it.demand.toKbps() },
+                currAvrgFlowTputPerc =
+                    let {
+                        if (flows.isEmpty()) {
+                            null
+                        } else {
+                            flows.sumOfUnit { it.totRateOut roundedPercentageOf it.demand } / flows.size
+                        }
+                    },
+                currNodeTputPercAllFlows =
+                    let {
+                        if (flows.isEmpty()) {
+                            null
+                        } else {
+                            flows.sumOf { it.totRateOut.toKbps() } roundedPercentageOf flows.sumOf { it.demand.toKbps() }
+                        }
+                    },
                 currPwrUse = (this as? EnergyConsumer<*>)?.enMonitor?.currPwrUsage ?: Power.ZERO,
                 avrgPwrUseOverTime = (this as? EnergyConsumer<*>)?.enMonitor?.avrgPwrUsage ?: Power.ZERO,
                 totEnConsumed = (this as? EnergyConsumer<*>)?.enMonitor?.totEnConsumpt ?: Energy.ZERO,
                 currNodeTputAllFlows = totNodeTput,
-                currNodePortUsageAllPorts = totNodeTput roundedPercentageOf  ports.sumOfUnit { it.maxSpeed }
-            )
+                currNodePortUsageAllPorts = totNodeTput roundedPercentageOf ports.sumOfUnit { it.maxSpeed },
+            ).also { cache[id] = it }
         }
 
-        public fun NetworkController.snapshotOf(nodeId: NodeId): NodeSnapshot? = network.nodesById[nodeId]?.snapshot(currentInstant, withStableNetwork = network)
+        /**
+         * Retrieves the [NodeSnapshot] of node with id [nodeId] if present in the network.
+         */
+        public fun NetworkController.snapshotOf(nodeId: NodeId): NodeSnapshot? =
+            network.nodesById[nodeId]?.snapshot(currentInstant, withStableNetwork = network)
     }
 }
-
-private fun OutFlow.tPutPerc(): Double =
-    (this.totRateOut / this.demand).roundToIfWithinEpsilon(to = 1.0).let {
-        check(it in .0..1.0) { "throughput % should be between 0 and 1 but was ${totRateOut / demand}" }
-        it
-    }
