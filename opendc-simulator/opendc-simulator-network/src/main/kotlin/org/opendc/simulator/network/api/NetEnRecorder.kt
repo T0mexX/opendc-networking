@@ -25,6 +25,7 @@ package org.opendc.simulator.network.api
 import org.opendc.common.units.Energy
 import org.opendc.common.units.Power
 import org.opendc.common.units.Time
+import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.stability.NetworkStabilityChecker.Key.getNetStabilityChecker
 import org.opendc.simulator.network.energy.EnMonitor
@@ -58,7 +59,7 @@ public class NetEnRecorder internal constructor(network: Network) {
         consumersById.values.forEach { it.enMonitor.onPwrUseChange(powerUseOnChangeHandler) }
         consumersById.values.forEach { it.enMonitor.update() }
 
-        network.onNodeAdded { _, node ->
+        (network as? CustomNetwork)?.onNodeAdded { _, node ->
             (node as? EnergyConsumer<*>)?.let { newConsumer ->
                 newConsumer.enMonitor.onPwrUseChange(powerUseOnChangeHandler)
                 consumersById.compute(newConsumer.id) { _, oldConsumer ->
@@ -68,11 +69,14 @@ public class NetEnRecorder internal constructor(network: Network) {
                             log.warn("energy consumer $oldConsumer is being replaced by $newConsumer which has the same id")
                         }
                     }
-                    newConsumer
+                    newConsumer.also {
+                        it.enMonitor.onPwrUseChange(powerUseOnChangeHandler)
+                        it.enMonitor.update()
+                    }
                 }
             }
         }
-        network.onNodeRemoved { _, node ->
+        (network as? CustomNetwork)?.onNodeRemoved { _, node ->
             (node as? EnergyConsumer<*>)?.let {
                 consumersById.remove(it.id)
                     ?: log.warn("energy consumer was removed from the network $network, but it was not tracked by the energy recorder")

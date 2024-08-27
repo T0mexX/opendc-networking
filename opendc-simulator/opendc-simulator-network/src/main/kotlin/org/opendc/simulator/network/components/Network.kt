@@ -87,18 +87,6 @@ public sealed class Network : WithSpecs<Network> {
     internal val isRunning: Boolean
         get() = runnerJob?.isActive ?: false
 
-    private val onNodeAdded = mutableListOf<(Network, Node) -> Unit>()
-
-    internal fun onNodeAdded(callback: (Network, Node) -> Unit) {
-        onNodeAdded.add(callback)
-    }
-
-    private val onNodeRemoved = mutableListOf<(Network, Node) -> Unit>()
-
-    internal fun onNodeRemoved(callback: (Network, Node) -> Unit) {
-        onNodeRemoved.add(callback)
-    }
-
     /**
      * Starts a [NetFlow] if the flow can be established.
      * @param[flow] the flow to be established.

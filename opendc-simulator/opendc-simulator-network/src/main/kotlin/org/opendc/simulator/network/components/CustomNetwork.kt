@@ -67,9 +67,21 @@ internal class CustomNetwork(
             coreSwitches = this.nodesById.values.filterIsInstance<CoreSwitch>(),
         )
 
+    private val onNodeAdded = mutableListOf<(Network, Node) -> Unit>()
+
+    private val onNodeRemoved = mutableListOf<(Network, Node) -> Unit>()
+
     init {
         this.nodesById[internet.id] = internet
         endPointNodes[internet.id] = internet
+    }
+
+    internal fun onNodeAdded(callback: (Network, Node) -> Unit) {
+        onNodeAdded.add(callback)
+    }
+
+    internal fun onNodeRemoved(callback: (Network, Node) -> Unit) {
+        onNodeRemoved.add(callback)
     }
 
     /**
@@ -127,6 +139,7 @@ internal class CustomNetwork(
         nodesById[node.id]?.let { return log.errAndNull("unable to add node $node, id already present") }
         nodesById[node.id] = node
         (node as? EndPointNode)?.let { endPointNodes[node.id] = node }
+        onNodeAdded.forEach { it.invoke(this, node) }
 
         return node
     }
@@ -140,6 +153,11 @@ internal class CustomNetwork(
             it.disconnectAll()
             rmEtoEFlowsGenBy(nodeId)
             nodesById.remove(nodeId)
+                ?.let { node ->
+                    onNodeRemoved.forEach { callback ->
+                        callback.invoke(this, node)
+                    }
+                }
         } ?: log.errAndNull("unable to remove node, not present in the network")
 
     /**
