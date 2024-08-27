@@ -22,7 +22,7 @@ public class NetworkProvisioningStep(
             } ?: config.copy(outputFolder = seedOutputFolder)
         }
 
-    override fun apply(ctx: ProvisioningContext): AutoCloseable {
+    override fun apply(ctx: ProvisioningContext): AutoCloseable =
         netController?.let {
             // Sets an external time source for the network simulation,
             // which can be advanced up to the instant source instant with sync()
@@ -47,13 +47,8 @@ public class NetworkProvisioningStep(
                 LOG.infoNewLine(netExportConfig.fmt())
             }
 
-
-        } ?: return AutoCloseable {  }
-
-
-
-        return netController
-    }
+            netController
+        } ?: AutoCloseable {  }
 
     private companion object {
         val LOG by logger()
