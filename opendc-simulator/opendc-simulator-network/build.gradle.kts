@@ -41,7 +41,6 @@ val serializationVersion = "1.6.0"
 
 dependencies {
     api(projects.opendcSimulator.opendcSimulatorFlow)
-    implementation(projects.opendcTrace.opendcTraceApiNew)
     implementation(libs.progressbar)
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
