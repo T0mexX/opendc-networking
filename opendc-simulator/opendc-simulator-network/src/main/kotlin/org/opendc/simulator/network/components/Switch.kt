@@ -99,7 +99,7 @@ internal open class Switch(
         val numOfPorts: Int,
         val portSpeed: DataRate,
         val id: NodeId? = null,
-        val fairnessPolicy: FairnessPolicy,
+        val fairnessPolicy: FairnessPolicy = FirstComeFirstServed,
         val portSelectionPolicy: PortSelectionPolicy = OSPF,
     ) : Specs<Switch> {
         override fun build(): Switch =

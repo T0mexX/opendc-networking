@@ -30,6 +30,7 @@ import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.serialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.encoding.encodeStructure
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonElement
@@ -51,14 +52,14 @@ import java.io.File
  * parquet files for network simulations.
  *
  * @param[networkExportColumns]     the columns that will be included in the `network.parquet` raw output file.
- * @param[nodeExportColumn]         the columns that will be included in the `node.parquet` raw output file.
+ * @param[nodeExportColumns]         the columns that will be included in the `node.parquet` raw output file.
  * @param[exportInterval]           the time interval between exports. If it is handled externally, this param should be `null`.
  */
 @Serializable(with = NetworkExportConfig.Companion.NetExpConfigSerializer::class)
 public data class NetworkExportConfig(
     val networkExportColumns: List<ExportColumn<NetworkSnapshot>>,
-    val nodeExportColumn: List<ExportColumn<NodeSnapshot>>,
-    val outputFolder: File,
+    val nodeExportColumns: List<ExportColumn<NodeSnapshot>>,
+    val outputFolder: File?,
     val exportInterval: Time,
     val startTime: Time? = null,
 ) {
@@ -69,7 +70,7 @@ public data class NetworkExportConfig(
         """
         | === NETWORK EXPORT CONFIG ===
         | Network columns  : ${networkExportColumns.map { it.name }.toString().trim('[', ']')}
-        | Node columns     : ${nodeExportColumn.map { it.name }.toString().trim('[', ']')}
+        | Node columns     : ${nodeExportColumns.map { it.name }.toString().trim('[', ']')}
         | Export interval  : $exportInterval
         """.trimIndent()
 
@@ -92,16 +93,20 @@ public data class NetworkExportConfig(
          */
         internal object NetExpConfigSerializer : KSerializer<NetworkExportConfig> {
             private val nullableTimeSerializer: KSerializer<Time?> = kotlinx.serialization.serializer<Time?>()
+            private val netColListSerializer: KSerializer<List<ExportColumn<NetworkSnapshot>>> =
+                ListSerializer(columnSerializer<NetworkSnapshot>())
+            private val nodeColListSerializer: KSerializer<List<ExportColumn<NodeSnapshot>>> =
+                ListSerializer(columnSerializer<NodeSnapshot>())
 
             override val descriptor: SerialDescriptor =
                 buildClassSerialDescriptor("org.opendc.compute.telemetry.export.parquet.ComputeExportConfig") {
                     element(
                         "networkExportColumns",
-                        ListSerializer(columnSerializer<NetworkSnapshot>()).descriptor,
+                        netColListSerializer.descriptor,
                     )
                     element(
                         "nodeExportColumns",
-                        ListSerializer(columnSerializer<NodeSnapshot>()).descriptor,
+                        nodeColListSerializer.descriptor,
                     )
                     element(
                         "outputFolder",
@@ -124,21 +129,25 @@ public data class NetworkExportConfig(
                 loadDfltColumns()
                 val elem = jsonDec.decodeJsonElement().jsonObject
 
-                val outputFolder = File(elem["outputFolder"].toString().trim('"'))
-                check(outputFolder.exists().not() || outputFolder.isDirectory)
-                outputFolder.mkdirs()
+
+                val outputFolder: File? = elem["outputFolder"]?.let { pathElem ->
+                    File(pathElem.toString().trim('"')).also {
+                        check(it.exists().not() || it.isDirectory)
+                        it.mkdirs()
+                    }
+                }
 
                 return NetworkExportConfig(
                     networkExportColumns = elem["networkExportColumns"].toFieldList(),
-                    nodeExportColumn = elem["nodeExportColumns"].toFieldList(),
+                    nodeExportColumns = elem["nodeExportColumns"].toFieldList(),
                     outputFolder = outputFolder,
                     exportInterval =
-                        Json.decodeFromString(
-                            elem["exportInterval"]?.toString()?.trim('"')
-                                ?: throw RuntimeException(
-                                    "`exportInterval` in `networkExportConfig` is needed in order to export network information",
-                                ),
-                        ),
+                    Json.decodeFromString(
+                        elem["exportInterval"]?.toString()?.trim('"')
+                            ?: throw RuntimeException(
+                                "`exportInterval` in `networkExportConfig` is needed in order to export network information",
+                            ),
+                    ),
                 )
             }
 
@@ -146,7 +155,16 @@ public data class NetworkExportConfig(
                 encoder: Encoder,
                 value: NetworkExportConfig,
             ) {
-                TODO("Not yet implemented")
+                encoder.encodeStructure(descriptor) {
+                    encodeSerializableElement(descriptor, 0, netColListSerializer, value.networkExportColumns)
+                    encodeSerializableElement(descriptor, 1, nodeColListSerializer, value.nodeExportColumns)
+                    value.outputFolder?.let {
+                        encodeStringElement(descriptor, 2, it.absolutePath.toString())
+                    }
+                    value.startTime?.let {
+                        encodeSerializableElement(descriptor, 4, nullableTimeSerializer, value.exportInterval)
+                    }
+                }
             }
         }
     }

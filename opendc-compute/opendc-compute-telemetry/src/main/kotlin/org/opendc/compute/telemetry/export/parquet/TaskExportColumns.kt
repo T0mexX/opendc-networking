@@ -179,7 +179,7 @@ public object NetworkTaskExportColumns {
     public val GEN_FLOWS: ExportColumn<TaskTableReader> =
         ExportColumn(
             field = Types.required(INT32).named("flows_being_generated"),
-        ) { it.networkSnapshot?.numGeneratingFlows }
+        ) { it.networkSnapshot?.numGeneratedFlows }
 
     public val TPUT: ExportColumn<TaskTableReader> =
         ExportColumn(

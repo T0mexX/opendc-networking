@@ -7,7 +7,6 @@
             "hosts" :
             [
                 {
-                    "nodeIds": [0],
                     "cpu":
                         {
                             "coreCount": 8,

@@ -149,5 +149,5 @@ public interface Host {
      *
      * @return  The network statistics of the server if simulation includes networking, `null` otherwise.
      */
-    @Nullable NetIfaceSnapshot getNetworkStats(Server server);
+    @Nullable NetIfaceSnapshot getNetworkStats(Task task);
 }

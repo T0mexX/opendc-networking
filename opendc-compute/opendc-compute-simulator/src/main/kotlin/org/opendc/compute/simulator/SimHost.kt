@@ -275,8 +275,8 @@ public class SimHost(
 
     override fun getNetworkStats(): NodeSnapshot? = ctx?.networkInterface?.nodeSnapshot()
 
-    override fun getNetworkStats(server: Server): NetIfaceSnapshot? {
-        val guest = requireNotNull(guests[server]) { "Unknown server ${server.uid} at host $uid" }
+    override fun getNetworkStats(task: Task): NetIfaceSnapshot? {
+        val guest = requireNotNull(guests[task]) { "Unknown server ${task.uid} at host $uid" }
         return guest.machine.networkInterface?.snapshot()
     }
 

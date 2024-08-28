@@ -36,8 +36,7 @@ import java.util.UUID
 
 internal class NetExportHandler(
     private val config: NetworkExportConfig,
-    private val runName: String = "unnamed-run-${UUID.randomUUID().toString().substring(0, 4)}",
-) : AutoCloseable {
+): AutoCloseable {
     private var startTime: Time? = config.startTime
     internal var nextExportDeadline: Time? = startTime?.plus(config.exportInterval)
         private set
@@ -45,13 +44,19 @@ internal class NetExportHandler(
     private val nodeExporter: Exporter<NodeSnapshot>?
 
     init {
+        require(config.outputFolder != null)
 
         with(config) {
             // NetworkExportConfig serialization guarantees that
             // outputFolder exists (if config are not null).
             val runOutputFolder =
                 outputFolder.let {
-                    File(it.absolutePath, runName).also { f -> check(f.mkdirs()) }
+                    File(it!!.absolutePath, "networking").also { f ->
+
+                        check(f.mkdirs() || f.exists()) {
+                            "unable to create directory (and parents) for path ${f.absolutePath}"
+                        }
+                    }
                 }
 
             networkExporter =
@@ -67,7 +72,7 @@ internal class NetExportHandler(
                 }
 
             nodeExporter =
-                nodeExportColumn.let { columns ->
+                nodeExportColumns.let { columns ->
                     if (columns.isEmpty()) {
                         null
                     } else {
@@ -80,17 +85,16 @@ internal class NetExportHandler(
         }
     }
 
-    internal fun NetworkController.timeUntilExport() = getNextDeadline() - instantSrc.time
+    internal fun NetworkController.timeUntilExport() = getNextDeadline() - lastUpdate
 
     internal fun NetworkController.exportIfNeeded() {
         // Non-mutable for smart cast.
         val exportDeadline = getNextDeadline()
-        val currTime = instantSrc.time
 
         // If not yet time to export then return.
-        if (exportDeadline approxLarger currTime) return
+        if (exportDeadline approxLarger lastUpdate) return
         // Check export deadline not passed yet.
-        check(exportDeadline approx currTime)
+        check(exportDeadline approx lastUpdate)
 
         // Write network snapshot to output file.
         networkExporter?.write(snapshot())

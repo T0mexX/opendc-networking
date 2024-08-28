@@ -31,4 +31,8 @@ public record SimTraceFragment(long deadline, double cpuUsage, int coreCount, do
     public SimTraceFragment(long start, long duration, double cpuUsage, int coreCount, double netTx, double netRx) {
         this(start + duration, cpuUsage, coreCount, netTx, netRx);
     }
+
+    public SimTraceFragment(long deadline, double cpuUsage, int coreCount) {
+        this(deadline, cpuUsage, coreCount, 0, 0);
+    }
 }

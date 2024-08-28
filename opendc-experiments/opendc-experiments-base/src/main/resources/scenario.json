@@ -1,4 +1,10 @@
 {
+    "networkExportConfig": {
+        "exportInterval": "5min"
+    },
+    "computeExportConfig": {
+        "hostExportColumns": ["network_throughput_mbps"]
+    },
     "runs": 5,
     "topologies": [{
         "pathToFile": "resources/env/single.json"

@@ -147,7 +147,7 @@ public final class SimTrace {
             if (netTxKbps < 0d || netRxKbps < 0d)
                 throw new IllegalArgumentException("network transmit and receive should be positive values");
 
-            add(deadline, usage, cores);
+            fragments.add(new SimTraceFragment(deadline, usage, cores, netTxKbps, netRxKbps));
         }
 
         /**
