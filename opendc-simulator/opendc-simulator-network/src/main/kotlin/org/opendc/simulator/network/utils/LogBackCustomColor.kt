@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,21 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.utils
 
-import org.opendc.simulator.compute.SimMachine;
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.pattern.color.ANSIConstants
+import ch.qos.logback.core.pattern.color.ForegroundCompositeConverterBase
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+public class LogBackCustomColor : ForegroundCompositeConverterBase<ILoggingEvent>() {
+    protected override fun getForegroundColorCode(event: ILoggingEvent): String {
+        val level: Level = event.level
+        return when (level.toInt()) {
+            Level.ERROR_INT -> ANSIConstants.BOLD + ANSIConstants.RED_FG // same as default color scheme
+            Level.WARN_INT -> ANSIConstants.BOLD + ANSIConstants.YELLOW_FG
+            Level.INFO_INT -> ANSIConstants.BOLD + ANSIConstants.GREEN_FG
+            else -> ANSIConstants.DEFAULT_FG
+        }
+    }
 }

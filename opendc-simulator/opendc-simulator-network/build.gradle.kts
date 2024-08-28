@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 /*
  * Copyright (c) 2021 AtLarge Research
  *
@@ -24,11 +26,43 @@ description = "Library for simulating datacenter network components"
 
 plugins {
     `kotlin-library-conventions`
+    `testing-conventions`
+    `jacoco-conventions`
+    kotlin("plugin.serialization") version "1.9.22"
+//    id("org.jetbrains.kotlinx.atomicfu") version "0.25.0"
 }
+
+val kLoggingVersion = "3.0.5"
+val logBackVersion = "1.5.6"
+val kotestVersion = "5.9.1"
+val kotestDataTestVersion = kotestVersion
+val kotestPropertyTestVersion = kotestVersion
+val serializationVersion = "1.6.0"
 
 dependencies {
     api(projects.opendcSimulator.opendcSimulatorFlow)
-    implementation(projects.opendcSimulator.opendcSimulatorCore)
+    implementation(libs.progressbar)
 
-    testImplementation(libs.slf4j.simple)
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation(projects.opendcSimulator.opendcSimulatorCore)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
+    implementation("io.github.microutils:kotlin-logging-jvm:$kLoggingVersion")
+    implementation("ch.qos.logback:logback-classic:$logBackVersion")
+    implementation(libs.clikt)
+    implementation(projects.opendcTrace.opendcTraceParquet)
+
+    testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
+    testImplementation("io.kotest:kotest-property:$version")
+    testImplementation("io.kotest:kotest-framework-datatest:$kotestDataTestVersion")
+    testImplementation("io.kotest:kotest-property:$kotestPropertyTestVersion")
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}
+
+tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions {
+        freeCompilerArgs = freeCompilerArgs + "-Xcontext-receivers"
+    }
 }

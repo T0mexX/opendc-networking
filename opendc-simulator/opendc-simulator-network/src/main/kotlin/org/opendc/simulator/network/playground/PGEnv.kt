@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,17 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.playground
 
-import org.opendc.simulator.compute.SimMachine;
+import org.opendc.simulator.network.api.NetEnRecorder
+import org.opendc.simulator.network.components.Network
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+internal data class PGEnv(
+    val network: Network,
+    val energyRecorder: NetEnRecorder,
+    val pgTimeSource: PGTimeSource,
+) : AbstractCoroutineContextElement(Key) {
+    companion object Key : CoroutineContext.Key<PGEnv>
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,25 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.playground.cmds
 
-import org.opendc.simulator.compute.SimMachine;
+import kotlinx.coroutines.CoroutineScope
+import org.opendc.simulator.network.playground.cmds.NodeInfo.regex
+import kotlin.system.exitProcess
 
 /**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
+ * Exits process.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > quit
+ * ```
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+internal data object Quit : PGCmd("QUIT") {
+    override val regex = Regex("\\s*(?:q|quit)\\s*")
+
+    override fun CoroutineScope.execCmd(result: MatchResult) {
+        exitProcess(status = 0)
+    }
 }

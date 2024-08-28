@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,44 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.utils
 
-import org.opendc.simulator.compute.SimMachine;
+internal class KeepTrying<T> {
+    private var lastExc: Exception? = null
+    private var result: T? = null
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+    fun tryThis(block: () -> T): KeepTrying<T> {
+        try {
+            result = block()
+            lastExc = null
+        } catch (e: Exception) {
+            lastExc = e
+        }
+
+        return this
+    }
+
+    fun elseThis(block: () -> T): KeepTrying<T> {
+        result
+            ?: try {
+                result = block()
+                lastExc = null
+            } catch (e: Exception) {
+                lastExc = e
+            }
+
+        return this
+    }
+
+    fun ifError(block: (Exception) -> kotlin.Unit): KeepTrying<T> {
+        lastExc?.let { block(it) }
+
+        return this
+    }
+
+    fun getOrNull(): T? = result
+
+    fun get(): T = result!!
 }
+
+internal fun <T> tryThis(block: () -> T): KeepTrying<T> = KeepTrying<T>().elseThis(block)

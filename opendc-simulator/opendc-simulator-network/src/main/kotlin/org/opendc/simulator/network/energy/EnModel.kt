@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,17 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.energy
 
-import org.opendc.simulator.compute.SimMachine;
+import org.opendc.common.units.Power
 
 /**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
+ * Represents the energy model for a specific component of type `T`.
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
+internal fun interface EnModel<T : EnergyConsumer<T>> {
     /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
+     * Computes the current energy consumption of ***this***.
+     * @param[e]   energy consumer network component whose energy consumption is to be computed.
      */
-    public abstract double getBandwidth();
+    fun computeCurrConsumpt(e: T): Power
 }

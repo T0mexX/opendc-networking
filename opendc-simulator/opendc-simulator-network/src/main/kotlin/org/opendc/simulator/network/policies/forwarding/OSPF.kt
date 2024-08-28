@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,30 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.policies.forwarding
 
-import org.opendc.simulator.compute.SimMachine;
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.api.NodeId
+import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.components.internalstructs.port.Port
+import org.opendc.simulator.network.flow.FlowId
+import org.opendc.simulator.network.flow.NetFlow
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+// TODO: documentation
+@Serializable
+@SerialName("ospf")
+internal data object OSPF : PortSelectionPolicy {
+    override suspend fun Node.selectPorts(flowId: FlowId): Set<Port> {
+        val finalDestId: NodeId =
+            NetFlow.flowsDestIds[flowId]
+                ?: throw IllegalStateException("unable to forward flow, flow id $flowId not recognized")
+
+        return routingTable.getPossiblePathsTo(finalDestId)
+            .onlyMinimal()
+            .firstOrNull()
+            ?.associatedPort(this@selectPorts)
+            ?.let { setOf(it) }
+            ?: emptySet()
+    }
 }

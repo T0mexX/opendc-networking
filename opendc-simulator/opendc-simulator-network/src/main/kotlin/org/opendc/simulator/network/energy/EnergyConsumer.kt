@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,23 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
-
-import org.opendc.simulator.compute.SimMachine;
+package org.opendc.simulator.network.energy
 
 /**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
+ * Classes that implement this interface consume energy,
+ * and their energy consumption can be tracked using [enMonitor].
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
+internal interface EnergyConsumer<T : EnergyConsumer<T>> {
+    val id: Long
+
     /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
+     * Allows to track the energy consumption of ***this***.
      */
-    public abstract double getBandwidth();
+    val enMonitor: EnMonitor<T>
+
+    /**
+     * Returns the default energy model to use for ***this*** component,
+     * if no specific energy model is provided.
+     */
+    fun getDfltEnModel(): EnModel<T>
 }

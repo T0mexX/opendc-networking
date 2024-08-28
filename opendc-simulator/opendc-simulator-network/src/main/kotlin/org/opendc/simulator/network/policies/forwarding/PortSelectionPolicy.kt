@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,26 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.policies.forwarding
 
-import org.opendc.simulator.compute.SimMachine;
+import kotlinx.serialization.Serializable
+import org.opendc.simulator.network.components.Node
+import org.opendc.simulator.network.components.internalstructs.RoutingTable
+import org.opendc.simulator.network.components.internalstructs.port.Port
+import org.opendc.simulator.network.flow.FlowId
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
+// TODO: documentation
+@Serializable
+internal sealed interface PortSelectionPolicy {
+    suspend fun Node.selectPorts(flowId: FlowId): Set<Port>
+
     /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
+     * Filters ***this*** collection of [RoutingTable.PossiblePath], keeping only those that are minimal.
      */
-    public abstract double getBandwidth();
+    fun Collection<RoutingTable.PossiblePath>.onlyMinimal(): Collection<RoutingTable.PossiblePath> {
+        val min: Int = this.minOfOrNull { it.numOfHops } ?: 0
+        return this.filter { it.numOfHops == min }
+    }
+
+    fun RoutingTable.PossiblePath.associatedPort(node: Node): Port = node.portToNode[this.nextHop.id]!!
 }

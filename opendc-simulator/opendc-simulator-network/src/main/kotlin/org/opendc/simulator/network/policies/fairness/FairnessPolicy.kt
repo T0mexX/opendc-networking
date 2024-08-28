@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,33 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.policies.fairness
 
-import org.opendc.simulator.compute.SimMachine;
+import kotlinx.serialization.Serializable
+import org.opendc.common.units.DataRate
+import org.opendc.simulator.network.flow.FlowHandler
+import org.opendc.simulator.network.flow.RateUpdt
+import org.opendc.simulator.network.utils.logger
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
+@Serializable
+internal sealed interface FairnessPolicy {
+    fun FlowHandler.applyPolicy(updt: RateUpdt)
+
     /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
+     * Executes the data rate reductions of the [updt].
+     *
+     * Every policy should always execute this method first,
+     * since rate reductions are always possible and it frees
+     * bandwidth for other flows rate increases.
      */
-    public abstract double getBandwidth();
+    fun FlowHandler.execRateReductions(updt: RateUpdt) {
+        updt.forEach { fId, deltaRate ->
+            if (deltaRate < DataRate.ZERO) outgoingFlows[fId]?.tryUpdtRate()
+        }
+    }
+
+    companion object {
+        val log by logger()
+        const val VERIFY: Boolean = false
+    }
 }

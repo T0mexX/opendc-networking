@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,35 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.playground.cmds
 
-import org.opendc.simulator.compute.SimMachine;
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import org.opendc.simulator.network.playground.PGEnv
+import org.opendc.simulator.network.utils.infoNewLn
 
 /**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
+ * Logs the energy report of the network.
+ * Check [regex] for a complete understanding of the command parsing.
+ *
+ * ```console
+ * // Example
+ * > energy report
+ * 16:04:47.178 [INFO] ENERGY_REPORT -
+ * | ==== Energy Report ====
+ * | Current Power Usage: 135.400000 Watts
+ * | Total Energy Consumed: 1354.000000 Joule
+ * ```
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+internal data object EnReport : PGCmd("ENERGY_REPORT") {
+    override val regex = Regex("\\s*(?:energy|en|e)(?:|report|rep|r)\\s*")
+
+    override fun CoroutineScope.execCmd(result: MatchResult) {
+        val pgEnv: PGEnv = coroutineContext[PGEnv]!!
+
+        launch {
+            pgEnv.network.awaitStability()
+            log.infoNewLn(pgEnv.energyRecorder.fmt())
+        }
+    }
 }

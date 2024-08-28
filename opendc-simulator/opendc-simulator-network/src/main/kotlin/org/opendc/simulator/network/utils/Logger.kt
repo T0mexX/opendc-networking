@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,51 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.utils
 
-import org.opendc.simulator.compute.SimMachine;
+import mu.KotlinLogging
+import org.slf4j.Logger
 
 /**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
+ * Returns a [Logger] with the class name of the caller, even if the caller is a companion object.
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+internal fun <T : Any> T.logger(name: String? = null): Lazy<Logger> {
+    return lazy {
+        KotlinLogging.logger(
+            name
+                ?: runCatching { this::class.java.enclosingClass.simpleName }
+                    .getOrNull()
+                ?: "unknown",
+        )
+    }
+}
+
+internal fun Logger.errAndNull(msg: String): Nothing? {
+    this.error(msg)
+    return null
+}
+
+public fun Logger.warnAndNull(msg: String): Nothing? {
+    this.warn(msg)
+    return null
+}
+
+internal fun <T> Logger.withWarn(
+    obj: T,
+    msg: String,
+): T {
+    this.warn(msg)
+    return obj
+}
+
+internal fun <T> Logger.withErr(
+    obj: T,
+    msg: String,
+): T {
+    this.error(msg)
+    return obj
+}
+
+internal fun Logger.infoNewLn(msg: String) {
+    info("\n" + msg)
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,15 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
-
-import org.opendc.simulator.compute.SimMachine;
+package org.opendc.simulator.network.components
 
 /**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
+ * Implementation of this interface are components whose [Specs]
+ * can be used to build multiple instances of that component with the same specifications.
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
+public fun interface WithSpecs<T : WithSpecs<T>> {
     /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
+     * @return the [Specs] of [T].
      */
-    public abstract double getBandwidth();
+    public fun toSpecs(): Specs<T>
 }

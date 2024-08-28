@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,33 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.components
 
-import org.opendc.simulator.compute.SimMachine;
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
+import java.io.File
 
 /**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
+ * Type serializable from json, representing the specifics of concrete object of type `T`.
+ * The object of type `T` can then be built with [build].
  */
-public abstract class SimNetworkAdapter implements SimPeripheral {
+@Serializable
+public sealed interface Specs<out T : WithSpecs<in @UnsafeVariance T>> {
     /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
+     * Builds the corresponding [T] object.
      */
-    public abstract double getBandwidth();
+    public fun build(): T
+
+    public companion object {
+        @OptIn(ExperimentalSerializationApi::class)
+        public inline fun <reified T : WithSpecs<T>> fromFile(file: File): Specs<T> {
+            val json = Json { ignoreUnknownKeys = true }
+
+            return json.decodeFromStream(file.inputStream())
+        }
+
+        public inline fun <reified T : WithSpecs<T>> fromFile(filePath: String): Specs<T> = fromFile(File(filePath))
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,13 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.components.link
 
-import org.opendc.simulator.compute.SimMachine;
+import org.opendc.common.units.DataRate
+import org.opendc.simulator.network.flow.FlowId
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+internal interface ReceiveLink : Link {
+    val incomingRateById: Map<FlowId, DataRate>
+
+    fun incomingRateOf(fId: FlowId): DataRate
 }

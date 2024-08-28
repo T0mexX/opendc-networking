@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,34 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.api
 
-import org.opendc.simulator.compute.SimMachine;
+import org.opendc.common.units.Time
+import org.opendc.simulator.network.api.NetworkController.Companion.log
+import java.time.Instant
+import java.time.InstantSource
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
+internal class NetworkInstantSrc(
+    private val external: InstantSource? = null,
+    internal: Time = Time.ZERO,
+) : InstantSource {
+    var internal = internal
+        private set
+    val isExternalSource: Boolean = external != null
+    val isInternalSource: Boolean = isExternalSource.not()
+
+    val time: Time get() = Time.ofInstantFromEpoch(instant())
+
+    override fun instant(): Instant =
+        external?.instant()
+            ?: Instant.ofEpochMilli(internal.toMsLong())
+
+    fun advanceTime(time: Time) {
+        external?.let { return log.error("unable to advance internal time, network has external time source") }
+        internal += time
+    }
+
+    fun setInternalTime(time: Time) {
+        internal = time
+    }
 }

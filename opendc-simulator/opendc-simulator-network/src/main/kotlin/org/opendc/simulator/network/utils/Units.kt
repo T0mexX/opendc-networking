@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 AtLarge Research
+ * Copyright (c) 2024 AtLarge Research
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,16 +20,24 @@
  * SOFTWARE.
  */
 
-package org.opendc.simulator.compute.device;
+package org.opendc.simulator.network.utils
 
-import org.opendc.simulator.compute.SimMachine;
+import org.opendc.common.units.DataRate
+import org.opendc.common.units.DataSize
+import org.opendc.common.units.Time
+import org.opendc.common.units.Unit
+import org.opendc.common.utils.ifNaN
 
-/**
- * A simulated network interface card (NIC or network adapter) that can be attached to a {@link SimMachine}.
- */
-public abstract class SimNetworkAdapter implements SimPeripheral {
-    /**
-     * Return the unidirectional bandwidth of the network adapter (in Mbps).
-     */
-    public abstract double getBandwidth();
-}
+internal inline fun <reified T : Unit<T>> T?.ifNull0(): T =
+    this
+        ?: when (T::class) {
+            DataRate::class -> DataRate.ZERO as T
+            DataSize::class -> DataSize.ZERO as T
+            Time::class -> Time.ZERO as T
+            else -> throw RuntimeException("change") // TODO: add others
+        }
+
+// TODO: refactor to use commons.units.percentage
+internal fun Double.ratioToPerc(fmt: String): String = "${String.format(fmt, (this * 100).ifNaN(.0))}%"
+
+internal fun Double.fmt(fmt: String): String = String.format(fmt, this)
