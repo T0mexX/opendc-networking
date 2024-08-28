@@ -1,18 +1,38 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.trace.table
 
 import org.opendc.trace.table.column.Column
 import org.opendc.trace.table.column.ColumnReader
 import org.opendc.trace.table.csv.CSVTableReader
 import org.opendc.trace.util.errAndFalse
-import org.opendc.trace.util.errAndNull
 import org.opendc.trace.util.logger
 import java.io.File
 import java.nio.file.Path
 
 public abstract class TableReader(
-    artificialCols: Map<String, Any> = mutableMapOf()
+    artificialCols: Map<String, Any> = mutableMapOf(),
 ) {
-
     private val artificialCols = artificialCols.toMutableMap()
 
     public abstract val tableName: String
@@ -26,7 +46,6 @@ public abstract class TableReader(
             .also {
                 // if a new line has been parsed
                 if (it) {
-
                     // set artificial columns readers current values
                     // and call their respective post-processing functions
                     artificialCols.forEach { (colName, colValue) ->
@@ -59,55 +78,70 @@ public abstract class TableReader(
         colReaders[colReader.name]?.remove(colReader)
     }
 
-    public open fun <T: Any> addColumnReader(
+    public open fun <T : Any> addColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<T>,
         postProcess: (T) -> Unit = {},
         defaultValue: T? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): ColumnReader<T, T>? =
-        addColumnReader(name = name, columnType = columnType, process = { it }, postProcess = postProcess, defaultValue = defaultValue, forceAdd = forceAdd)
+        addColumnReader(
+            name = name,
+            columnType = columnType,
+            process = { it },
+            postProcess = postProcess,
+            defaultValue = defaultValue,
+            forceAdd = forceAdd,
+        )
 
-    public open fun <O, P: Any> addColumnReader(
+    public open fun <O, P : Any> addColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<O>,
         process: (O) -> P,
         postProcess: (P) -> Unit = {},
         defaultValue: P? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): ColumnReader<O, P>? {
-
         return if (colReaderAdditionPossible(colName = name, dfltValue = defaultValue, forceAdd = forceAdd)) {
-            val newReader = ColumnReader(
-                name = name,
-                columnType = columnType,
-                process = process,
-                postProcess = postProcess
-            )
+            val newReader =
+                ColumnReader(
+                    name = name,
+                    columnType = columnType,
+                    process = process,
+                    postProcess = postProcess,
+                )
 
             colReaders.getOrPut(name) { mutableListOf() }.add(newReader)
 
             newReader
-
-        } else null
+        } else {
+            null
+        }
     }
 
-    public fun <T: Any> withColumnReader(
+    public fun <T : Any> withColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<T>,
         postProcess: (T) -> Unit,
         defaultValue: T? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): TableReader? =
-        withColumnReader(name = name, columnType = columnType, process = { it }, postProcess = postProcess, defaultValue = defaultValue, forceAdd = forceAdd)
+        withColumnReader(
+            name = name,
+            columnType = columnType,
+            process = { it },
+            postProcess = postProcess,
+            defaultValue = defaultValue,
+            forceAdd = forceAdd,
+        )
 
-    public fun <O, P: Any> withColumnReader(
+    public fun <O, P : Any> withColumnReader(
         name: String,
         columnType: ColumnReader.ColumnType<O>,
         process: (O) -> P,
         postProcess: (P) -> Unit,
         defaultValue: P? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): TableReader? {
         addColumnReader(
             name = name,
@@ -115,33 +149,33 @@ public abstract class TableReader(
             process = process,
             defaultValue = defaultValue,
             postProcess = postProcess,
-            forceAdd = forceAdd
+            forceAdd = forceAdd,
         ) ?: return null
 
         return this
     }
 
-    public fun <T: Any> addColumnReader(
+    public fun <T : Any> addColumnReader(
         column: Column<T>,
         postProcess: (T) -> Unit = {},
         defaultValue: T? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): ColumnReader<T, T>? {
         return this.addColumnReader(
             name = column.name,
             columnType = column.type,
             defaultValue = defaultValue,
-            postProcess =postProcess,
-            forceAdd = forceAdd
+            postProcess = postProcess,
+            forceAdd = forceAdd,
         )
     }
 
-    public fun <O, P: Any> addColumnReader(
+    public fun <O, P : Any> addColumnReader(
         column: Column<O>,
         process: (O) -> P,
         postProcess: (P) -> Unit = {},
         defaultValue: P? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): ColumnReader<O, P>? {
         return this.addColumnReader(
             name = column.name,
@@ -149,33 +183,33 @@ public abstract class TableReader(
             defaultValue = defaultValue,
             process = process,
             postProcess = postProcess,
-            forceAdd = forceAdd
+            forceAdd = forceAdd,
         )
     }
 
-    public fun <T: Any> withColumnReader(
+    public fun <T : Any> withColumnReader(
         column: Column<T>,
         postProcess: (T) -> Unit,
         defaultValue: T? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): TableReader? {
         this.addColumnReader(
             name = column.name,
             columnType = column.type,
             defaultValue = defaultValue,
             postProcess = postProcess,
-            forceAdd = forceAdd
+            forceAdd = forceAdd,
         ) ?: return null
 
         return this
     }
 
-    public fun <O, P: Any> withColumnReader(
+    public fun <O, P : Any> withColumnReader(
         column: Column<O>,
         process: (O) -> P,
         postProcess: (P) -> Unit,
         defaultValue: P? = null,
-        forceAdd: Boolean = false
+        forceAdd: Boolean = false,
     ): TableReader? {
         this.addColumnReader(
             name = column.name,
@@ -183,39 +217,59 @@ public abstract class TableReader(
             defaultValue = defaultValue,
             process = process,
             postProcess = postProcess,
-            forceAdd = forceAdd
+            forceAdd = forceAdd,
         ) ?: return null
 
         return this
     }
 
-    private fun colReaderAdditionPossible(colName: String, dfltValue: Any?, forceAdd: Boolean = false): Boolean {
+    private fun colReaderAdditionPossible(
+        colName: String,
+        dfltValue: Any?,
+        forceAdd: Boolean = false,
+    ): Boolean {
         if (colName !in colNames) {
             if (forceAdd) {
                 artificialCols[colName] = dfltValue
-                    ?. also { log.warn("forcing column reader for column '$colName' which is not present in table '$tableName', " +
-                        "it will always return the default value '$dfltValue'. It is expected behaviour in " +
-                        "concatenated tables where the columns are not 1:1. Post processing functions will be called on the default value for each row.")
-                    } ?: return log.errAndFalse("unable to force column reader addition in table '$tableName' for column name '$colName', no default value provided.")
-
-            } else return log.errAndFalse("unable to add column reader for column $colName, " +
-                "column does not exists in table '$tableName' and 'forceAdd' was not set")
+                    ?. also {
+                        log.warn(
+                            "forcing column reader for column '$colName' which is not present in table '$tableName', " +
+                                "it will always return the default value '$dfltValue'. It is expected behaviour in " +
+                                "concatenated tables where the columns are not 1:1. P" +
+                                "ost processing functions will be called on the default value for each row.",
+                        )
+                    } ?: return log.errAndFalse(
+                    "unable to force column reader addition " +
+                        "in table '$tableName' for column name '$colName', no default value provided.",
+                )
+            } else {
+                return log.errAndFalse(
+                    "unable to add column reader for column $colName, " +
+                        "column does not exists in table '$tableName' and 'forceAdd' was not set",
+                )
+            }
         }
 
         return true
     }
 
-    //should only be called while force adding a column reader
-    protected fun withArtColumn(colName: String, dfltValue: Any): TableReader? {
+    // should only be called while force adding a column reader
+    protected fun withArtColumn(
+        colName: String,
+        dfltValue: Any,
+    ): TableReader? {
         return artificialCols.putIfAbsent(colName, dfltValue)
             ?. let { this }
     }
 
-
     public companion object {
         private val log by logger()
 
-        internal fun genericReaderFor(file: File, artificialColumns: Map<String, Any>, tableName: String): TableReader? =
+        internal fun genericReaderFor(
+            file: File,
+            artificialColumns: Map<String, Any>,
+            tableName: String,
+        ): TableReader? =
             when (file.extension) {
                 "csv" -> CSVTableReader(file, artificialColumns = artificialColumns, tableName = tableName)
                 else -> null // TODO: add error log
@@ -224,11 +278,9 @@ public abstract class TableReader(
         public fun genericReaderFor(file: File): TableReader? =
             genericReaderFor(file = file, artificialColumns = emptyMap(), tableName = file.nameWithoutExtension)
 
-        public fun genericReaderFor(path: Path): TableReader? =
-            genericReaderFor(path.toFile())
+        public fun genericReaderFor(path: Path): TableReader? = genericReaderFor(path.toFile())
 
-        public fun genericReaderFor(path: String): TableReader? =
-            genericReaderFor(File(path))
+        public fun genericReaderFor(path: String): TableReader? = genericReaderFor(File(path))
     }
 }
 

@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2024 AtLarge Research
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.opendc.trace.table.column
 
 import com.fasterxml.jackson.core.JsonParser
@@ -72,14 +94,13 @@ import kotlin.time.Duration
  *                          processed counterpart [P], then stored in [currRowValue].
  * @property[postProcess]   lambda called after the column entry has been processed, with the processed value as param.
  */
-public open class ColumnReader<O, P: Any> internal constructor(
+public open class ColumnReader<O, P : Any> internal constructor(
     public val name: String,
     private val columnType: ColumnType<O>,
     private val defaultValue: P? = null,
     private val process: (O) -> P,
     private val postProcess: ((P) -> Unit) = {},
 ) {
-
     public companion object {
         private val log by logger()
 
@@ -100,14 +121,14 @@ public open class ColumnReader<O, P: Any> internal constructor(
             name: String,
             columnType: ColumnType<T>,
             defaultValue: T? = null,
-            postProcess: (T) -> Unit
+            postProcess: (T) -> Unit,
         ): ColumnReader<T, T> =
             ColumnReader(
                 name = name,
                 columnType = columnType,
                 defaultValue = defaultValue,
                 process = { it },
-                postProcess = postProcess
+                postProcess = postProcess,
             )
     }
 
@@ -172,28 +193,29 @@ public open class ColumnReader<O, P: Any> internal constructor(
      */
     public abstract class ColumnType<T> {
         internal abstract fun fromJsonParser(parser: JsonParser): T
+
         internal abstract fun fromStr(strValue: String): T
     }
 
-
-    public object IntType: ColumnType<Int>() {
+    public object IntType : ColumnType<Int>() {
         override fun fromJsonParser(parser: JsonParser): Int = parser.intValue
+
         override fun fromStr(strValue: String): Int = jsonParser.decodeFromString(strValue)
     }
 
-    public object DoubleType: ColumnType<Double>() {
+    public object DoubleType : ColumnType<Double>() {
         override fun fromJsonParser(parser: JsonParser): Double = parser.doubleValue
+
         override fun fromStr(strValue: String): Double = jsonParser.decodeFromString(strValue)
     }
 
-    public object InstantType: ColumnType<Instant>() {
+    public object InstantType : ColumnType<Instant>() {
         override fun fromJsonParser(parser: JsonParser): Instant {
             return try {
                 // used to parse the timestamps in case of the Materna trace?
                 val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss")
 
                 LocalDateTime.parse(parser.text, formatter).toInstant(ZoneOffset.UTC)
-
             } catch (e: DateTimeParseException) {
                 Instant.ofEpochSecond(parser.longValue)
             }
@@ -202,36 +224,41 @@ public open class ColumnReader<O, P: Any> internal constructor(
         override fun fromStr(strValue: String): Instant = jsonParser.decodeFromString(strValue)
     }
 
-    public object LongType: ColumnType<Long>() {
+    public object LongType : ColumnType<Long>() {
         override fun fromJsonParser(parser: JsonParser): Long = parser.longValue
+
         override fun fromStr(strValue: String): Long = jsonParser.decodeFromString(strValue)
     }
 
-    public object FloatType: ColumnType<Float>() {
+    public object FloatType : ColumnType<Float>() {
         override fun fromJsonParser(parser: JsonParser): Float = parser.floatValue
+
         override fun fromStr(strValue: String): Float = jsonParser.decodeFromString(strValue)
     }
 
-    public object BooleanType: ColumnType<Boolean>() {
+    public object BooleanType : ColumnType<Boolean>() {
         override fun fromJsonParser(parser: JsonParser): Boolean = parser.booleanValue
+
         override fun fromStr(strValue: String): Boolean = jsonParser.decodeFromString(strValue)
     }
 
-    public object StringType: ColumnType<String>() {
+    public object StringType : ColumnType<String>() {
         override fun fromJsonParser(parser: JsonParser): String = parser.valueAsString
+
         override fun fromStr(strValue: String): String = strValue
     }
 
-    public object UUIDType: ColumnType<UUID>() {
-        override fun fromJsonParser(parser: JsonParser): UUID = UUID.fromString(parser.valueAsString) // NEVER USED (every old TableReader::getUUID impl. throws exception)
+    public object UUIDType : ColumnType<UUID>() {
+        override fun fromJsonParser(parser: JsonParser): UUID =
+            UUID.fromString(parser.valueAsString) // NEVER USED (every old TableReader::getUUID impl. throws exception)
+
         override fun fromStr(strValue: String): UUID = UUID.fromString(strValue)
     }
 
     public class DurationType(
-        private val dfltValue: Duration? = null
-    ): ColumnType<Duration>() {
-        override fun fromJsonParser(parser: JsonParser): Duration =
-            fromStr(parser.valueAsString)
+        private val dfltValue: Duration? = null,
+    ) : ColumnType<Duration>() {
+        override fun fromJsonParser(parser: JsonParser): Duration = fromStr(parser.valueAsString)
 
         override fun fromStr(strValue: String): Duration =
             Duration.parseOrNull(strValue)
@@ -240,30 +267,24 @@ public open class ColumnReader<O, P: Any> internal constructor(
                 ?: throw RuntimeException("unable to parse duration in column entry")
     }
 
-    public data class ListType<T>(private val colType: ColumnType<T>): ColumnType<List<T>>() {
-        override fun fromJsonParser(parser: JsonParser): List<T> =
-            parser.readValueAs(listOf<T>().javaClass)
+    public data class ListType<T>(private val colType: ColumnType<T>) : ColumnType<List<T>>() {
+        override fun fromJsonParser(parser: JsonParser): List<T> = parser.readValueAs(listOf<T>().javaClass)
 
-        override fun fromStr(strValue: String): List<T> =
-            jsonParser.decodeFromString(strValue)
+        override fun fromStr(strValue: String): List<T> = jsonParser.decodeFromString(strValue)
     }
 
-    public data class SetType<T>(private val colType: ColumnType<T>): ColumnType<Set<T>>() {
-        override fun fromJsonParser(parser: JsonParser): Set<T> =
-            parser.readValueAs(setOf<T>().javaClass)
+    public data class SetType<T>(private val colType: ColumnType<T>) : ColumnType<Set<T>>() {
+        override fun fromJsonParser(parser: JsonParser): Set<T> = parser.readValueAs(setOf<T>().javaClass)
 
-        override fun fromStr(strValue: String): Set<T> =
-            jsonParser.decodeFromString(strValue)
+        override fun fromStr(strValue: String): Set<T> = jsonParser.decodeFromString(strValue)
     }
 
     public data class MapType<T, R>(
         private val keyColType: ColumnType<T>,
-        private val valueColType: ColumnType<R>
-    ): ColumnType<Map<T, R>>() {
-        override fun fromJsonParser(parser: JsonParser): Map<T, R> =
-            parser.readValueAs(mapOf<T, R>().javaClass)
+        private val valueColType: ColumnType<R>,
+    ) : ColumnType<Map<T, R>>() {
+        override fun fromJsonParser(parser: JsonParser): Map<T, R> = parser.readValueAs(mapOf<T, R>().javaClass)
 
-        override fun fromStr(strValue: String): Map<T, R> =
-            jsonParser.decodeFromString(strValue)
+        override fun fromStr(strValue: String): Map<T, R> = jsonParser.decodeFromString(strValue)
     }
 }
