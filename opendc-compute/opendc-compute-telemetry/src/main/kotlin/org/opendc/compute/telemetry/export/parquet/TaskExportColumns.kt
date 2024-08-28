@@ -150,4 +150,68 @@ public object DfltTaskExportColumns {
             TIMESTAMP_ABS,
             TIMESTAMP,
         )
+
+    public val ALL : Set<ExportColumn<TaskTableReader>> = setOf(
+        TIMESTAMP,
+        TIMESTAMP_ABS,
+        TASK_ID,
+        HOST_ID,
+        TASK_NAME,
+        CPU_COUNT,
+        MEM_CAPACITY,
+        CPU_LIMIT,
+        CPU_TIME_ACTIVE,
+        CPU_TIME_IDLE,
+        CPU_TIME_STEAL,
+        CPU_TIME_LOST,
+        UP_TIME,
+        DOWN_TIME,
+        PROVISION_TIME,
+        BOOT_TIME,
+        BOOT_TIME_ABS,
+    )
+}
+
+/**
+ * Aggregates all host export columns related to networking.
+ */
+public object NetworkTaskExportColumns {
+    public val GEN_FLOWS: ExportColumn<TaskTableReader> =
+        ExportColumn(
+            field = Types.required(INT32).named("flows_being_generated"),
+        ) { it.networkSnapshot?.numGeneratingFlows }
+
+    public val TPUT: ExportColumn<TaskTableReader> =
+        ExportColumn(
+            field = Types.required(DOUBLE).named("network_throughput_Mbps"),
+        ) { it.networkSnapshot?.currTputAllFlows?.toMbps() }
+
+    public val TPUT_PERC: ExportColumn<TaskTableReader> =
+        ExportColumn(
+            field = Types.optional(DOUBLE).named("network_throughput_ratio"),
+        ) { it.networkSnapshot?.currTputPercAllFlows?.toRatio() }
+
+    public val MIN_F_TPUT: ExportColumn<TaskTableReader> =
+        ExportColumn(
+            field = Types.optional(DOUBLE).named("min_flow_throughput_ratio"),
+        ) { it.networkSnapshot?.currMinFlowTputPerc?.toRatio() }
+
+    public val MAX_F_TPUT: ExportColumn<TaskTableReader> =
+        ExportColumn(
+            field = Types.optional(DOUBLE).named("max_flow_throughput_ratio"),
+        ) { it.networkSnapshot?.currMaxFlowTputPerc?.toRatio() }
+
+    public val AVRG_F_TPUT: ExportColumn<TaskTableReader> =
+        ExportColumn(
+            field = Types.optional(DOUBLE).named("avg_flow_throughput_ratio"),
+        ) { it.networkSnapshot?.currAvrgFlowTputPerc?.toRatio() }
+
+    public val ALL: Set<ExportColumn<TaskTableReader>> = setOf(
+        GEN_FLOWS,
+        TPUT,
+        TPUT_PERC,
+        MIN_F_TPUT,
+        MAX_F_TPUT,
+        AVRG_F_TPUT,
+    )
 }

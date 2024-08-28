@@ -22,9 +22,13 @@
 
 package org.opendc.simulator.compute.workload;
 
-public record SimTraceFragment(long deadline, double cpuUsage, int coreCount) {
+public record SimTraceFragment(long deadline, double cpuUsage, int coreCount, double netTx, double netRx) {
 
     public SimTraceFragment(long start, long duration, double cpuUsage, int coreCount) {
-        this(start + duration, cpuUsage, coreCount);
+        this(start + duration, cpuUsage, coreCount, 0, 0);
+    }
+
+    public SimTraceFragment(long start, long duration, double cpuUsage, int coreCount, double netTx, double netRx) {
+        this(start + duration, cpuUsage, coreCount, netTx, netRx);
     }
 }

@@ -31,6 +31,7 @@ plugins {
 dependencies {
     api(projects.opendcCompute.opendcComputeApi)
     api(projects.opendcTrace.opendcTraceParquet)
+    implementation(projects.opendcSimulator.opendcSimulatorNetwork)
     implementation(projects.opendcCommon)
     implementation(libs.kotlin.logging)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")

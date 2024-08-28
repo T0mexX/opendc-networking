@@ -45,6 +45,9 @@ import org.opendc.simulator.compute.model.ProcessingNode
 import org.opendc.simulator.compute.model.ProcessingUnit
 import org.opendc.simulator.compute.workload.SimWorkload
 import org.opendc.simulator.compute.workload.SimWorkloads
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot.Companion.snapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot
 import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
@@ -268,6 +271,13 @@ public class SimHost(
     override fun getCpuStats(task: Task): GuestCpuStats {
         val guest = requireNotNull(guests[task]) { "Unknown task ${task.uid} at host $uid" }
         return guest.getCpuStats()
+    }
+
+    override fun getNetworkStats(): NodeSnapshot? = ctx?.networkInterface?.nodeSnapshot()
+
+    override fun getNetworkStats(server: Server): NetIfaceSnapshot? {
+        val guest = requireNotNull(guests[server]) { "Unknown server ${server.uid} at host $uid" }
+        return guest.machine.networkInterface?.snapshot()
     }
 
     override fun hashCode(): Int = uid.hashCode()

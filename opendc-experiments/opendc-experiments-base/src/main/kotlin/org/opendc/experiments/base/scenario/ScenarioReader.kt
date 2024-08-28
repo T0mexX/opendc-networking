@@ -47,7 +47,7 @@ public class ScenarioReader {
     public fun read(input: InputStream): ScenariosSpec {
         // Loads the default parquet output fields,
         // so that they can be deserialized
-        ComputeExportConfig.loadDfltColumns()
+        ComputeExportConfig.loadComputeColumns()
 
         return jsonReader.decodeFromStream<ScenariosSpec>(input)
     }

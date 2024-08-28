@@ -22,6 +22,8 @@
 
 package org.opendc.compute.telemetry.table
 
+import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot
+import org.opendc.simulator.network.api.snapshots.NodeSnapshot
 import org.opendc.trace.util.parquet.exporter.Exportable
 import java.time.Instant
 
@@ -147,4 +149,9 @@ public interface HostTableReader : Exportable {
      * The [Instant] at which the host booted.
      */
     public val bootTimeAbsolute: Instant?
+
+    /**
+     * The snapshot of the network interface state.
+     */
+    public val networkSnapshot: NodeSnapshot?
 }

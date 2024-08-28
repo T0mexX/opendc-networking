@@ -25,8 +25,11 @@ package org.opendc.simulator.compute;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.workload.SimWorkload;
 import org.opendc.simulator.flow2.FlowGraph;
+import org.opendc.simulator.network.api.NetworkInterface;
 
 /**
  * A simulated execution context in which a bootable image runs.
@@ -36,6 +39,8 @@ import org.opendc.simulator.flow2.FlowGraph;
  * or virtual firmware on which the image runs.
  */
 public interface SimMachineContext {
+    @Nullable NetworkInterface getNetworkInterface();
+
     /**
      * Return the {@link FlowGraph} in which the workload executes.
      */

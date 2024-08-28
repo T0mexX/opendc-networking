@@ -29,6 +29,7 @@ import org.opendc.experiments.base.scenario.specs.ExportModelSpec
 import org.opendc.experiments.base.scenario.specs.FailureModelSpec
 import org.opendc.experiments.base.scenario.specs.ScenarioTopologySpec
 import org.opendc.experiments.base.scenario.specs.WorkloadSpec
+import org.opendc.simulator.network.export.NetworkExportConfig
 
 /**
  * A data class representing a scenario for a set of experiments.
@@ -55,6 +56,7 @@ public data class Scenario(
     val exportModelSpec: ExportModelSpec = ExportModelSpec(),
     val outputFolder: String = "output",
     val computeExportConfig: ComputeExportConfig,
+    val networkExportConfig: NetworkExportConfig?,
     val name: String = "",
     val runs: Int = 1,
     val initialSeed: Int = 0,

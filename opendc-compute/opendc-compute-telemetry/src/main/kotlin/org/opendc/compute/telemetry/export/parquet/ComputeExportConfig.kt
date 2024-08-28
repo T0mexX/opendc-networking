@@ -78,6 +78,18 @@ public data class ComputeExportConfig(
         | Service columns : ${serviceExportColumns.map { it.name }.toString().trim('[', ']')}
         """.trimIndent()
 
+    @JvmName("alsoWithHostColumns")
+    public fun alsoWith(vararg additionalColumns: ExportColumn<HostTableReader>): ComputeExportConfig =
+        this.copy(hostExportColumns = hostExportColumns + additionalColumns)
+
+    @JvmName("alsoWithServerColumns")
+    public fun alsoWith(vararg additionalColumns: ExportColumn<TaskTableReader>): ComputeExportConfig =
+        this.copy(taskExportColumns = taskExportColumns + additionalColumns)
+
+    @JvmName("alsoWithServiceColumns")
+    public fun alsoWith(vararg additionalColumns: ExportColumn<ServiceTableReader>): ComputeExportConfig =
+        this.copy(serviceExportColumns = serviceExportColumns + additionalColumns)
+
     public companion object {
         internal val LOG by logger()
 
@@ -85,9 +97,11 @@ public data class ComputeExportConfig(
          * Force the jvm to load the default [ExportColumn]s relevant to compute export,
          * so that they are available for deserialization.
          */
-        public fun loadDfltColumns() {
+        public fun loadComputeColumns() {
             DfltHostExportColumns
+            NetworkHostExportColumns
             DfltTaskExportColumns
+            NetworkTaskExportColumns
             DfltServiceExportColumns
         }
 
@@ -96,12 +110,11 @@ public data class ComputeExportConfig(
          * [DfltTaskExportColumns], [DfltServiceExportColumns] among all other loaded
          * columns for [HostTableReader], [TaskTableReader] and [ServiceTableReader].
          */
-        public val ALL_COLUMNS: ComputeExportConfig by lazy {
-            loadDfltColumns()
+        public val ALL_DFLT: ComputeExportConfig by lazy {
             ComputeExportConfig(
-                hostExportColumns = ExportColumn.getAllLoadedColumns(),
-                taskExportColumns = ExportColumn.getAllLoadedColumns(),
-                serviceExportColumns = ExportColumn.getAllLoadedColumns(),
+                hostExportColumns = DfltHostExportColumns.ALL,
+                taskExportColumns = DfltTaskExportColumns.ALL,
+                serviceExportColumns = DfltServiceExportColumns.ALL,
             )
         }
 
@@ -135,12 +148,12 @@ public data class ComputeExportConfig(
                     }
 
                 // Loads the default columns so that they are available for deserialization.
-                loadDfltColumns()
+                loadComputeColumns()
                 val elem = jsonDec.decodeJsonElement().jsonObject
 
-                val hostFields: List<ExportColumn<HostTableReader>> = elem["hostExportColumns"].toFieldList()
-                val taskFields: List<ExportColumn<TaskTableReader>> = elem["taskExportColumns"].toFieldList()
-                val serviceFields: List<ExportColumn<ServiceTableReader>> = elem["serviceExportColumns"].toFieldList()
+                val hostFields: Collection<ExportColumn<HostTableReader>> = elem["hostExportColumns"].toFieldList()
+                val taskFields: Collection<ExportColumn<TaskTableReader>> = elem["taskExportColumns"].toFieldList()
+                val serviceFields: Collection<ExportColumn<ServiceTableReader>> = elem["serviceExportColumns"].toFieldList()
 
                 return ComputeExportConfig(
                     hostExportColumns = hostFields,
@@ -180,13 +193,22 @@ public data class ComputeExportConfig(
 
 private val json = Json { ignoreUnknownKeys = true }
 
-private inline fun <reified T : Exportable> JsonElement?.toFieldList(): List<ExportColumn<T>> =
+private inline fun <reified T : Exportable> JsonElement?.toFieldList(): Collection<ExportColumn<T>> =
     this?.let {
         json.decodeFromJsonElement(ColListSerializer(columnSerializer<T>()), it)
     }?.ifEmpty {
         ComputeExportConfig.LOG.warn(
             "deserialized list of export columns for exportable ${T::class.simpleName} " +
-                "produced empty list, falling back to all loaded columns",
+                "produced empty list, falling back to default columns",
         )
-        ExportColumn.getAllLoadedColumns<T>()
-    } ?: ExportColumn.getAllLoadedColumns<T>()
+        dfltColumns()
+    } ?: dfltColumns()
+
+@Suppress("UNCHECKED_CAST")
+private inline fun <reified T: Exportable> dfltColumns(): Set<ExportColumn<T>> =
+    when (T::class) {
+        HostTableReader::class -> DfltHostExportColumns.ALL as Set<ExportColumn<T>>
+        TaskTableReader::class -> DfltTaskExportColumns.ALL as Set<ExportColumn<T>>
+        ServiceTableReader::class -> DfltServiceExportColumns.ALL as Set<ExportColumn<T>>
+        else -> emptySet()
+    }

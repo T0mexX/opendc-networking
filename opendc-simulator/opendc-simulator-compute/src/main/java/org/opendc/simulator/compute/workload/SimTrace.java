@@ -25,18 +25,28 @@ package org.opendc.simulator.compute.workload;
 import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.SimMachineContext;
 import org.opendc.simulator.compute.SimProcessingUnit;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.FlowStage;
 import org.opendc.simulator.flow2.FlowStageLogic;
 import org.opendc.simulator.flow2.OutPort;
+import org.opendc.simulator.network.api.NetworkController;
+import org.opendc.simulator.network.api.NetworkInterface;
+import org.opendc.simulator.network.flow.NetFlow;
+import org.opendc.common.units.DataRate;
 
 /**
  * A workload trace that describes the resource utilization over time in a collection of {@link SimTraceFragment}s.
  */
 public final class SimTrace {
     private final ArrayDeque<SimTraceFragment> fragments;
+//    private final double @Nullable [] netTxKbpsCol;
+//    private final double @Nullable [] netRxKbpsCol;
+
     /**
      * Construct a {@link SimTrace} instance.
      *
@@ -131,6 +141,13 @@ public final class SimTrace {
             }
 
             fragments.add(new SimTraceFragment(deadline, usage, cores));
+        }
+
+        public void add(long deadline, double usage, int cores, double netTxKbps, double netRxKbps) {
+            if (netTxKbps < 0d || netRxKbps < 0d)
+                throw new IllegalArgumentException("network transmit and receive should be positive values");
+
+            add(deadline, usage, cores);
         }
 
         /**
@@ -249,6 +266,9 @@ public final class SimTrace {
         private final Iterator<SimTraceFragment> fragments;
         private SimTraceFragment currentFragment;
 
+        private final @Nullable NetFlow txFlow;
+        private final @Nullable NetFlow rxFlow;
+
         private SingleWorkloadLogic(SimMachineContext ctx, long offset, Iterator<SimTraceFragment> fragments) {
             this.ctx = ctx;
             this.workloadOffset = offset;
@@ -263,6 +283,18 @@ public final class SimTrace {
             final SimProcessingUnit cpu = cpus.get(0);
             final OutPort output = stage.getOutlet("cpu");
             this.output = output;
+
+            // Network interface provided by the context, to which
+            // is provided by the machine (vm or baremetal, in this case vm)
+            final @Nullable NetworkInterface netIface = ctx.getNetworkInterface();
+
+            if (netIface != null) {
+                // If network interface is provided by context then start flows (to/from internet).
+                txFlow = netIface.startFlow(); // default destination = INTERNET
+                rxFlow = netIface.fromInternet();
+
+                // If networking columns are not defined.
+            } else { txFlow = null; rxFlow = null; }
 
             graph.connect(output, cpu.getInput());
         }
@@ -286,7 +318,12 @@ public final class SimTrace {
                 deadline = currentFragment.deadline();
             }
 
+            // If transmit and receive flows (to / from internet) are defined then update.
+            if (txFlow != null) txFlow.setDemand(DataRate.ofKbps(currentFragment.netTx()));
+            if (rxFlow != null) rxFlow.setDemand(DataRate.ofKbps(currentFragment.netRx()));
+
             this.output.push((float) currentFragment.cpuUsage());
+
             return deadline + this.workloadOffset;
         }
 
@@ -327,6 +364,9 @@ public final class SimTrace {
         private final Iterator<SimTraceFragment> fragments;
         private SimTraceFragment currentFragment;
 
+        private final @Nullable NetFlow txFlow;
+        private final @Nullable NetFlow rxFlow;
+
         private final SimMachineContext ctx;
 
         private MultiWorkloadLogic(SimMachineContext ctx, long offset, Iterator<SimTraceFragment> fragments) {
@@ -343,6 +383,18 @@ public final class SimTrace {
 
             final OutPort[] outputs = new OutPort[cpus.size()];
             this.outputs = outputs;
+
+            // Network interface provided by the context, to which
+            // is provided by the machine (vm or baremetal, in this case vm)
+            final @Nullable NetworkInterface netIface = ctx.getNetworkInterface();
+
+            if (netIface != null) {
+                // If network interface is provided by context then start flows (to/from internet).
+                txFlow = netIface.startFlow(); // default destination = INTERNET
+                rxFlow = netIface.fromInternet();
+
+                // If networking columns are not defined.
+            } else { txFlow = null; rxFlow = null; }
 
             for (int i = 0; i < cpus.size(); i++) {
                 final SimProcessingUnit cpu = cpus.get(i);
@@ -389,6 +441,10 @@ public final class SimTrace {
             for (int i = cores; i < outputs.length; i++) {
                 outputs[i].push(0.f);
             }
+
+            // If transmit and receive flows (to / from internet) are defined then update.
+            if (txFlow != null) txFlow.setDemand(DataRate.ofKbps(currentFragment.netTx()));
+            if (rxFlow != null) rxFlow.setDemand(DataRate.ofKbps(currentFragment.netRx()));
 
             return deadline + offset;
         }

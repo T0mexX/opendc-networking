@@ -83,6 +83,7 @@ public fun getScenarios(scenariosSpec: ScenariosSpec): List<Scenario> {
                 runs = scenariosSpec.runs,
                 initialSeed = scenariosSpec.initialSeed,
                 computeExportConfig = scenarioSpec.computeExportConfig,
+                networkExportConfig = scenariosSpec.networkExportConfig,
             )
         trackScenario(scenarioSpec, outputFolder)
         scenarios.add(scenario)

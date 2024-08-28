@@ -74,7 +74,7 @@ public object DfltServiceExportColumns {
             field = Types.required(INT32).named("attempts_success"),
         ) { it.attemptsSuccess }
 
-    public val AT3yyTEMPTS_FAILURE: ExportColumn<ServiceTableReader> =
+    public val ATTEMPTS_FAILURE: ExportColumn<ServiceTableReader> =
         ExportColumn(
             field = Types.required(INT32).named("attempts_failure"),
         ) { it.attemptsFailure }
@@ -92,4 +92,15 @@ public object DfltServiceExportColumns {
             TIMESTAMP_ABS,
             TIMESTAMP,
         )
+
+    public val ALL: Set<ExportColumn<ServiceTableReader>> = setOf(
+        TIMESTAMP,
+        TIMESTAMP_ABS,
+        HOSTS_UP,
+        SERVERS_PENDING,
+        SERVERS_ACTIVE,
+        ATTEMPTS_SUCCESS,
+        ATTEMPTS_FAILURE,
+        ATTEMPTS_ERROR,
+    )
 }
