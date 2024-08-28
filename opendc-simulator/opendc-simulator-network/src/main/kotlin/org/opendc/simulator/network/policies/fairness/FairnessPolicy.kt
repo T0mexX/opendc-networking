@@ -22,12 +22,14 @@
 
 package org.opendc.simulator.network.policies.fairness
 
+import kotlinx.serialization.Serializable
 import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.utils.logger
 
-internal interface FairnessPolicy {
+@Serializable
+internal sealed interface FairnessPolicy {
     fun FlowHandler.applyPolicy(updt: RateUpdt)
 
     /**
@@ -48,3 +50,5 @@ internal interface FairnessPolicy {
         const val VERIFY: Boolean = false
     }
 }
+
+

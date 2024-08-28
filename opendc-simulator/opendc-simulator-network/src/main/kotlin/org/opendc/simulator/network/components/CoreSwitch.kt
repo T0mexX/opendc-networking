@@ -31,6 +31,7 @@ import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
+import org.opendc.simulator.network.policies.forwarding.OSPF
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
@@ -55,7 +56,17 @@ internal class CoreSwitch(
         return super<EndPointNode>.run(invalidator)
     }
 
-    override fun toSpecs(): Specs<CoreSwitch> = CoreSwitchSpecs(id = id, numOfPorts = numOfPorts, portSpeed = portSpeed)
+    override fun toString(): String =
+        "CoreSwitch(id=$id, portSpeed=$portSpeed, numOfPorts=$numOfPorts, fairnessPolicy=$fairnessPolicy, portSelectionPolicy=$portSelectionPolicy)"
+
+    override fun toSpecs(): Specs<CoreSwitch> =
+        CoreSwitchSpecs(
+            id = id,
+            numOfPorts = numOfPorts,
+            portSpeed = portSpeed,
+            fairnessPolicy = fairnessPolicy,
+            portSelectionPolicy = portSelectionPolicy,
+        )
 
     /**
      * Serializable representation of the specifics from which a core switch can be built.
@@ -67,7 +78,16 @@ internal class CoreSwitch(
         val numOfPorts: Int,
         val portSpeed: DataRate,
         val id: NodeId? = null,
+        val fairnessPolicy: FairnessPolicy = FirstComeFirstServed,
+        val portSelectionPolicy: PortSelectionPolicy = OSPF,
     ) : Specs<CoreSwitch> {
-        override fun build(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts + 1)
+        override fun build(): CoreSwitch =
+            CoreSwitch(
+                id = id ?: IdDispenser.nextNodeId,
+                portSpeed = portSpeed,
+                numOfPorts = numOfPorts + 1, // + 1 to connect to internet "node"
+                fairnessPolicy = fairnessPolicy,
+                portSelectionPolicy = portSelectionPolicy,
+            )
     }
 }

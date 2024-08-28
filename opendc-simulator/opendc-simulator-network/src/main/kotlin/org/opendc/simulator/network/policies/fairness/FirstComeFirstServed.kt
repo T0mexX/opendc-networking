@@ -1,13 +1,14 @@
 package org.opendc.simulator.network.policies.fairness
 
-import org.opendc.common.logger.logger
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.flow.RateUpdt
 
-internal object FirstComeFirstServed: FairnessPolicy {
-    private val LOG by logger()
-
+@Serializable
+@SerialName("first_come_first_served")
+internal data object FirstComeFirstServed: FairnessPolicy {
     override fun FlowHandler.applyPolicy(updt: RateUpdt) {
         execRateReductions(updt)
 

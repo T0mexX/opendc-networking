@@ -22,13 +22,16 @@
 
 package org.opendc.simulator.network.policies.forwarding
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.RoutingTable
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowId
 
 // TODO: documentation
-internal fun interface PortSelectionPolicy {
+@Serializable
+internal sealed interface PortSelectionPolicy {
     suspend fun Node.selectPorts(flowId: FlowId): Set<Port>
 
     /**

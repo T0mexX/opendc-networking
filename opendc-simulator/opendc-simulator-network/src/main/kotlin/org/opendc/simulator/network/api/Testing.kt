@@ -53,16 +53,17 @@ private fun idk() {
 //            hostNodeSpecs = HostNode.HostNodeSpecs(portSpeed = DataRate.ofGbps(1.0), numOfPorts = 1),
 //        )
 
-    val spec =
-        FatTreeNetwork.FatTreeTopologySpecs(
-            switchSpecs = Switch.SwitchSpecs(portSpeed = DataRate.ofMbps(1.0), numOfPorts = 8),
-            hostNodeSpecs = HostNode.HostNodeSpecs(portSpeed = DataRate.ofGbps(1.0), numOfPorts = 1),
-        )
+//    val spec =
+//        FatTreeNetwork.FatTreeTopologySpecs(
+//            switchSpecs = Switch.SwitchSpecs(portSpeed = DataRate.ofMbps(1.0), numOfPorts = 8),
+//            hostNodeSpecs = HostNode.HostNodeSpecs(portSpeed = DataRate.ofGbps(1.0), numOfPorts = 1),
+//        )
 //    println(net.allNodesToString())
 
     val iStream = File("resources/scenario-test/net-scenario.json").inputStream()
 
     val scenario: NetworkScenario = Json.decodeFromStream(iStream)
+    scenario.networkSpecs.build().nodesById.forEach { println(it) }
     DfltNodeExportColumns
     DfltNetworkExportColumns
 //    val scenario =

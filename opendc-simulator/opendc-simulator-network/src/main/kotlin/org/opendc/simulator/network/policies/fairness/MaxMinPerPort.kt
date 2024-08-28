@@ -22,6 +22,8 @@
 
 package org.opendc.simulator.network.policies.fairness
 
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.flow.FlowHandler
@@ -31,7 +33,9 @@ import org.opendc.simulator.network.flow.tracker.AllByDemand
 import org.opendc.simulator.network.utils.ifNull0
 import org.opendc.simulator.network.utils.isSorted
 
-internal object MaxMinPerPort : FairnessPolicy {
+@Serializable
+@SerialName("max-min")
+internal data object MaxMinPerPort : FairnessPolicy {
     override fun FlowHandler.applyPolicy(updt: RateUpdt) {
         resetAll()
 
@@ -73,7 +77,6 @@ internal object MaxMinPerPort : FairnessPolicy {
 
                 remainingFlowsPerPort[port] = remFlowsForThisPort - 1
             }
-//            flows.forEach { try { it.verify() } catch (e: Exception) { println("IDX($idx) (prevF: ${flows.slice(0..idx)}) ${e.message}") } }
         }
 
         if (FairnessPolicy.VERIFY) {

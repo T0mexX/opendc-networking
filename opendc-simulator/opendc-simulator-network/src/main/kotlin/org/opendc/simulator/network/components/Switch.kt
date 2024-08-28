@@ -38,6 +38,7 @@ import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
+import org.opendc.simulator.network.policies.forwarding.OSPF
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
@@ -77,9 +78,17 @@ internal open class Switch(
 
     override fun getDfltEnModel(): EnModel<Switch> = SwitchDfltEnModel
 
-    override fun toSpecs(): Specs<Switch> = SwitchSpecs(id = id, numOfPorts = numOfPorts, portSpeed = portSpeed)
+    override fun toSpecs(): Specs<Switch> =
+        SwitchSpecs(
+            id = id,
+            numOfPorts = numOfPorts,
+            portSpeed = portSpeed,
+            fairnessPolicy = fairnessPolicy,
+            portSelectionPolicy = portSelectionPolicy,
+        )
 
-    override fun toString(): String = "[Switch: id=$id]"
+    override fun toString(): String =
+        "Switch(id=$id, portSpeed=$portSpeed, numOfPorts=$numOfPorts, fairnessPolicy=$fairnessPolicy, portSelectionPolicy=$portSelectionPolicy)"
 
     /**
      * Serializable representation of the specifics from which a switch can be built.
@@ -90,9 +99,24 @@ internal open class Switch(
         val numOfPorts: Int,
         val portSpeed: DataRate,
         val id: NodeId? = null,
+        val fairnessPolicy: FairnessPolicy,
+        val portSelectionPolicy: PortSelectionPolicy = OSPF,
     ) : Specs<Switch> {
-        override fun build(): Switch = Switch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts)
+        override fun build(): Switch =
+            Switch(
+                id = id ?: IdDispenser.nextNodeId,
+                portSpeed = portSpeed, numOfPorts,
+                fairnessPolicy = fairnessPolicy,
+                portSelectionPolicy = portSelectionPolicy,
+            )
 
-        fun buildCoreSwitchFromSpecs(): CoreSwitch = CoreSwitch(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts)
+        fun buildCoreSwitchFromSpecs(): CoreSwitch =
+            CoreSwitch(
+                id = id ?: IdDispenser.nextNodeId,
+                portSpeed = portSpeed,
+                numOfPorts = numOfPorts + 1, // 1 more to connect to Internet "node"
+                fairnessPolicy = fairnessPolicy,
+                portSelectionPolicy = portSelectionPolicy,
+            )
     }
 }

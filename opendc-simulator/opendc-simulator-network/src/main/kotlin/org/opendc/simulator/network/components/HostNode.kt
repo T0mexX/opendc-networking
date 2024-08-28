@@ -34,6 +34,7 @@ import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
+import org.opendc.simulator.network.policies.forwarding.OSPF
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
@@ -43,7 +44,7 @@ import org.opendc.simulator.network.utils.IdDispenser
  * TODO: integrate with current hosts implementation, now only useful for testing and playground.
  *
  */
-internal class HostNode(
+internal data class HostNode(
     override val id: NodeId,
     override val portSpeed: DataRate,
     override val numOfPorts: Int = 1,
@@ -62,6 +63,7 @@ internal class HostNode(
                 add(PortImpl(maxSpeed = portSpeed, owner = this@HostNode))
             }
         }
+
     override val flowHandler = FlowHandler(ports)
 
     override fun toSpecs(): Specs<HostNode> =
@@ -69,9 +71,9 @@ internal class HostNode(
             id = id,
             portSpeed = portSpeed,
             numOfPorts = numOfPorts,
+            fairnessPolicy = fairnessPolicy,
+            portSelectionPolicy = portSelectionPolicy,
         )
-
-    override fun toString(): String = "[HostNode: id=$id]"
 
     @Serializable
     @SerialName("host-node-specs")
@@ -79,7 +81,16 @@ internal class HostNode(
         val id: NodeId? = null,
         val portSpeed: DataRate,
         val numOfPorts: Int = 1,
+        val fairnessPolicy: FairnessPolicy = FirstComeFirstServed,
+        val portSelectionPolicy: PortSelectionPolicy = OSPF,
     ) : Specs<HostNode> {
-        override fun build(): HostNode = HostNode(id = id ?: IdDispenser.nextNodeId, portSpeed = portSpeed, numOfPorts = numOfPorts)
+        override fun build(): HostNode =
+            HostNode(
+                id = id ?: IdDispenser.nextNodeId,
+                portSpeed = portSpeed,
+                numOfPorts = numOfPorts,
+                fairnessPolicy = fairnessPolicy,
+                portSelectionPolicy = portSelectionPolicy,
+            )
     }
 }
