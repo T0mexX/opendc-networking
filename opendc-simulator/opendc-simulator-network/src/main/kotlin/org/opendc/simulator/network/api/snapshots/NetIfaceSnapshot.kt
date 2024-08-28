@@ -110,12 +110,11 @@ public class NetIfaceSnapshot private constructor(
             noCache: Boolean = false,
         ): NetIfaceSnapshot {
             // If snapshot with same timestamp in cache
-            if (noCache.not())
-                {
-                    cache[nodeId]?.let {
-                        if (it.instant == netController.currentInstant) return it
-                    }
+            if (noCache.not()) {
+                cache[nodeId]?.let {
+                    if (it.instant == netController.currentInstant) return it
                 }
+            }
 
             val network = netController.network
             if (withStableNetwork) {

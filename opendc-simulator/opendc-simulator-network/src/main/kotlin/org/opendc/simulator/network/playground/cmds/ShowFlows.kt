@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.components.link.Link
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.playground.PGEnv
 import org.opendc.simulator.network.playground.cmds.RmLink.regex

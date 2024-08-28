@@ -22,7 +22,6 @@
 
 package org.opendc.simulator.network.policies.forwarding
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.internalstructs.RoutingTable

@@ -30,7 +30,6 @@ import org.opendc.simulator.network.components.stability.NetworkStabilityValidat
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
-import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.OSPF
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
@@ -57,7 +56,11 @@ internal class CoreSwitch(
     }
 
     override fun toString(): String =
-        "CoreSwitch(id=$id, portSpeed=$portSpeed, numOfPorts=$numOfPorts, fairnessPolicy=$fairnessPolicy, portSelectionPolicy=$portSelectionPolicy)"
+        "CoreSwitch(id=$id, " +
+            "portSpeed=$portSpeed, " +
+            "numOfPorts=$numOfPorts, " +
+            "fairnessPolicy=$fairnessPolicy, " +
+            "portSelectionPolicy=$portSelectionPolicy)"
 
     override fun toSpecs(): Specs<CoreSwitch> =
         CoreSwitchSpecs(
@@ -85,7 +88,8 @@ internal class CoreSwitch(
             CoreSwitch(
                 id = id ?: IdDispenser.nextNodeId,
                 portSpeed = portSpeed,
-                numOfPorts = numOfPorts + 1, // + 1 to connect to internet "node"
+                // 1 more port connect to Internet "node"
+                numOfPorts = numOfPorts + 1,
                 fairnessPolicy = fairnessPolicy,
                 portSelectionPolicy = portSelectionPolicy,
             )

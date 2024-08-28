@@ -26,7 +26,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.opendc.simulator.network.components.Network
-import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.playground.PGEnv
 import org.opendc.simulator.network.playground.cmds.NodeInfo.regex

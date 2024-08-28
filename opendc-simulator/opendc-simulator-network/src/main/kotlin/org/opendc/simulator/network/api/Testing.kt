@@ -25,11 +25,7 @@ package org.opendc.simulator.network.api
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
-import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.workload.SimNetWorkload
-import org.opendc.simulator.network.components.FatTreeNetwork
-import org.opendc.simulator.network.components.HostNode
-import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.export.network.DfltNetworkExportColumns
 import org.opendc.simulator.network.export.node.DfltNodeExportColumns
 import org.opendc.trace.preset.BitBrains

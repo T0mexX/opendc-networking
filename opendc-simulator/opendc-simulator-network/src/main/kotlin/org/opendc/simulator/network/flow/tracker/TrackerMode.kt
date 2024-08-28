@@ -95,4 +95,3 @@ internal object AllByUnsatisfaction : TrackerMode {
 
     override fun OutFlow.shouldBeTracked(): Boolean = true
 }
-

@@ -238,12 +238,11 @@ public class NodeSnapshot internal constructor(
             noCache: Boolean = false,
         ): NodeSnapshot {
             // If snapshot with same timestamp in cache
-            if (noCache.not())
-                {
-                    cache[id]?.let {
-                        if (it.instant == instant) return it
-                    }
+            if (noCache.not()) {
+                cache[id]?.let {
+                    if (it.instant == instant) return it
                 }
+            }
 
             withStableNetwork?.let {
                 runBlocking {

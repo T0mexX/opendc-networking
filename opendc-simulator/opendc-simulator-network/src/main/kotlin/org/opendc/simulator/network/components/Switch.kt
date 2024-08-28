@@ -37,18 +37,17 @@ import org.opendc.simulator.network.energy.emodels.SwitchDfltEnModel
 import org.opendc.simulator.network.flow.FlowHandler
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
-import org.opendc.simulator.network.policies.fairness.MaxMinPerPort
 import org.opendc.simulator.network.policies.forwarding.OSPF
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
 
 /**
- * A [Node] whose job is to route incoming flows according to [portSelectionPolicy].
- * @param[id]               id of this [Node].
- * @param[portSpeed]        port speed in Kbps.
- * @param[numOfPorts]       number of ports.
- * @param[portSelectionPolicy] policy used to determine the links to which forward incoming flows.
+ * A [Node] whose job is to route incoming flows according to [portSelectionPolicy] and .
+ * @param[id]                   id of this [Node].
+ * @param[portSpeed]            port speed in Kbps.
+ * @param[numOfPorts]           number of ports.
+ * @param[portSelectionPolicy]  policy used to determine the links to which forward incoming flows.
  */
 internal open class Switch(
     final override val id: NodeId,
@@ -58,10 +57,8 @@ internal open class Switch(
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ) : Node, EnergyConsumer<Switch> {
     override val updtChl = UpdateChl()
-
     override val enMonitor: EnMonitor<Switch> by lazy { EnMonitor(this) }
     override val routingTable: RoutingTable = RoutingTable(this.id)
-
     override val portToNode: MutableMap<NodeId, Port> = HashMap()
     final override val ports: List<Port> =
         buildList {
@@ -88,7 +85,10 @@ internal open class Switch(
         )
 
     override fun toString(): String =
-        "Switch(id=$id, portSpeed=$portSpeed, numOfPorts=$numOfPorts, fairnessPolicy=$fairnessPolicy, portSelectionPolicy=$portSelectionPolicy)"
+        "Switch(id=$id, portSpeed=$portSpeed, " +
+            "numOfPorts=$numOfPorts, " +
+            "fairnessPolicy=$fairnessPolicy, " +
+            "portSelectionPolicy=$portSelectionPolicy)"
 
     /**
      * Serializable representation of the specifics from which a switch can be built.
@@ -105,7 +105,8 @@ internal open class Switch(
         override fun build(): Switch =
             Switch(
                 id = id ?: IdDispenser.nextNodeId,
-                portSpeed = portSpeed, numOfPorts,
+                portSpeed = portSpeed,
+                numOfPorts,
                 fairnessPolicy = fairnessPolicy,
                 portSelectionPolicy = portSelectionPolicy,
             )
@@ -114,7 +115,8 @@ internal open class Switch(
             CoreSwitch(
                 id = id ?: IdDispenser.nextNodeId,
                 portSpeed = portSpeed,
-                numOfPorts = numOfPorts + 1, // 1 more to connect to Internet "node"
+                // 1 more port connect to Internet "node"
+                numOfPorts = numOfPorts + 1,
                 fairnessPolicy = fairnessPolicy,
                 portSelectionPolicy = portSelectionPolicy,
             )

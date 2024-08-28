@@ -27,7 +27,6 @@ import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.CustomNetwork
-import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.playground.PGEnv
 import org.opendc.simulator.network.playground.cmds.NewLink.regex

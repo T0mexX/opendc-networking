@@ -25,7 +25,6 @@ package org.opendc.simulator.network.playground.cmds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.encodeToString
-import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.playground.PGEnv
 import org.opendc.simulator.network.playground.cmds.EnReport.regex

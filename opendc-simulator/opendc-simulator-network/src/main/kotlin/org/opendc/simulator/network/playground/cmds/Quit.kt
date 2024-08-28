@@ -23,7 +23,6 @@
 package org.opendc.simulator.network.playground.cmds
 
 import kotlinx.coroutines.CoroutineScope
-import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.playground.cmds.NodeInfo.regex
 import kotlin.system.exitProcess
 

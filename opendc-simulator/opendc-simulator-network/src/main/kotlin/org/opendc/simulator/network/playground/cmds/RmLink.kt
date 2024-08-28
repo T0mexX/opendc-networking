@@ -23,7 +23,6 @@
 package org.opendc.simulator.network.playground.cmds
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import org.opendc.simulator.network.api.NodeId

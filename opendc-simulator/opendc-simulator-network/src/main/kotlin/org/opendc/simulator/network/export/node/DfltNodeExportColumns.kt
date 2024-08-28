@@ -31,7 +31,6 @@ import org.apache.parquet.schema.PrimitiveType.PrimitiveTypeName.INT64
 import org.apache.parquet.schema.Types
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.api.snapshots.NodeSnapshot
-import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.trace.util.parquet.exporter.ExportColumn

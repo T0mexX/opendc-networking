@@ -161,7 +161,7 @@ public class NetworkSnapshot private constructor(
          */
         public val TOT_TPUT_PERC: Flag<NetworkSnapshot> = Flag()
 
-        /**
+        /**NodeSna
          * The average throughput percentage of all the flows transiting through
          * the network at the instant the snapshot was taken.
          */
@@ -223,7 +223,7 @@ public class NetworkSnapshot private constructor(
                 numCoreSwitches = network.getNodesById<CoreSwitch>().size,
                 numActiveFlows = activeFlows.size,
                 totTput = totThroughput,
-                totTputPerc = if (flows.isEmpty()) null else totThroughput roundedPercentageOf totDemand,
+                totTputPerc = if (activeFlows.isEmpty()) null else totThroughput roundedPercentageOf totDemand,
                 avrgTputPerc =
                     let {
                         if (activeFlows.isEmpty()) {
