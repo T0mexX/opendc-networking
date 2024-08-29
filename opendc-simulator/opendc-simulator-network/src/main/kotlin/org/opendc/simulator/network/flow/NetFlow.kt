@@ -34,6 +34,7 @@ import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.stability.NetworkStabilityChecker.Key.getNetStabilityChecker
 import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.SuspOnChangeHandler
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -202,7 +203,7 @@ public class NetFlow internal constructor(
          * not yet discarded by the garbage collector.
          */
         internal val flowsDestIds: Map<FlowId, NodeId> get() = _flowsDestIds
-        private val _flowsDestIds = mutableMapOf<FlowId, NodeId>()
+        private val _flowsDestIds = ConcurrentHashMap<FlowId, NodeId>()
     }
 }
 

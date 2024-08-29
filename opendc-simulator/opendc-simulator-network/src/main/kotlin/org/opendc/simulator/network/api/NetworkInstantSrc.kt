@@ -48,6 +48,7 @@ internal class NetworkInstantSrc(
     }
 
     fun setInternalTime(time: Time) {
+        require(isInternalSource)
         internal = time
     }
 }

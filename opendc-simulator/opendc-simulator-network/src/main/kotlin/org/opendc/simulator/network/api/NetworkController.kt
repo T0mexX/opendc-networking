@@ -133,6 +133,12 @@ public class NetworkController(
      */
     public fun setInstantSource(instantSource: InstantSource) {
         instantSrc = NetworkInstantSrc(instantSource)
+        lastUpdate = instantSrc.time
+    }
+
+    internal fun setInternalTime(time: Time) {
+        instantSrc.setInternalTime(time)
+        lastUpdate = time
     }
 
     public fun setExportConfig(exportConfig: NetworkExportConfig) {
@@ -155,7 +161,7 @@ public class NetworkController(
      * The [Instant] when the last [advanceBy] or [sync] was called.
      * It is used by sync to determine the time span to advance the network by.
      */
-    internal var lastUpdate: Time = Time.ZERO
+    internal var lastUpdate: Time = instantSrc.time
 
     /**
      * @see[NetEnRecorder]

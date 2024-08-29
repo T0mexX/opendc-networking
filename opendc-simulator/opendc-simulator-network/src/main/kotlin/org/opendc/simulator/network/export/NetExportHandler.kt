@@ -44,7 +44,7 @@ internal class NetExportHandler(
     private val nodeExporter: Exporter<NodeSnapshot>?
 
     init {
-        require(config.outputFolder != null)
+        requireNotNull(config.outputFolder)
 
         with(config) {
             // NetworkExportConfig serialization guarantees that

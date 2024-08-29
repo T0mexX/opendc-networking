@@ -1,9 +1,0 @@
-{
-    "networkSpecsPath": "resources/scenario-test/net-spec.json",
-    "wlPath": "resources/scenario-test/example_net_trace.parquet",
-    "exportConfig": {
-        "outputFolder": "output/test1",
-        "exportInterval": "5min"
-    },
-    "virtualMapping": true
-}

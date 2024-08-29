@@ -95,7 +95,7 @@ public data class NetworkScenario(
         init {
             if (virtualMapping) runWl.performVirtualMappingOn(netController)
             // Sets controller time to the instant of the first network event.
-            netController.instantSrc.setInternalTime(
+            netController.setInternalTime(
                 Time.ofInstantFromEpoch(runWl.startInstant),
             )
 

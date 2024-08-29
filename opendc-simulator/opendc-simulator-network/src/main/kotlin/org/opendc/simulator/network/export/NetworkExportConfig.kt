@@ -72,6 +72,7 @@ public data class NetworkExportConfig(
         | Network columns  : ${networkExportColumns.map { it.name }.toString().trim('[', ']')}
         | Node columns     : ${nodeExportColumns.map { it.name }.toString().trim('[', ']')}
         | Export interval  : $exportInterval
+        | Output folder    : ${outputFolder?.absolutePath ?: "N/A"}
         """.trimIndent()
 
     public companion object {

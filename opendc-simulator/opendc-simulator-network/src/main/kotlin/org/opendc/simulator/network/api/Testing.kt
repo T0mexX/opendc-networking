@@ -53,7 +53,7 @@ private fun idk() {
 //        )
 //    println(net.allNodesToString())
 
-    val iStream = File("resources/scenario-test/net-scenario.json").inputStream()
+    val iStream = File("resources/example-scenarios/net-scenario.json").inputStream()
 
     val scenario: NetworkScenario = Json.decodeFromStream(iStream)
     scenario.networkSpecs.build().nodesById.forEach { println(it) }

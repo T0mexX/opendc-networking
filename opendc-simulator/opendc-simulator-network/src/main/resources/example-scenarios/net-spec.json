@@ -1,14 +1,14 @@
 {
     "type": "fat-tree-specs",
     "switchSpecs": {
-        "numOfPorts": 6,
-        "portSpeed": "1Mbps",
+        "numOfPorts": 4,
+        "portSpeed": "500Kbps",
         "fairnessPolicy": { "type": "max-min" },
-        "portSelectionPolicy": { "type": "static-ecmp" }
+        "portSelectionPolicy": { "type": "ospf" }
     },
     "hostNodeSpecs": {
         "numOfPorts": 1,
-        "portSpeed": "1Mbps",
+        "portSpeed": "500Kbps",
         "fairnessPolicy": { "type": "max-min" },
         "portSelectionPolicy": { "type": "static-ecmp" }
     }
