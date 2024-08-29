@@ -1,8 +1,8 @@
 {
-    "networkSpecsPath": "resources/example-scenarios/net-spec.json",
+    "networkSpecsPath": "resources/example-topologies/net-spec.json",
     "wlPath": "resources/example-traces/anarchy_online_48servers_6pernode.parquet",
     "exportConfig": {
-        "outputFolder": "output/test3",
+        "outputFolder": "output/test1",
         "exportInterval": "5min"
     },
     "virtualMapping": true

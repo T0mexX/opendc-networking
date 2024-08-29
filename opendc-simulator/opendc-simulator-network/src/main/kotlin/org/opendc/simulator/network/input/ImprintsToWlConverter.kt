@@ -50,12 +50,7 @@ internal class ImprintsToWlConverter private constructor(
      */
     private fun convert(): SimNetWorkload {
         imprints.forEach { it.convert() }
-        println("imprint start: ${imprints.first().deadline.toInstantFromEpoch()}")
-        println("imprint end: ${imprints.last().deadline.toInstantFromEpoch()}")
-
         val events = converted.sorted()
-        println("start: ${events.first().deadline.toInstantFromEpoch()}")
-        println("end: ${events.last().deadline.toInstantFromEpoch()}")
 
         val hostIds =
             buildSet { // TODO: remove this feature from workload and just

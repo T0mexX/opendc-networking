@@ -119,7 +119,6 @@ public data class NetworkScenario(
 
                 pb.refresh()
                 println()
-                LOG.infoNewLine(energyRecorder.fmt())
                 this@RunInstance.close()
             }
 

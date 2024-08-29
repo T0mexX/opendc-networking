@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package runner
+package org.opendc.experiments.network.runner
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.defaultLazy
@@ -46,7 +46,7 @@ internal class NetScenarioCmd : CliktCommand(name = "scenario") {
      */
     private val scenarioPath by option("--scenario-path", help = "path to scenario file")
         .file(canBeDir = false, canBeFile = true)
-        .defaultLazy { File("resources/net-scenario.json") }
+        .defaultLazy { File("resources/example-scenarios/net-scenario.json") }
 
     @OptIn(ExperimentalSerializationApi::class)
     override fun run() {
