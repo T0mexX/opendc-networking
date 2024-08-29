@@ -130,25 +130,25 @@ public data class NetworkExportConfig(
                 loadDfltColumns()
                 val elem = jsonDec.decodeJsonElement().jsonObject
 
-
-                val outputFolder: File? = elem["outputFolder"]?.let { pathElem ->
-                    File(pathElem.toString().trim('"')).also {
-                        check(it.exists().not() || it.isDirectory)
-                        it.mkdirs()
+                val outputFolder: File? =
+                    elem["outputFolder"]?.let { pathElem ->
+                        File(pathElem.toString().trim('"')).also {
+                            check(it.exists().not() || it.isDirectory)
+                            it.mkdirs()
+                        }
                     }
-                }
 
                 return NetworkExportConfig(
                     networkExportColumns = elem["networkExportColumns"].toFieldList(),
                     nodeExportColumns = elem["nodeExportColumns"].toFieldList(),
                     outputFolder = outputFolder,
                     exportInterval =
-                    Json.decodeFromString(
-                        elem["exportInterval"]?.toString()?.trim('"')
-                            ?: throw RuntimeException(
-                                "`exportInterval` in `networkExportConfig` is needed in order to export network information",
-                            ),
-                    ),
+                        Json.decodeFromString(
+                            elem["exportInterval"]?.toString()?.trim('"')
+                                ?: throw RuntimeException(
+                                    "`exportInterval` in `networkExportConfig` is needed in order to export network information",
+                                ),
+                        ),
                 )
             }
 

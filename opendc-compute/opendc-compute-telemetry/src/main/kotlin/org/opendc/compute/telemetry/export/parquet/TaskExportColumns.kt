@@ -151,25 +151,26 @@ public object DfltTaskExportColumns {
             TIMESTAMP,
         )
 
-    public val ALL : Set<ExportColumn<TaskTableReader>> = setOf(
-        TIMESTAMP,
-        TIMESTAMP_ABS,
-        TASK_ID,
-        HOST_ID,
-        TASK_NAME,
-        CPU_COUNT,
-        MEM_CAPACITY,
-        CPU_LIMIT,
-        CPU_TIME_ACTIVE,
-        CPU_TIME_IDLE,
-        CPU_TIME_STEAL,
-        CPU_TIME_LOST,
-        UP_TIME,
-        DOWN_TIME,
-        PROVISION_TIME,
-        BOOT_TIME,
-        BOOT_TIME_ABS,
-    )
+    public val ALL: Set<ExportColumn<TaskTableReader>> =
+        setOf(
+            TIMESTAMP,
+            TIMESTAMP_ABS,
+            TASK_ID,
+            HOST_ID,
+            TASK_NAME,
+            CPU_COUNT,
+            MEM_CAPACITY,
+            CPU_LIMIT,
+            CPU_TIME_ACTIVE,
+            CPU_TIME_IDLE,
+            CPU_TIME_STEAL,
+            CPU_TIME_LOST,
+            UP_TIME,
+            DOWN_TIME,
+            PROVISION_TIME,
+            BOOT_TIME,
+            BOOT_TIME_ABS,
+        )
 }
 
 /**
@@ -206,12 +207,13 @@ public object NetworkTaskExportColumns {
             field = Types.optional(DOUBLE).named("avg_flow_throughput_ratio"),
         ) { it.networkSnapshot?.currAvrgFlowTputPerc?.toRatio() }
 
-    public val ALL: Set<ExportColumn<TaskTableReader>> = setOf(
-        GEN_FLOWS,
-        TPUT,
-        TPUT_PERC,
-        MIN_F_TPUT,
-        MAX_F_TPUT,
-        AVRG_F_TPUT,
-    )
+    public val ALL: Set<ExportColumn<TaskTableReader>> =
+        setOf(
+            GEN_FLOWS,
+            TPUT,
+            TPUT_PERC,
+            MIN_F_TPUT,
+            MAX_F_TPUT,
+            AVRG_F_TPUT,
+        )
 }

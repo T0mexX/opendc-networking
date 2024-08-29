@@ -42,7 +42,7 @@ public class HostsProvisioningStep internal constructor(
     private val serviceDomain: String,
     private val specs: List<HostSpec>,
     private val optimize: Boolean,
-    private val networkController: NetworkController? = null
+    private val networkController: NetworkController? = null,
 ) : ProvisioningStep {
     override fun apply(ctx: ProvisioningContext): AutoCloseable {
         val service =

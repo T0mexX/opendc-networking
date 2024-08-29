@@ -79,7 +79,7 @@ public fun setupHosts(
     serviceDomain: String,
     specs: List<HostSpec>,
     optimize: Boolean = false,
-    networkController: NetworkController? = null
+    networkController: NetworkController? = null,
 ): ProvisioningStep {
     return HostsProvisioningStep(serviceDomain, specs, optimize, networkController)
 }

@@ -117,8 +117,10 @@ gradle-app.setting
 .gradletasknamecache
 
 # Network simulation output
-opendc-simulator/opendc-simulator-network/src/main/output
+opendc-experiments/opendc-experiments-network/src/main/output
+
+# Network experiment resources to be ignored
+opendc-experiments/opendc-experiments-network/src/main/resources/ignored
 
 # Network module resources to be ignored
-
 opendc-simulator/opendc-simulator-network/src/main/resources/ignored

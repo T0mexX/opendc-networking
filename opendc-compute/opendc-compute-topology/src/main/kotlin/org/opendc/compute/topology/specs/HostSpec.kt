@@ -46,7 +46,5 @@ public data class HostSpec(
     val model: MachineModel,
     val psuFactory: SimPsuFactory = SimPsuFactories.noop(),
     val multiplexerFactory: FlowMultiplexerFactory = FlowMultiplexerFactory.maxMinMultiplexer(),
-
-    val netIface: NetworkInterface? = null
+    val netIface: NetworkInterface? = null,
 )
-

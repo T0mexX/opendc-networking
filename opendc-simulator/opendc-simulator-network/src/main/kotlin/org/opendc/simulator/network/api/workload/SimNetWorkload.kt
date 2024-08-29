@@ -23,7 +23,6 @@
 package org.opendc.simulator.network.api.workload
 
 import kotlinx.serialization.Serializable
-import org.opendc.common.units.DataRate
 import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.NetworkController
 import org.opendc.simulator.network.api.NodeId

@@ -22,7 +22,6 @@
 
 package org.opendc.compute.telemetry.table
 
-import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot
 import org.opendc.simulator.network.api.snapshots.NodeSnapshot
 import org.opendc.trace.util.parquet.exporter.Exportable
 import java.time.Instant

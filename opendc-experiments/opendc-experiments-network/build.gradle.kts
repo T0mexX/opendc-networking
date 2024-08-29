@@ -20,17 +20,20 @@
  * SOFTWARE.
  */
 
-package org.opendc.trace.formats.opendc.parquet
+description = "Support library for simulating network workloads with OpenDC"
 
-import java.time.Duration
-import java.time.Instant
+plugins {
+    `kotlin-library-conventions`
+    `testing-conventions`
+    `jacoco-conventions`
+    distribution
+    kotlin("plugin.serialization") version "1.9.22"
+}
 
-internal class ResourceState(
-    val id: String,
-    val timestamp: Instant,
-    val duration: Duration,
-    val cpuCount: Int,
-    val cpuUsage: Double,
-    val netTx: Double? = null,
-    val netRx: Double? = null,
-)
+private val kotlinxVersion = "1.6.0"
+dependencies {
+    implementation(projects.opendcCommon)
+    implementation(libs.clikt)
+    implementation(projects.opendcSimulator.opendcSimulatorNetwork)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxVersion")
+}

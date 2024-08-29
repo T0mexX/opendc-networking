@@ -39,7 +39,6 @@ import org.opendc.compute.telemetry.table.ServiceTableReader
 import org.opendc.compute.telemetry.table.TaskInfo
 import org.opendc.compute.telemetry.table.TaskTableReader
 import org.opendc.simulator.network.api.snapshots.NetIfaceSnapshot
-import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
 import org.opendc.simulator.network.api.snapshots.NodeSnapshot
 import java.time.Duration
 import java.time.Instant

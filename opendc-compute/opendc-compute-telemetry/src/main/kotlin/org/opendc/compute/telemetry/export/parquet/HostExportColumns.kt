@@ -193,34 +193,35 @@ public object DfltHostExportColumns {
             TIMESTAMP,
         )
 
-    public val ALL: Set<ExportColumn<HostTableReader>> = setOf(
-        TIMESTAMP,
-        TIMESTAMP_ABS,
-        HOST_ID,
-        HOST_NAME,
-        CPU_COUNT,
-        MEM_CAPACITY,
-        GUESTS_TERMINATED,
-        GUESTS_RUNNING,
-        GUESTS_ERROR,
-        GUESTS_INVALID,
-        CPU_LIMIT,
-        CPU_USAGE,
-        CPU_DEMAND,
-        CPU_UTILIZATION,
-        CPU_TIME_ACTIVE,
-        CPU_TIME_IDLE,
-        CPU_TIME_STEAL,
-        CPU_TIME_LOST,
-        POWER_DRAW,
-        ENERGY_USAGE,
-        CARBON_INTENSITY,
-        CARBON_EMISSION,
-        UP_TIME,
-        DOWN_TIME,
-        BOOT_TIME,
-        BOOT_TIME_ABS,
-    )
+    public val ALL: Set<ExportColumn<HostTableReader>> =
+        setOf(
+            TIMESTAMP,
+            TIMESTAMP_ABS,
+            HOST_ID,
+            HOST_NAME,
+            CPU_COUNT,
+            MEM_CAPACITY,
+            GUESTS_TERMINATED,
+            GUESTS_RUNNING,
+            GUESTS_ERROR,
+            GUESTS_INVALID,
+            CPU_LIMIT,
+            CPU_USAGE,
+            CPU_DEMAND,
+            CPU_UTILIZATION,
+            CPU_TIME_ACTIVE,
+            CPU_TIME_IDLE,
+            CPU_TIME_STEAL,
+            CPU_TIME_LOST,
+            POWER_DRAW,
+            ENERGY_USAGE,
+            CARBON_INTENSITY,
+            CARBON_EMISSION,
+            UP_TIME,
+            DOWN_TIME,
+            BOOT_TIME,
+            BOOT_TIME_ABS,
+        )
 }
 
 /**
@@ -277,16 +278,17 @@ public object NetworkHostExportColumns {
             field = Types.required(DOUBLE).named("network_energy_consumption_joule"),
         ) { it.networkSnapshot?.totEnConsumed?.toJoule() }
 
-    public val ALL: Set<ExportColumn<HostTableReader>> = setOf(
-        NODE_ID,
-        GEN_FLOWS,
-        CONS_FLOWS,
-        MIN_F_TPUT,
-        MAX_F_TPUT,
-        AVRG_F_TPUT,
-        TPUT,
-        TPUT_PERC,
-        CURR_PWR_USE,
-        EN_CONSUMPT,
-    )
+    public val ALL: Set<ExportColumn<HostTableReader>> =
+        setOf(
+            NODE_ID,
+            GEN_FLOWS,
+            CONS_FLOWS,
+            MIN_F_TPUT,
+            MAX_F_TPUT,
+            AVRG_F_TPUT,
+            TPUT,
+            TPUT_PERC,
+            CURR_PWR_USE,
+            EN_CONSUMPT,
+        )
 }

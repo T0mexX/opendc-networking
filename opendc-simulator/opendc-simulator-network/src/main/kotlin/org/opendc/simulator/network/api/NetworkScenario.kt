@@ -41,6 +41,7 @@ import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.export.NetworkExportConfig
 import org.opendc.simulator.network.input.readNetworkWl
 import org.opendc.simulator.network.utils.logger
+import java.io.File
 import java.util.UUID
 import javax.naming.OperationNotSupportedException
 
@@ -89,7 +90,10 @@ public data class NetworkScenario(
         val netController: NetworkController =
             NetworkController(
                 network = network,
-                exportConfig = exportConfiguration,
+                exportConfig =
+                    exportConfiguration?.copy(
+                        outputFolder = File(exportConfig?.outputFolder?.absolutePath, runName),
+                    ),
             )
 
         init {
@@ -108,12 +112,8 @@ public data class NetworkScenario(
                 with(runWl) wl@{
                     while (runWl.hasNext()) {
                         val nextWlDeadline = runWl.peek().deadline
-                        // Executes all network events up until `nextDeadline`
-                        // included (with all events with that deadline).
                         pb.stepBy(execUntil(nextWlDeadline))
                         network.awaitStability()
-//                        LOG.infoNewLine(snapshot().fmt())
-//                        network.nodesById.values.forEach { LOG.infoNewLine(it.snapshot(currentInstant).fmt()) }
                     }
                 }
 
@@ -129,33 +129,6 @@ public data class NetworkScenario(
                 .setStyle(ProgressBarStyle.ASCII)
                 .setTaskName("Simulating network...")
                 .build()
-
-//        private fun exportIfNeeded() {
-//            // Non-mutable for smart cast.
-//            val exportDeadline = exportDeadline ?: return
-//            val currTime = netController.instantSrc.time
-//
-//            // If not yet time to export then return.
-//            if (exportDeadline approxLarger currTime) return
-//            // Check export deadline not passed yet.
-//            check(exportDeadline approx currTime)
-//
-//            // Write network snapshot to output file.
-//            networkExporter?.write(netController.snapshot())
-//
-//            // Write each node's snapshot to output file.
-//            network.nodesById.values.forEach {
-//                if (it.id == INTERNET_ID) return@forEach
-//                nodeExporter?.write(
-//                    it.snapshot(
-//                        instant = netController.currentInstant,
-// //                        withStableNetwork = network,
-//                    ),
-//                )
-//            }
-//
-//            this.exportDeadline = exportConfig?.exportInterval!! + exportDeadline
-//        }
 
         override fun close() {
             netController.close()

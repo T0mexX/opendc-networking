@@ -32,11 +32,10 @@ import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.utils.logger
 import org.opendc.trace.util.parquet.exporter.Exporter
 import java.io.File
-import java.util.UUID
 
 internal class NetExportHandler(
     private val config: NetworkExportConfig,
-): AutoCloseable {
+) : AutoCloseable {
     private var startTime: Time? = config.startTime
     internal var nextExportDeadline: Time? = startTime?.plus(config.exportInterval)
         private set

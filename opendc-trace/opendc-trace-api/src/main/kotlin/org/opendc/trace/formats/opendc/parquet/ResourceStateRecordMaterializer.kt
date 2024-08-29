@@ -122,7 +122,16 @@ internal class ResourceStateRecordMaterializer(schema: MessageType) : RecordMate
             override fun getConverter(fieldIndex: Int): Converter = converters[fieldIndex]
         }
 
-    override fun getCurrentRecord(): ResourceState = ResourceState(localId, localTimestamp, localDuration, localCpuCount, localCpuUsage, netTx = localNetTx, netRx = localNetRx)
+    override fun getCurrentRecord(): ResourceState =
+        ResourceState(
+            localId,
+            localTimestamp,
+            localDuration,
+            localCpuCount,
+            localCpuUsage,
+            netTx = localNetTx,
+            netRx = localNetRx,
+        )
 
     override fun getRootConverter(): GroupConverter = root
 }

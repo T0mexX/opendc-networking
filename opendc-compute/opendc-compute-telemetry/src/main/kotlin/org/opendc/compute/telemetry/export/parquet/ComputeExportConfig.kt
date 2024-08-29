@@ -205,7 +205,7 @@ private inline fun <reified T : Exportable> JsonElement?.toFieldList(): Collecti
     } ?: dfltColumns()
 
 @Suppress("UNCHECKED_CAST")
-private inline fun <reified T: Exportable> dfltColumns(): Set<ExportColumn<T>> =
+private inline fun <reified T : Exportable> dfltColumns(): Set<ExportColumn<T>> =
     when (T::class) {
         HostTableReader::class -> DfltHostExportColumns.ALL as Set<ExportColumn<T>>
         TaskTableReader::class -> DfltTaskExportColumns.ALL as Set<ExportColumn<T>>

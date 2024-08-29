@@ -93,14 +93,15 @@ public object DfltServiceExportColumns {
             TIMESTAMP,
         )
 
-    public val ALL: Set<ExportColumn<ServiceTableReader>> = setOf(
-        TIMESTAMP,
-        TIMESTAMP_ABS,
-        HOSTS_UP,
-        TASKS_PENDING,
-        TASKS_ACTIVE,
-        ATTEMPTS_SUCCESS,
-        ATTEMPTS_FAILURE,
-        ATTEMPTS_ERROR,
-    )
+    public val ALL: Set<ExportColumn<ServiceTableReader>> =
+        setOf(
+            TIMESTAMP,
+            TIMESTAMP_ABS,
+            HOSTS_UP,
+            TASKS_PENDING,
+            TASKS_ACTIVE,
+            ATTEMPTS_SUCCESS,
+            ATTEMPTS_FAILURE,
+            ATTEMPTS_ERROR,
+        )
 }

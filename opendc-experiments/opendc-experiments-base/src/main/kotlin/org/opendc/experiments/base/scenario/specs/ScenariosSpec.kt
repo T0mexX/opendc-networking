@@ -74,7 +74,7 @@ public data class ScenariosSpec(
     val checkpointModels: Set<CheckpointModelSpec?> = setOf(null),
     val carbonTracePaths: Set<String?> = setOf(null),
     val computeExportConfig: ComputeExportConfig = ComputeExportConfig.ALL_DFLT,
-    val networkExportConfig: NetworkExportConfig? = null
+    val networkExportConfig: NetworkExportConfig? = null,
 ) {
     init {
         require(runs > 0) { "The number of runs should always be positive" }

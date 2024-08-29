@@ -27,7 +27,6 @@ import org.opendc.compute.telemetry.table.HostTableReader
 import org.opendc.compute.telemetry.table.ServiceTableReader
 import org.opendc.compute.telemetry.table.TaskTableReader
 import org.opendc.trace.util.parquet.exporter.ExportColumn
-import org.opendc.trace.util.parquet.exporter.Exportable
 import org.opendc.trace.util.parquet.exporter.Exporter
 import java.io.File
 

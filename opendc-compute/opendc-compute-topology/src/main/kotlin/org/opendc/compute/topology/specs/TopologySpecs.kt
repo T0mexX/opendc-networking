@@ -45,8 +45,6 @@ public data class TopologySpec(
     }
 }
 
-
-
 /**
  * Definition of a compute cluster modeled in the simulation.
  *

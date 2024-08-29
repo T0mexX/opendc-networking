@@ -94,8 +94,10 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
                 val durationMs = reader.getDuration(durationCol)!!
                 val cores = reader.getInt(coresCol)
                 val cpuUsage = reader.getDouble(usageCol)
-                val netTx = netTxCol?.let { reader.getDouble(netTxCol) * 8 /* KBps to Kbps */ }
-                val netRx = netRxCol?.let { reader.getDouble(netRxCol) * 8 /* KBps to Kbps */ }
+
+                // KBps to Kbps
+                val netTx = netTxCol?.let { reader.getDouble(netTxCol) * 8 }
+                val netRx = netRxCol?.let { reader.getDouble(netRxCol) * 8 }
 
                 val builder = fragments.computeIfAbsent(id) { Builder() }
                 builder.add(time, durationMs, cpuUsage, cores, netTxKbps = netTx, netRxKbps = netRx)
@@ -269,7 +271,7 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
             usage: Double,
             cores: Int,
             netTxKbps: Double?,
-            netRxKbps: Double?
+            netRxKbps: Double?,
         ) {
             val startTimeMs = (deadline - duration).toEpochMilli()
             totalLoad += (usage * duration.toMillis()) / 1000.0 // avg MHz * duration = MFLOPs
@@ -280,10 +282,11 @@ public class ComputeWorkloadLoader(private val baseDir: File) {
             }
 
             // If networking values are defined in fragment.
-            if (netTxKbps != null && netRxKbps != null)
+            if (netTxKbps != null && netRxKbps != null) {
                 builder.add(deadline.toEpochMilli(), usage, cores, netTxKbps, netRxKbps)
-            else
+            } else {
                 builder.add(deadline.toEpochMilli(), usage, cores)
+            }
 
             previousDeadline = deadline.toEpochMilli()
         }

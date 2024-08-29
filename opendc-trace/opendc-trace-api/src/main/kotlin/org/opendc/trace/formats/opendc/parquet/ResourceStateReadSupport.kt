@@ -57,7 +57,7 @@ internal class ResourceStateReadSupport(private val projection: List<String>?) :
             "cpuUsage" to resourceStateCpuUsage,
             "cpu_usage" to resourceStateCpuUsage,
             "net_tx" to resourceStateNetTx,
-            "net_rx" to resourceStateNetRx
+            "net_rx" to resourceStateNetRx,
         )
 
     override fun init(context: InitContext): ReadContext {
@@ -146,7 +146,7 @@ internal class ResourceStateReadSupport(private val projection: List<String>?) :
                         .named("net_tx"),
                     Types
                         .optional(PrimitiveType.PrimitiveTypeName.DOUBLE)
-                        .named("net_rx")
+                        .named("net_rx"),
                 )
                 .named("resource_state")
 

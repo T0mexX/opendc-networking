@@ -79,13 +79,11 @@ public fun clusterTopology(
     return topology.toHostSpecs(random)
 }
 
-public fun TopologySpec.Companion.fromFile(file: File): TopologySpec =
-    reader.read(file)
-public fun TopologySpec.Companion.fromPath(path: String): TopologySpec =
-    reader.read(File(path))
-public fun TopologySpec.Companion.fromInput(input: InputStream): TopologySpec =
-    reader.read(input)
+public fun TopologySpec.Companion.fromFile(file: File): TopologySpec = reader.read(file)
 
+public fun TopologySpec.Companion.fromPath(path: String): TopologySpec = reader.read(File(path))
+
+public fun TopologySpec.Companion.fromInput(input: InputStream): TopologySpec = reader.read(input)
 
 /**
  * Helper method to convert a [TopologySpec] into a list of [HostSpec]s.
@@ -105,7 +103,7 @@ private var clusterId = 0
 
 private fun ClusterSpec.toHostSpecs(
     random: RandomGenerator,
-    networkController: NetworkController?
+    networkController: NetworkController?,
 ): List<HostSpec> {
     val hostSpecs =
         hosts.flatMap { host ->
@@ -113,7 +111,7 @@ private fun ClusterSpec.toHostSpecs(
                 host.toHostsSpecs(
                     clusterId,
                     random,
-                    networkController = networkController
+                    networkController = networkController,
                 )
             )
         }
@@ -130,14 +128,15 @@ private var globalCoreId = 0
 private fun HostJSONSpec.toHostsSpecs(
     clusterId: Int,
     random: RandomGenerator,
-    networkController: NetworkController?
+    networkController: NetworkController?,
 ): List<HostSpec> {
     return buildList {
         repeat(count) { hostIndex ->
             val unknownProcessingNode = ProcessingNode("unknown", "unknown", "unknown", cpu.coreCount)
             val units = List(cpu.count) { ProcessingUnit(unknownProcessingNode, globalCoreId++, cpu.coreSpeed.toMHz()) }
 
-            val unknownMemoryUnit = MemoryUnit(memory.vendor, memory.modelName, memory.memorySpeed.toMHz(), memory.memorySize.toMiB().toLong())
+            val unknownMemoryUnit =
+                MemoryUnit(memory.vendor, memory.modelName, memory.memorySpeed.toMHz(), memory.memorySize.toMiB().toLong())
             val machineModel =
                 MachineModel(
                     units,
@@ -145,7 +144,12 @@ private fun HostJSONSpec.toHostsSpecs(
                 )
 
             val powerModel =
-                getPowerModel(powerModel.modelType, powerModel.power.toWatts(), powerModel.maxPower.toWatts(), powerModel.idlePower.toWatts())
+                getPowerModel(
+                    powerModel.modelType,
+                    powerModel.power.toWatts(),
+                    powerModel.maxPower.toWatts(),
+                    powerModel.idlePower.toWatts(),
+                )
 
             val networkInterface: NetworkInterface? =
                 // networkController != null  => network specifications were provided and network simulation is requested.
@@ -162,9 +166,11 @@ private fun HostJSONSpec.toHostsSpecs(
                         // The network interface of any unclaimed host node in the network.
                         ?: controller.claimNextHostNode()
                         // Network controller not null (network simulation required), but no unclaimed host available.
-                        ?: throw RuntimeException("'networkFile' property defined in topology file, " +
-                            "however not enough host nodes available. Either a different network with a higher " +
-                            "number of host nodes has to be provided, or the number of hosts shall be lowered")
+                        ?: throw RuntimeException(
+                            "'networkFile' property defined in topology file, " +
+                                "however not enough host nodes available. Either a different network with a higher " +
+                                "number of host nodes has to be provided, or the number of hosts shall be lowered",
+                        )
                 } // networkController == null => not network interface and no network simulation.
 
             val nodeId: Long = networkInterface?.nodeId ?: (hostId++).toLong()
@@ -177,8 +183,8 @@ private fun HostJSONSpec.toHostsSpecs(
                     mapOf("cluster" to clusterId),
                     machineModel,
                     SimPsuFactories.simple(powerModel),
-                    netIface = networkInterface
-                )
+                    netIface = networkInterface,
+                ),
             )
         }
     }

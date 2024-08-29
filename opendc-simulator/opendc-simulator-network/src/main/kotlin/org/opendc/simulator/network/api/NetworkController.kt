@@ -52,7 +52,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.InstantSource
 import java.util.UUID
-import kotlin.time.measureTime
 
 /**
  * Interface through which control the network (from external modules).
