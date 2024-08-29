@@ -30,6 +30,7 @@ import org.opendc.simulator.network.api.snapshots.NodeSnapshot.Companion.snapsho
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.Internet
 import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
+import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.utils.logger
@@ -40,8 +41,11 @@ import org.opendc.simulator.network.utils.logger
 public typealias NodeId = Long
 
 /**
- * Interface that can be used by other modules
- * to control the networking of a single node.
+ * Interface through which control networking of a single node.
+ *
+ * @param[node]             the node this interface is part of.
+ * @param[netController]    the controller that controls the network [node] is part of.
+ * @param[owner]            the name of the owner if any.
  */
 public class NetworkInterface internal constructor(
     private val node: EndPointNode,
@@ -53,13 +57,37 @@ public class NetworkInterface internal constructor(
      */
     public val nodeId: NodeId = node.id
 
+    /**
+     * The interfaces created by [getSubInterface]. This interfaces are closed whenever *this* is closed.
+     */
     private val subInterfaces = mutableListOf<NetworkInterface>()
+
+    /**
+     * Stores [NetFlow]s started by this interface by their [FlowId]
+     */
+
     internal val flowsById = mutableMapOf<FlowId, NetFlow>()
+
+    /**
+     * Stores [NetFlow]s started by this interface by their name (if any).
+     */
     private val flowsByName = mutableMapOf<String, NetFlow>()
+
+    /**
+     * Stores [NetFlow]s started through this interface with [fromInternet] method by their [FlowId].
+     */
     private val genFromInternet = mutableMapOf<FlowId, NetFlow>()
 
+    /**
+     * @return a snapshot of the [Node] this interface belongs to.
+     * @see[NodeSnapshot]
+     */
     public fun nodeSnapshot(): NodeSnapshot = netController.snapshotOf(node.id)!!
 
+    /**
+     * @return a new [NetworkInterface] that depends on this interface.
+     * When this interface is closed, its children are also closed.
+     */
     @JvmOverloads
     public fun getSubInterface(
         owner: String = "unknown",
@@ -163,6 +191,7 @@ public class NetworkInterface internal constructor(
     /**
      * Starts a flow from the [Internet] to this node.
      * Alternatively one can use [NetworkController.internetNetworkInterface].
+     * A flow started through this method cannot be retrieved from this interface afterwords.
      *
      * See [startFlowSus] for parameters docs.
      */
@@ -184,7 +213,7 @@ public class NetworkInterface internal constructor(
     }
 
     /**
-     * Non suspending overload fot java interoperability.
+     * Non suspending overload for java interoperability.
      * JvmOverloads annotation not allowed with *value-class* arguments.
      */
     public fun fromInternet(
@@ -212,8 +241,5 @@ public class NetworkInterface internal constructor(
 
     public companion object {
         internal val log by logger()
-
-        private fun NetFlow.belongsTo(netIface: NetworkInterface): Boolean =
-            id in netIface.flowsById || netIface.subInterfaces.any { belongsTo(it) }
     }
 }
