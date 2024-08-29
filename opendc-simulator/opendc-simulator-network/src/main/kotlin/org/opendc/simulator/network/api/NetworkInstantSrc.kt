@@ -27,10 +27,19 @@ import org.opendc.simulator.network.api.NetworkController.Companion.log
 import java.time.Instant
 import java.time.InstantSource
 
-internal class NetworkInstantSrc(
+/**
+ * Represent the time source of the network.
+ * The time source can either be internal (can be advanced with [advanceTime])
+ * or external (the current time/instant can be retrieved with [time]/[instant] and is updated externally).
+ */
+internal class NetworkInstantSrc private constructor(
     private val external: InstantSource? = null,
     internal: Time = Time.ZERO,
 ) : InstantSource {
+    constructor(external: InstantSource? = null): this(external = external, internal = Time.ZERO)
+
+    constructor(internal: Time = Time.ZERO): this(external = null, internal = internal)
+
     var internal = internal
         private set
     val isExternalSource: Boolean = external != null
@@ -42,11 +51,18 @@ internal class NetworkInstantSrc(
         external?.instant()
             ?: Instant.ofEpochMilli(internal.toMsLong())
 
+    /**
+     * Advances the internal time by [time].
+     */
     fun advanceTime(time: Time) {
         external?.let { return log.error("unable to advance internal time, network has external time source") }
         internal += time
     }
 
+    /**
+     * Sets internal time to [time].
+     * @throws[IllegalArgumentException] if the current time source is external.
+     */
     fun setInternalTime(time: Time) {
         require(isInternalSource)
         internal = time

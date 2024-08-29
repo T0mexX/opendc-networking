@@ -22,7 +22,6 @@
 
 package org.opendc.simulator.network.api
 
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
@@ -123,7 +122,7 @@ public data class NetworkScenario(
 
         private fun getProgressBar(): ProgressBar =
             ProgressBarBuilder()
-                .setInitialMax(wl.size.toLong())
+                .setInitialMax(wl.numRemainingEvents.toLong())
                 .setStyle(ProgressBarStyle.ASCII)
                 .setTaskName("Simulating network...")
                 .build()

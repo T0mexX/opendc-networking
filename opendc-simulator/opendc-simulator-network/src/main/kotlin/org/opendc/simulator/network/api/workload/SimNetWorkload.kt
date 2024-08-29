@@ -31,20 +31,34 @@ import java.time.Instant
 import java.util.LinkedList
 import java.util.Queue
 
-public data class SimNetWorkload(
-    private val networkEvents: Collection<NetworkEvent>,
+/**
+ * Represent a network workload consisting of multiple [NetworkEvent]s.
+ *
+ * **This class is mutable**, its events are consumed when executed.
+ */
+public class SimNetWorkload(
+    networkEvents: Collection<NetworkEvent>,
 ) {
     private val events: Queue<NetworkEvent> = LinkedList(networkEvents.sorted())
 
+    /**
+     * The instant of the first [NetworkEvent] of the workload.
+     */
     public val startInstant: Instant =
         this.events.peek()?.deadline?.toInstantFromEpoch()
             ?: Instant.ofEpochMilli(0L)
 
+    /**
+     * The instant of the last [NetworkEvent] of the workload.
+     */
     public val endInstant: Instant =
         this.events.lastOrNull()?.deadline?.toInstantFromEpoch()
             ?: Instant.ofEpochMilli(0L)
 
-    public val size: Int = events.size
+    /**
+     * The number of [NetworkEvent]s that have not been executed yet.
+     */
+    public val numRemainingEvents: Int = events.size
 
     private val hostIds: Set<NodeId> =
         buildSet {
@@ -72,11 +86,17 @@ public data class SimNetWorkload(
         }
     }
 
+    /**
+     * Executes the next [NetworkEvent].
+     */
     internal suspend fun NetworkController.execNext() {
         events.poll()?.let { with(it) { execIfNotPassed() } }
             ?: LOG.error("unable to execute network event, no more events remaining in the workload")
     }
 
+    /**
+     * @return `true` if there is at least one [NetworkEvent] that has not been executed, `false` otherwise.
+     */
     internal fun hasNext(): Boolean = events.isNotEmpty()
 
     internal suspend fun NetworkController.execUntil(until: Time): Long {
@@ -102,6 +122,8 @@ public data class SimNetWorkload(
         | duration: ${Duration.ofMillis(endInstant.toEpochMilli() - startInstant.toEpochMilli())}
         | num of network events: ${events.size}
         """.trimIndent()
+
+    public fun copy(networkEvents: Collection<NetworkEvent> = events): SimNetWorkload = SimNetWorkload(networkEvents)
 
     public companion object {
         internal val LOG by logger()

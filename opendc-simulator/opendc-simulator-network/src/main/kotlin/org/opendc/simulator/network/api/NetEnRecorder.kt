@@ -36,6 +36,9 @@ import org.opendc.simulator.network.utils.OnChangeHandler
 import org.opendc.simulator.network.utils.logger
 import kotlin.coroutines.coroutineContext
 
+/**
+ * Records the network's power draw and energy consumption.
+ */
 public class NetEnRecorder internal constructor(network: Network) {
     public var currPwrUsage: Power = Power.ZERO
         private set
@@ -56,9 +59,11 @@ public class NetEnRecorder internal constructor(network: Network) {
         }
 
     init {
+        // Sets up listeners on the energy consuming nodes.
         consumersById.values.forEach { it.enMonitor.onPwrUseChange(powerUseOnChangeHandler) }
         consumersById.values.forEach { it.enMonitor.update() }
 
+        // Sets up callback for whenever a node is added to the network.
         (network as? CustomNetwork)?.onNodeAdded { _, node ->
             (node as? EnergyConsumer<*>)?.let { newConsumer ->
                 newConsumer.enMonitor.onPwrUseChange(powerUseOnChangeHandler)
@@ -76,6 +81,8 @@ public class NetEnRecorder internal constructor(network: Network) {
                 }
             }
         }
+
+        // Sets up a callback for whenever a node is removed from the network.
         (network as? CustomNetwork)?.onNodeRemoved { _, node ->
             (node as? EnergyConsumer<*>)?.let {
                 consumersById.remove(it.id)
@@ -84,13 +91,21 @@ public class NetEnRecorder internal constructor(network: Network) {
         }
     }
 
+    /**
+     * @return a formatted [String] that displays energy consumption and power draw of the network.
+     * Preferably to be logged on a new line.
+     */
     internal fun fmt(flags: Flags<NetEnRecorder> = Flags.all()): String =
         buildString {
             appendLine("| ==== Energy Report ====")
-            flags.ifSet(PWR_DRAW) { appendLine("| Current Power Usage: $currPwrUsage") }
+            flags.ifSet(PWR_DRAW) { appendLine("| Current Power Draw: $currPwrUsage") }
+            flags.ifSet(AVG_PWR_DRAW) { appendLine("| Average Power Draw: $avrgPwrUsage") }
             flags.ifSet(EN_CONS) { appendLine("| Total Energy Consumed: $totalConsumption") }
         }
 
+    /**
+     * Advances the time by [Time], updating energy consumption and average power draw accordingly.
+     */
     internal suspend fun advanceBy(deltaTime: Time) {
         coroutineContext.getNetStabilityChecker().checkIsStableWhile {
             // Update total energy consumption.
@@ -108,13 +123,10 @@ public class NetEnRecorder internal constructor(network: Network) {
         }
     }
 
-    internal fun reset() {
-        totalConsumption = Energy.ZERO
-    }
-
     public companion object {
         private val log by logger()
 
+        public val AVG_PWR_DRAW: Flag<NetEnRecorder> = Flag()
         public val PWR_DRAW: Flag<NetEnRecorder> = Flag()
         public val EN_CONS: Flag<NetEnRecorder> = Flag()
     }
