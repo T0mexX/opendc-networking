@@ -24,6 +24,7 @@
 
 package org.opendc.compute.topology
 
+import org.opendc.common.logger.warnAndNull
 import org.opendc.compute.topology.specs.ClusterSpec
 import org.opendc.compute.topology.specs.HostJSONSpec
 import org.opendc.compute.topology.specs.HostSpec
@@ -159,9 +160,9 @@ private fun HostJSONSpec.toHostsSpecs(
                     jsonNodeId?.let jsonIdTry@{
                         // The network interface of the node with id corresponding to jsonNodeId if exists.
                         controller.claimNode(nodeId = it)
-//                            ?: NetworkController.log.warnAndNull("nodeId $it provided in JSON topology file " +
-//                                "does not correspond to any node id of the network defined in the 'networkFile' property (or duplicate ids are provided)." +
-//                                "Falling back to first unclaimed host node (might cause a chain of claiming each other node ids)")
+                            ?: NetworkController.log.warnAndNull("nodeId $it provided in JSON topology file " +
+                                "does not correspond to any node id of the network defined in the 'networkFile' property (or duplicate ids are provided)." +
+                                "Falling back to first unclaimed host node (might cause a chain of claiming each other node ids)")
                     }
                         // The network interface of any unclaimed host node in the network.
                         ?: controller.claimNextHostNode()

@@ -38,6 +38,7 @@ import java.util.UUID
  * @param model The physical model of the machine.
  * @param psuFactory The [SimPsuFactory] to construct the PSU that models the power consumption of the machine.
  * @param multiplexerFactory The [FlowMultiplexerFactory] that is used to multiplex the virtual machines over the host.
+ * @param netIface the network interface of the host-node.
  */
 public data class HostSpec(
     val uid: UUID,

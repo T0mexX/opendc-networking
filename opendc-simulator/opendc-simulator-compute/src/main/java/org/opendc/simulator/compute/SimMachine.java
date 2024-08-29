@@ -25,7 +25,6 @@ package org.opendc.simulator.compute;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-
 import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
@@ -36,7 +35,18 @@ import org.opendc.simulator.network.api.NetworkInterface;
  * A generic machine that is able to execute {@link SimWorkload} objects.
  */
 public interface SimMachine {
-    @Nullable NetworkInterface getNetworkInterface();
+
+    /**
+     * @return the {@link NetworkInterface} of this machine.
+     */
+    @Nullable
+    NetworkInterface getNetworkInterface();
+
+    /**
+     * @param owner the name assigned to the interface.
+     * @return a {@link NetworkInterface} that depends on this machine's network interface.
+     * Meaning if this machine's interface is close, all its children are closed.
+     */
     default @Nullable NetworkInterface getNetworkSubInterface(String owner) {
         final @Nullable NetworkInterface machineNetIface = getNetworkInterface();
         return machineNetIface == null ? null : machineNetIface.getSubInterface(owner);

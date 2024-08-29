@@ -25,8 +25,8 @@ package org.opendc.compute.service.driver;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.opendc.compute.api.Task;
 import org.jetbrains.annotations.Nullable;
+import org.opendc.compute.api.Task;
 import org.opendc.compute.service.driver.telemetry.GuestCpuStats;
 import org.opendc.compute.service.driver.telemetry.GuestSystemStats;
 import org.opendc.compute.service.driver.telemetry.HostCpuStats;
@@ -141,13 +141,15 @@ public interface Host {
     /**
      * @return  the network statistics of the host if simulation includes networking, `null` otherwise.
      */
-    @Nullable NodeSnapshot getNetworkStats();
+    @Nullable
+    NodeSnapshot getNetworkStats();
 
     /**
-     * @param server    The {@link Task} to obtain the network statistics of.
+     * @param task    The {@link Task} to obtain the network statistics of.
      * @throws IllegalArgumentException if the server is not present on the host.
      *
      * @return  The network statistics of the server if simulation includes networking, `null` otherwise.
      */
-    @Nullable NetIfaceSnapshot getNetworkStats(Task task);
+    @Nullable
+    NetIfaceSnapshot getNetworkStats(Task task);
 }

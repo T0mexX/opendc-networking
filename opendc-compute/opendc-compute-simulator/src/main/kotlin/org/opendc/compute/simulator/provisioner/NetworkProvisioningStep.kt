@@ -31,11 +31,24 @@ import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snap
 import org.opendc.simulator.network.export.NetworkExportConfig
 import java.io.File
 
+/**
+ * Returns a [ProvisioningStep] that sets up the network environment (if any).
+ * @param netController the network controller used by the simulation.
+ * If `null` network environment is not set up.
+ * @param netExportConfig the network export configuration for the simulation.
+ * If `null` no network output file will be produced (network related columns can still
+ * be present in host, task, service outputs)
+ * @param seedOutputFolder the output folder of the current simulation instance.
+ * If [netExportConfig] does not provide an output folder, this one is used.
+ */
 public class NetworkProvisioningStep(
     private val netController: NetworkController? = null,
     private val seedOutputFolder: File,
     netExportConfig: NetworkExportConfig? = null,
 ) : ProvisioningStep {
+    /**
+     * The final output folder.
+     */
     private val netExportConfig: NetworkExportConfig? =
         netExportConfig?.let { config ->
             config.outputFolder?.let {

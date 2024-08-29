@@ -25,27 +25,22 @@ package org.opendc.simulator.compute.workload;
 import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
-
 import org.jetbrains.annotations.Nullable;
+import org.opendc.common.units.DataRate;
 import org.opendc.simulator.compute.SimMachineContext;
 import org.opendc.simulator.compute.SimProcessingUnit;
 import org.opendc.simulator.flow2.FlowGraph;
 import org.opendc.simulator.flow2.FlowStage;
 import org.opendc.simulator.flow2.FlowStageLogic;
 import org.opendc.simulator.flow2.OutPort;
-import org.opendc.simulator.network.api.NetworkController;
 import org.opendc.simulator.network.api.NetworkInterface;
 import org.opendc.simulator.network.flow.NetFlow;
-import org.opendc.common.units.DataRate;
 
 /**
  * A workload trace that describes the resource utilization over time in a collection of {@link SimTraceFragment}s.
  */
 public final class SimTrace {
     private final ArrayDeque<SimTraceFragment> fragments;
-//    private final double @Nullable [] netTxKbpsCol;
-//    private final double @Nullable [] netRxKbpsCol;
 
     /**
      * Construct a {@link SimTrace} instance.
@@ -291,10 +286,11 @@ public final class SimTrace {
             if (netIface != null) {
                 // If network interface is provided by context then start flows (to/from internet).
                 txFlow = netIface.startFlow(); // default destination = INTERNET
-                rxFlow = netIface.fromInternet();
-
-                // If networking columns are not defined.
-            } else { txFlow = null; rxFlow = null; }
+                rxFlow = netIface.fromInternet(); // from internet to this node
+            } else {
+                txFlow = null;
+                rxFlow = null;
+            }
 
             graph.connect(output, cpu.getInput());
         }
@@ -391,10 +387,11 @@ public final class SimTrace {
             if (netIface != null) {
                 // If network interface is provided by context then start flows (to/from internet).
                 txFlow = netIface.startFlow(); // default destination = INTERNET
-                rxFlow = netIface.fromInternet();
-
-                // If networking columns are not defined.
-            } else { txFlow = null; rxFlow = null; }
+                rxFlow = netIface.fromInternet(); // from internet to this node
+            } else {
+                txFlow = null;
+                rxFlow = null;
+            }
 
             for (int i = 0; i < cpus.size(); i++) {
                 final SimProcessingUnit cpu = cpus.get(i);

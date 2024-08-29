@@ -291,16 +291,6 @@ public abstract class SimAbstractMachine implements SimMachine {
             return model.getBandwidth();
         }
 
-//        @Override
-//        protected Outlet getOutlet() {
-//            return tx.getOutput();
-//        }
-//
-//        @Override
-//        protected Inlet getInlet() {
-//            return rx.getInput();
-//        }
-
         @Override
         public String toString() {
             return "SimAbstractMachine.NetworkAdapterImpl[name=" + name + ", bandwidth=" + model.getBandwidth()

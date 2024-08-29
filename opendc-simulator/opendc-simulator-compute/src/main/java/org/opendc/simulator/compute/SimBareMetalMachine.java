@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-
 import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.device.SimPeripheral;
 import org.opendc.simulator.compute.model.MachineModel;
@@ -46,7 +45,10 @@ import org.opendc.simulator.network.api.NetworkInterface;
  * example, the class expects only a single concurrent call to {@link #startWorkload(SimWorkload, Map, Consumer)}.
  */
 public final class SimBareMetalMachine extends SimAbstractMachine {
-     private final @Nullable NetworkInterface netIface;
+    /**
+     * The interface through which this machine interacts with the network environment.
+     */
+    private final @Nullable NetworkInterface netIface;
 
     /**
      * The {@link FlowGraph} in which the simulation takes places.
@@ -73,12 +75,10 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
      * @param graph The {@link FlowGraph} to which the machine belongs.
      * @param model The machine model to simulate.
      * @param psuFactory The {@link SimPsuFactory} to construct the power supply of the machine.
+     * @param netIface The network interface of the machine.
      */
-    private SimBareMetalMachine(FlowGraph graph,
-                                MachineModel model,
-                                SimPsuFactory psuFactory,
-                                @Nullable NetworkInterface netIface
-    ) {
+    private SimBareMetalMachine(
+            FlowGraph graph, MachineModel model, SimPsuFactory psuFactory, @Nullable NetworkInterface netIface) {
         super(model);
 
         this.netIface = netIface;
@@ -109,7 +109,10 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
         }
     }
 
-     @Override public @Nullable NetworkInterface getNetworkInterface() { return netIface; }
+    @Override
+    public @Nullable NetworkInterface getNetworkInterface() {
+        return netIface;
+    }
 
     /**
      * Create a {@link SimBareMetalMachine} instance.
@@ -121,10 +124,11 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
     public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory) {
         return new SimBareMetalMachine(graph, model, psuFactory, /* networkInterface */ null);
     }
-    public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, SimPsuFactory psuFactory, NetworkInterface netIface) {
+
+    public static SimBareMetalMachine create(
+            FlowGraph graph, MachineModel model, SimPsuFactory psuFactory, NetworkInterface netIface) {
         return new SimBareMetalMachine(graph, model, psuFactory, netIface);
     }
-
 
     /**
      * Create a {@link SimBareMetalMachine} instance with a no-op PSU.
@@ -135,6 +139,7 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
     public static SimBareMetalMachine create(FlowGraph graph, MachineModel model) {
         return new SimBareMetalMachine(graph, model, SimPsuFactories.noop(), /* networkInterface */ null);
     }
+
     public static SimBareMetalMachine create(FlowGraph graph, MachineModel model, NetworkInterface netIface) {
         return new SimBareMetalMachine(graph, model, SimPsuFactories.noop(), netIface);
     }
@@ -226,9 +231,6 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
         private final Memory memory;
         private final List<NetworkAdapter> net;
         private final List<StorageDevice> disk;
-
-        // Each context has its own network sub interface, so that
-        // on shutdown all network flows started in this context are terminated
         private final NetworkInterface netIface;
 
         private Context(
@@ -247,7 +249,9 @@ public final class SimBareMetalMachine extends SimAbstractMachine {
         }
 
         @Override
-        public @Nullable NetworkInterface getNetworkInterface() { return netIface; }
+        public @Nullable NetworkInterface getNetworkInterface() {
+            return netIface;
+        }
 
         @Override
         public FlowGraph getGraph() {

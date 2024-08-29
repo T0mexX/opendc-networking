@@ -74,6 +74,7 @@ public fun registerComputeMonitor(
  * @param serviceDomain The domain name under which the compute service is registered.
  * @param specs A list of [HostSpec] objects describing the simulated hosts to provision.
  * @param optimize A flag to indicate that the CPU resources of the host should be merged into a single CPU resource.
+ * @param networkController the network controller used by the simulation (needed to set up hosts).
  */
 public fun setupHosts(
     serviceDomain: String,
@@ -84,6 +85,16 @@ public fun setupHosts(
     return HostsProvisioningStep(serviceDomain, specs, optimize, networkController)
 }
 
+/**
+ * Returns a [ProvisioningStep] that sets up the network environment (if any).
+ * @param networkController the network controller used by the simulation.
+ * If `null` network environment is not set up.
+ * @param networkExportConfig the network export configuration for the simulation.
+ * If `null` no network output file will be produced (network related columns can still
+ * be present in host, task, service outputs)
+ * @param seedOutputFolder the output folder of the current simulation instance.
+ * If [networkExportConfig] does not provide an output folder, this one is used.
+ */
 public fun setUpNetwork(
     networkController: NetworkController? = null,
     networkExportConfig: NetworkExportConfig? = null,

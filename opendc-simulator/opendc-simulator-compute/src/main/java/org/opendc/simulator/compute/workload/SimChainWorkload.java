@@ -24,7 +24,6 @@ package org.opendc.simulator.compute.workload;
 
 import java.util.List;
 import java.util.Map;
-
 import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.SimMachineContext;
 import org.opendc.simulator.compute.SimMemory;
@@ -124,7 +123,9 @@ final class SimChainWorkload implements SimWorkload {
         }
 
         @Override
-        public @Nullable NetworkInterface getNetworkInterface() { return ctx.getNetworkInterface(); }
+        public @Nullable NetworkInterface getNetworkInterface() {
+            return ctx.getNetworkInterface();
+        }
 
         @Override
         public FlowGraph getGraph() {

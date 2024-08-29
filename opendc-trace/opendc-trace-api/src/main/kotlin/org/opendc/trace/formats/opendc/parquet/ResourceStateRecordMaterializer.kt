@@ -129,8 +129,8 @@ internal class ResourceStateRecordMaterializer(schema: MessageType) : RecordMate
             localDuration,
             localCpuCount,
             localCpuUsage,
-            netTx = localNetTx,
-            netRx = localNetRx,
+            localNetTx,
+            localNetRx,
         )
 
     override fun getRootConverter(): GroupConverter = root

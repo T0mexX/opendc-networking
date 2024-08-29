@@ -37,6 +37,7 @@ import java.util.SplittableRandom
  * @param serviceDomain The domain name under which the compute service is registered.
  * @param specs A list of [HostSpec] objects describing the simulated hosts to provision.
  * @param optimize A flag to indicate that the CPU resources of the host should be merged into a single CPU resource.
+ * @param networkController the network controller used by the simulation (needed to set up hosts).
  */
 public class HostsProvisioningStep internal constructor(
     private val serviceDomain: String,

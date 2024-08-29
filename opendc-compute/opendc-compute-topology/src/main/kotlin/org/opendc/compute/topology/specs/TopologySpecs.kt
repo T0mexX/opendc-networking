@@ -40,6 +40,9 @@ public data class TopologySpec(
     private val networkSpecsPath: String? = null,
     val schemaVersion: Int = 1,
 ) {
+    /**
+     * The network controller used for the simulation run.
+     */
     val networkController: NetworkController? by lazy {
         networkSpecsPath?.let { NetworkController.fromPath(it) }
     }

@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
 import org.jetbrains.annotations.Nullable;
 import org.opendc.simulator.compute.SimAbstractMachine;
 import org.opendc.simulator.compute.SimMachine;
@@ -159,15 +158,11 @@ public final class SimHypervisor implements SimWorkload {
             throw new IllegalArgumentException("Machine does not fit");
         }
 
-
         VirtualMachine vm;
         NetworkInterface hvNetIface = activeContext.ctx.getNetworkInterface();
-        if (hvNetIface != null)
-            vm = new VirtualMachine(model, hvNetIface.getSubInterface());
-        else
-            vm = new VirtualMachine(model);
-
-
+        // If hypervisor has a network interface, it provides the vm with an interface as well.
+        if (hvNetIface != null) vm = new VirtualMachine(model, hvNetIface.getSubInterface());
+        else vm = new VirtualMachine(model);
 
         vms.add(vm);
         return vm;
@@ -446,20 +441,22 @@ public final class SimHypervisor implements SimWorkload {
         private boolean isClosed;
         private final VmCounters counters = new VmCounters(this);
 
-
         private VirtualMachine(MachineModel model, NetworkInterface netIface) {
             super(model);
 
             netIface.setOwner(this.toString());
             this.netIface = netIface;
         }
+
         private VirtualMachine(MachineModel model) {
             super(model);
             this.netIface = null;
         }
 
         @Override
-        public @Nullable NetworkInterface getNetworkInterface() { return netIface; }
+        public @Nullable NetworkInterface getNetworkInterface() {
+            return netIface;
+        }
 
         @Override
         public SimHypervisorCounters getCounters() {
@@ -560,9 +557,6 @@ public final class SimHypervisor implements SimWorkload {
         private final SimAbstractMachine.Memory memory;
         private final List<SimAbstractMachine.NetworkAdapter> net;
         private final List<SimAbstractMachine.StorageDevice> disk;
-
-        // Each context has its own network sub interface, so that
-        // on shutdown all network flows started in this context are terminated
         private final @Nullable NetworkInterface netIface;
 
         private final Inlet[] muxInlets;
@@ -662,7 +656,9 @@ public final class SimHypervisor implements SimWorkload {
         }
 
         @Override
-        public @Nullable NetworkInterface getNetworkInterface() { return this.netIface; }
+        public @Nullable NetworkInterface getNetworkInterface() {
+            return this.netIface;
+        }
 
         /**
          * Update the performance counters of the virtual machine.
