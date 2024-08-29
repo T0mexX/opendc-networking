@@ -65,39 +65,14 @@ public abstract class NetworkEvent : Comparable<NetworkEvent> {
 
     override fun compareTo(other: NetworkEvent): Int = this.deadline.compareTo(other.deadline)
 
-    /**
-     * Only one flow is allowed between 2 nodesById.
-     */
-    internal data class FlowUpdate(
+    internal data class FlowUpdateDemand(
         override val deadline: Time,
-        val from: NodeId,
-        val to: NodeId,
-        val desiredDataRate: DataRate,
-    ) : NetworkEvent() {
-        override suspend fun NetworkController.exec() {
-            this.startOrUpdateFlow(
-                transmitterId = from,
-                destinationId = to,
-                demand = desiredDataRate,
-            ) ?. let { targetFlowGetter = { it } }
-        }
-
-        override fun involvedIds(): Set<NodeId> = setOf(from, to)
-
-        fun toFlowStart(): FlowStart = FlowStart(deadline = deadline, from = from, to = to, desiredDataRate = desiredDataRate)
-
-        fun toFlowChangeRate(flowGetter: () -> NetFlow): FlowChangeRate =
-            FlowChangeRate(deadline = deadline, newRate = desiredDataRate, targetFlowGetter = flowGetter)
-    }
-
-    internal data class FlowChangeRate(
-        override val deadline: Time,
-        val newRate: DataRate,
+        val newDemand: DataRate,
         override var targetFlowGetter: () -> NetFlow,
     ) : NetworkEvent() {
         override suspend fun NetworkController.exec() {
             val flow = targetFlow
-            flow.setDemand(newRate)
+            flow.setDemand(newDemand)
         }
     }
 
@@ -105,14 +80,14 @@ public abstract class NetworkEvent : Comparable<NetworkEvent> {
         override val deadline: Time,
         val from: NodeId,
         val to: NodeId,
-        val desiredDataRate: DataRate,
+        val demand: DataRate,
         val flowId: FlowId = runBlocking { NetFlow.nextId() },
     ) : NetworkEvent() {
         override suspend fun NetworkController.exec() {
             this.startFlow(
                 transmitterId = from,
                 destinationId = to,
-                demand = desiredDataRate,
+                demand = demand,
             ) ?. let { targetFlowGetter = { it } }
         }
 

@@ -1,6 +1,6 @@
 {
     "networkSpecsPath": "resources/example-topologies/net-spec.json",
-    "wlPath": "resources/example-traces/anarchy_online_48servers_6pernode.parquet",
+    "wlPath": "resources/example-traces/example_net_trace.parquet",
     "exportConfig": {
         "outputFolder": "output/test1",
         "exportInterval": "5min"

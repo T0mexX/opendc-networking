@@ -82,7 +82,7 @@ public data class NetworkScenario(
     }
 
     private inner class RunInstance(
-        private val runName: String = "unnamed-run-${UUID.randomUUID().toString().substring(0, 4)}",
+        runName: String = "unnamed-run-${UUID.randomUUID().toString().substring(0, 4)}",
     ) : AutoCloseable {
         val network: Network = networkSpecs.build()
         val runWl: SimNetWorkload = wl.copy()
@@ -108,7 +108,6 @@ public data class NetworkScenario(
 
         private fun NetworkController.execWl(runWl: SimNetWorkload) =
             runBlocking(network.validator) {
-                delay(1000)
                 with(runWl) wl@{
                     while (runWl.hasNext()) {
                         val nextWlDeadline = runWl.peek().deadline

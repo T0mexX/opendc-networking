@@ -24,7 +24,7 @@ package org.opendc.simulator.network.input
 
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.api.workload.NetworkEvent
-import org.opendc.simulator.network.api.workload.NetworkEvent.FlowChangeRate
+import org.opendc.simulator.network.api.workload.NetworkEvent.FlowUpdateDemand
 import org.opendc.simulator.network.api.workload.NetworkEvent.FlowStart
 import org.opendc.simulator.network.api.workload.NetworkEvent.FlowStop
 import org.opendc.simulator.network.api.workload.SimNetWorkload
@@ -59,10 +59,7 @@ internal class ImprintsToWlConverter private constructor(
                 }
             }
 
-        return SimNetWorkload(
-            events = events,
-            hostIds = hostIds,
-        )
+        return SimNetWorkload(networkEvents = events)
     }
 
     /**
@@ -170,14 +167,14 @@ internal class ImprintsToWlConverter private constructor(
                     deadline = deadline,
                     from = transmitterId,
                     to = destId,
-                    desiredDataRate = netTx,
+                    demand = netTx,
                     flowId = fId,
                 )
             } ?: FlowStart(
                 deadline = deadline,
                 from = transmitterId,
                 to = destId,
-                desiredDataRate = netTx,
+                demand = netTx,
             )
         }.also { converted += it }
 
@@ -190,9 +187,9 @@ internal class ImprintsToWlConverter private constructor(
 
     context (NetEventImprint)
     private fun NetworkEvent.addFlowRateChange() =
-        FlowChangeRate(
+        FlowUpdateDemand(
             deadline = this@NetEventImprint.deadline,
-            newRate = netTx,
+            newDemand = netTx,
             targetFlowGetter = { this.targetFlow },
         ).also { converted += it }
 

@@ -31,7 +31,6 @@ import org.opendc.common.units.Time
 import org.opendc.simulator.network.api.snapshots.NetworkSnapshot
 import org.opendc.simulator.network.api.snapshots.NetworkSnapshot.Companion.snapshot
 import org.opendc.simulator.network.api.workload.SimNetWorkload
-import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.EndPointNode
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
@@ -54,21 +53,19 @@ import java.time.InstantSource
 import java.util.UUID
 
 /**
- * Interface through which control the network (from external modules).
+ * Interface through which control the network.
  *
  * @param[network]          the network controlled by this controller.
  * @param[instantSource]    the external instantSource (time source). If an external
  * time source is set, one can synchronize the network statistics with [sync].
- *
  * If no external time source is provided, the controller defaults to an internal one starting at EPOCH.
- * If a [SimNetWorkload] is provided with [execWorkload], and the reset
- * parameter is set to `true`, the internal time source is set to the start of the workload.
+ * Internal time can then be set with [setInternalTime].
+ * @param[exportConfig]     the export configuration for the simulation if any. It can then be changed with [setExportConfig]
  */
 public class NetworkController(
     internal val network: Network,
     instantSource: InstantSource? = null,
     exportConfig: NetworkExportConfig? = null,
-    private val runName: String = "unnamed-run-${UUID.randomUUID().toString().substring(0, 4)}",
 ) : AutoCloseable {
     public companion object {
         public val log: Logger by logger()
@@ -128,29 +125,6 @@ public class NetworkController(
         private set
 
     /**
-     * Sets the external time source of the network. The network is then to be synchronized with [sync].
-     */
-    public fun setInstantSource(instantSource: InstantSource) {
-        instantSrc = NetworkInstantSrc(instantSource)
-        lastUpdate = instantSrc.time
-    }
-
-    internal fun setInternalTime(time: Time) {
-        instantSrc.setInternalTime(time)
-        lastUpdate = time
-    }
-
-    public fun setExportConfig(exportConfig: NetworkExportConfig) {
-        netExportHandler?.let {
-            close()
-            log.warn("replacing current network export handler $it with new one")
-        }
-
-        netExportHandler =
-            NetExportHandler(config = exportConfig)
-    }
-
-    /**
      * The current instant of the network time source.
      */
     public val currentInstant: Instant
@@ -192,16 +166,41 @@ public class NetworkController(
     public val claimedHostIds: Set<NodeId> get() = _claimedHostIds
     private val _claimedHostIds = mutableSetOf<NodeId>()
 
-    /**
-     * @see[claimedHostIds]
-     */
-    private val claimedCoreSwitchIds = mutableSetOf<NodeId>()
-
     init {
         instantSource?.let { lastUpdate = Time.ofInstantFromEpoch(it.instant()) }
 
         network.launch()
         log.info(network.fmtNodes())
+    }
+
+    /**
+     * Sets [instantSource] as the external time source of the network. The network is then to be synchronized with [sync].
+     */
+    public fun setInstantSource(instantSource: InstantSource) {
+        instantSrc = NetworkInstantSrc(instantSource)
+        lastUpdate = instantSrc.time
+    }
+
+    /**
+     * Sets [time] as the internal time of the network. The network time is then to be advanced with [advanceBy].
+     * @throws[IllegalArgumentException] if the current [instantSrc] is external.
+     */
+    internal fun setInternalTime(time: Time) {
+        instantSrc.setInternalTime(time)
+        lastUpdate = time
+    }
+
+    /**
+     * Sets [exportConfig] as the export configuration, replacing any previously set configuration.
+     */
+    public fun setExportConfig(exportConfig: NetworkExportConfig) {
+        netExportHandler?.let {
+            close()
+            log.warn("replacing current network export handler $it with new one")
+        }
+
+        netExportHandler =
+            NetExportHandler(config = exportConfig)
     }
 
     /**
@@ -221,26 +220,9 @@ public class NetworkController(
     }
 
     /**
-     * See [claimedHostIds] for an explanation of the *claiming process*.
-     *
-     * @return the network interface of an unclaimed [CoreSwitch] if exists, `null` otherwise.
-     */
-    public fun claimNextCoreNode(): NetworkInterface? {
-        val coreSwitches = network.getNodesById<CoreSwitch>()
-        return coreSwitches
-            .keys
-            .filterNot { it in _claimedHostIds }
-            .firstOrNull()
-            ?.let {
-                claimedCoreSwitchIds.add(it)
-                getNetInterfaceOf(it)
-            } ?: log.errAndNull("unable to claim core switch node, none available")
-    }
-
-    /**
      * Maps "virtual" node id [from] to physical id [to].
      *
-     * Used only when a [SimNetWorkload] is executed with virtual mapping (see [execWorkload]).
+     * Used only when a [SimNetWorkload] is executed with virtual mapping.
      */
     internal fun virtualMap(
         from: NodeId,
@@ -264,7 +246,7 @@ public class NetworkController(
      */
     public fun claimNode(nodeId: NodeId): NetworkInterface? {
         // Check that node is not already claimed.
-        if (nodeId in _claimedHostIds || nodeId in claimedCoreSwitchIds) {
+        if (nodeId in _claimedHostIds) {
             return log.errAndNull("unable to claim node nodeId $nodeId, nodeId already claimed")
         }
 
@@ -275,17 +257,10 @@ public class NetworkController(
                 return getNetInterfaceOf(nodeId)
             }
 
-        // If node is core switch.
-        network.getNodesById<CoreSwitch>()[nodeId]
-            ?.let {
-                claimedCoreSwitchIds.add(nodeId)
-                return getNetInterfaceOf(nodeId)
-            }
-
         // else
         return log.errAndNull(
             "unable to claim node nodeId $nodeId, " +
-                "nodeId not existent or not associated to a core switch or a host node",
+                "nodeId not existent or not associated to a host node",
         )
     }
 
@@ -359,41 +334,6 @@ public class NetworkController(
     }
 
     /**
-     * **The usage if this method assumes there can only
-     * be 1 flow between 2 nodesById (1 per direction).**
-     *
-     * - If a [NetFlow] with transmitter [transmitterId] and destination
-     * [destinationId] already exists in the network then it is updated with the new demand [demand].
-     * - If no [NetFlow] with this "signature" exists (and it can be started), then it is started (see [startFlow]).
-     *
-     * @return the [NetFlow] (update/created) if its update/creation was successful,
-     * `null` if the flow was not in the network, and it could not be started.
-     */
-    public suspend fun startOrUpdateFlow(
-        transmitterId: NodeId,
-        destinationId: NodeId = internetNetworkInterface.nodeId,
-        demand: DataRate = DataRate.ZERO,
-        dataRateOnChangeHandler: ((NetFlow, DataRate, DataRate) -> Unit)? = null,
-    ): NetFlow? {
-        val mappedTransmitterId: NodeId = mappedOrSelf(transmitterId)
-        val mappedDestId: NodeId = mappedOrSelf(destinationId)
-
-        return network.flowsById.values.find {
-            it.transmitterId == mappedTransmitterId && it.destinationId == mappedDestId
-        }?. let {
-            it.setDemand(demand)
-            if (dataRateOnChangeHandler != null) it.withThroughputOnChangeHandler(dataRateOnChangeHandler)
-
-            it
-        } ?: startFlow(
-            transmitterId = transmitterId,
-            destinationId = destinationId,
-            demand = demand,
-            throughputOnChangeHandler = dataRateOnChangeHandler,
-        )
-    }
-
-    /**
      * Stops the [NetFlow] with id [flowId] if it is present in the network.
      *
      * @return the [NetFlow] that was terminated if any, `null` otherwise.
@@ -419,18 +359,13 @@ public class NetworkController(
      * Avoid invoking this method when the external time source is set, and it
      * did not change since last update, unless network stability is needed (for performance reasons).
      * @param[logSnapshot]          if `true` it logs the [NetworkSnapshot] after the synchronization, at INFO level.
-     * @param[consistencyCheck]     if `true` checks that no [NetFlow], after network has reached stability,
      * has a throughput higher than its demand.
      */
     @JvmOverloads
-    public fun sync(
-        logSnapshot: Boolean = false,
-        consistencyCheck: Boolean = false,
-    ) {
+    public fun sync(logSnapshot: Boolean = false) {
         val syncTo = instantSrc.time
         if (instantSrc.isExternalSource) {
             runBlocking(network.validator) { network.awaitStability() }
-            if (consistencyCheck) runBlocking { checkFlowConsistency() }
             if (logSnapshot) log.infoNewLn(snapshot().fmt())
 
             val timeSpan = syncTo - lastUpdate
@@ -472,6 +407,7 @@ public class NetworkController(
             }
         }
 
+        // If method called externally while external instant source is set.
         if (instantSrc.isExternalSource && suppressWarn.not()) {
             log.warn(
                 "advancing time directly while instant source is set, this can cause ambiguity. " +
@@ -483,7 +419,7 @@ public class NetworkController(
         if (time == Time.ZERO) return
 
         netExportHandler?.let {
-            // Advances time in multiple steps to allow all exports.
+            // Advances time in multiple steps to allow all export deadlines.
             with(it) {
                 var remaining: Time = time
                 while (remaining != Time.ZERO) {
@@ -507,20 +443,5 @@ public class NetworkController(
     override fun close() {
         network.runnerJob?.cancel()
         netExportHandler?.close()
-    }
-
-    /**
-     * Checks (after network is stabilized) that no flow has a higher throughput than its demand.
-     */
-    private suspend fun checkFlowConsistency() {
-        network.awaitStability()
-
-        network.flowsById.values.forEach {
-            check(it.demand approxLarger it.throughput || it.demand approx it.throughput) {
-                " Inconsistent state: flow ${it.id} has demand=${it.demand} and throuput=${it.throughput}"
-            }
-
-            check(it.demand approx (network.nodesById[it.transmitterId]?.flowHandler?.outgoingFlows?.get(it.id)?.demand ?: DataRate.ZERO))
-        }
     }
 }
