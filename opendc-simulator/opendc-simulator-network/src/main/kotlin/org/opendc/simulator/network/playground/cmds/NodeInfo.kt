@@ -45,12 +45,12 @@ import org.opendc.simulator.network.utils.infoNewLn
  * | numConnectedNodes = 2
  */
 internal data object NodeInfo : PGCmd("NODE_INFO") {
-    override val regex = Regex("\\s*(?:n|node)\\s+(\\d+)\\s*")
+    override val regex = Regex("\\s*(?:n|node)\\s+([^ ]+)\\s*")
 
     override fun CoroutineScope.execCmd(result: MatchResult) {
         val network: Network = (coroutineContext[PGEnv]!!.network)
 
-        val nodeId: NodeId = fromStrElseCanc(result.groupValues[1])
+        val nodeId: NodeId = ifInternetElseNull(result.groupValues[1]) ?: fromStrElseCanc(result.groupValues[1])
 
         val node: Node = network.getNodeElseCanc(nodeId)
 

@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.Network
+import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.utils.logger
 import kotlin.coroutines.CoroutineContext
@@ -74,6 +75,13 @@ internal sealed class PGCmd(val name: String) {
                 throw cancExc
             }
 
+    protected fun ifInternetElseNull(str: String): NodeId? =
+        if (internetReg.matches(str)) {
+            INTERNET_ID
+        } else {
+            null
+        }
+
     fun Network.getNodeElseCanc(nodeId: NodeId): Node =
         this[nodeId]
             ?: let {
@@ -84,6 +92,8 @@ internal sealed class PGCmd(val name: String) {
 
     companion object {
         val json = Json { prettyPrint = true }
+
+        private val internetReg = Regex("(?:\\s*int|i|internet)(?:|\\s+id)\\s*?", RegexOption.IGNORE_CASE)
 
         fun CoroutineScope.cancelAfter(f: () -> Unit) {
             f.invoke()

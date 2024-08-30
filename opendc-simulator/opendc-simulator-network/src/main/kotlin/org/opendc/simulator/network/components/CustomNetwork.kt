@@ -139,6 +139,7 @@ internal class CustomNetwork(
         nodesById[node.id]?.let { return log.errAndNull("unable to add node $node, id already present") }
         nodesById[node.id] = node
         (node as? EndPointNode)?.let { endPointNodes[node.id] = node }
+        (node as? CoreSwitch)?.let { runBlocking(validator) { it.connect(internet) } }
         onNodeAdded.forEach { it.invoke(this, node) }
 
         return node

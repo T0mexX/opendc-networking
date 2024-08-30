@@ -40,6 +40,7 @@ import org.opendc.simulator.network.playground.cmds.AdvanceTime
 import org.opendc.simulator.network.playground.cmds.EnReport
 import org.opendc.simulator.network.playground.cmds.Export
 import org.opendc.simulator.network.playground.cmds.NewFlow
+import org.opendc.simulator.network.playground.cmds.NewHost
 import org.opendc.simulator.network.playground.cmds.NewLink
 import org.opendc.simulator.network.playground.cmds.NewSwitch
 import org.opendc.simulator.network.playground.cmds.NodeInfo
@@ -55,10 +56,10 @@ import org.opendc.simulator.network.utils.logger
 import java.io.File
 import java.time.Instant
 
-public fun main(args: Array<String>): Unit = NetworkPlayground().main(args)
+public fun main(args: Array<String>): Unit = NetPlayground().main(args)
 
 @OptIn(ExperimentalSerializationApi::class)
-private class NetworkPlayground : CliktCommand() {
+private class NetPlayground : CliktCommand() {
     // TODO: let choose file from command line
     private val file: File = File("resources/exported8.json")
 
@@ -93,6 +94,7 @@ private class NetworkPlayground : CliktCommand() {
     val availableCmds: List<PGCmd> =
         listOf(
             NewSwitch,
+            NewHost,
             RmNode,
             NewFlow,
             RmFlow,

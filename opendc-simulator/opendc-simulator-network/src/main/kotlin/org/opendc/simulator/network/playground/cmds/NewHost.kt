@@ -23,48 +23,48 @@
 package org.opendc.simulator.network.playground.cmds
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
 import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
-import org.opendc.simulator.network.components.Network
-import org.opendc.simulator.network.components.Node
-import org.opendc.simulator.network.flow.NetFlow
+import org.opendc.simulator.network.components.CoreSwitch
+import org.opendc.simulator.network.components.CustomNetwork
+import org.opendc.simulator.network.components.HostNode
+import org.opendc.simulator.network.components.Network.Companion.INTERNET_ID
+import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.playground.PGEnv
-import org.opendc.simulator.network.playground.cmds.Export.regex
 
 /**
- * Starts a new flow between 2 [Node]s, with a certain demand.
+ * Creates a new host-node with certain specs.
  * Check [regex] for a complete understanding of the command parsing.
  *
  * ```console
  * // Example
- * > flow 0 /* sender node id */ -> internet /* receiver node id */ 10Kbps /* demand */
- * 16:35:28.539 [INFO] NEW_FLOW - successfully create org.opendc.simulator.network.flow.NetFlow@4cfe988d
+ *
+ * // switch
+ * > host 0 /* node id */ - 1Gbps /* port speed */ 4 /* num of ports */
+ * 6:42:29.719 [INFO] NEW_HOST - successfully added [Switch: id=10] to network
  */
-internal data object NewFlow : PGCmd("NEW_FLOW") {
-    override val regex = Regex("\\s*(?:flow|f)\\s+([^ ]+)\\s*(?:->| )\\s*([^ ]+)\\s+([^ ]+)\\s*")
+internal data object NewHost : PGCmd("NEW_HOST") {
+    override val regex = Regex("\\s*(h|host)\\s+(\\d+)\\s+([^ ]+)\\s+([^ ]+)\\s*")
 
     override fun CoroutineScope.execCmd(result: MatchResult) {
-        val network: Network = (coroutineContext[PGEnv]!!.network)
+        val customNetwork: CustomNetwork =
+            (coroutineContext[PGEnv]!!.network as? CustomNetwork)
+                ?: return cancelAfter { log.error("adding a switch is not allowed unless the network is custom type") }
 
-        val senderIdStr = result.groupValues[1]
-        val senderId: NodeId = ifInternetElseNull(senderIdStr) ?: fromStrElseCanc(senderIdStr)
-        val destIdStr = result.groupValues[2]
-        val destId: NodeId = ifInternetElseNull(destIdStr) ?: fromStrElseCanc(destIdStr)
-        val demand: DataRate = fromStrElseCanc(result.groupValues[3])
+        val nodeIdStr = result.groupValues[2]
+        val nodeId: NodeId = ifInternetElseNull(nodeIdStr) ?: fromStrElseCanc(nodeIdStr)
+        val portSpeed: DataRate = fromStrElseCanc(result.groupValues[3])
+        val numOfPorts: Int = fromStrElseCanc(result.groupValues[4])
 
-        val newFLow =
-            NetFlow(
-                demand = demand,
-                transmitterId = senderId,
-                destinationId = destId,
+        val newHost =
+            HostNode(
+                id = nodeId,
+                portSpeed = portSpeed,
+                numOfPorts = numOfPorts,
             )
 
-        launch {
-            async { network.startFlow(newFLow) }.await()
-                ?.let { log.info("successfully create $newFLow") }
-                ?: log.error("unable to create flow.")
-        }
+        customNetwork.addNode(newHost)
+            ?.let { log.info("successfully added $newHost to network") }
+            ?: log.error("unable to add host.")
     }
 }
