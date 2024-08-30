@@ -31,6 +31,7 @@ import org.opendc.simulator.network.components.internalstructs.UpdateChl
 import org.opendc.simulator.network.components.internalstructs.port.Port
 import org.opendc.simulator.network.components.internalstructs.port.PortImpl
 import org.opendc.simulator.network.flow.FlowHandler
+import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.forwarding.OSPF
@@ -38,10 +39,10 @@ import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
 
+// TODO: add energy model for host-node
+
 /**
- * Represent an [EndPointNode] cluster with hosts.
- * TODO: integrate with current hosts implementation, now only useful for testing and playground.
- *
+ * Represent a host-node in the network. A host is an [EndPointNode], meaning it can generate and consume [NetFlow]s.
  */
 internal data class HostNode(
     override val id: NodeId,

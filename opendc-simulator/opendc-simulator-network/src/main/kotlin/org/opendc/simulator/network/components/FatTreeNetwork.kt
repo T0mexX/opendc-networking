@@ -28,6 +28,7 @@ import kotlinx.serialization.Serializable
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.HostNode.HostNodeSpecs
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
+import org.opendc.simulator.network.utils.NonSerializable
 import org.opendc.simulator.network.utils.logger
 import kotlin.math.min
 import kotlin.math.pow
@@ -36,6 +37,8 @@ import kotlin.math.pow
  * Fat-tree network topology built based on the number of ports of the [SwitchSpecs] passed as parameter.
  * The number of ports is usually referred as ***k*** and should be a multiple of 2 and larger than 2.
  */
+@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
+@Serializable(NonSerializable::class)
 internal class FatTreeNetwork(
     private val coreSpecs: SwitchSpecs,
     private val aggrSpecs: SwitchSpecs,

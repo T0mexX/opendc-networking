@@ -43,11 +43,9 @@ import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
 
 /**
- * A [Node] whose job is to route incoming flows according to [portSelectionPolicy] and .
- * @param[id]                   id of this [Node].
- * @param[portSpeed]            port speed in Kbps.
- * @param[numOfPorts]           number of ports.
- * @param[portSelectionPolicy]  policy used to determine the links to which forward incoming flows.
+ * This [Node] represents a switch in the network. This switch routs incoming flows
+ * according to its [fairnessPolicy] and [portSelectionPolicy].
+ * Depending on the policies, the switch can provide SDN routing.
  */
 internal open class Switch(
     final override val id: NodeId,

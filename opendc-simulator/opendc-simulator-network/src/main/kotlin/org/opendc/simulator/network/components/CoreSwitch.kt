@@ -27,7 +27,6 @@ import kotlinx.serialization.Serializable
 import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.stability.NetworkStabilityValidator
-import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.forwarding.OSPF
@@ -36,8 +35,9 @@ import org.opendc.simulator.network.policies.forwarding.StaticECMP
 import org.opendc.simulator.network.utils.IdDispenser
 
 /**
- * Switch that also implements [EndPointNode].
- * This switch is able to start and receive [NetFlow]s.
+ * // TODO: remove end-point-node capabilities
+ * This switch is automatically connected to the internet (for now).
+ * @see Switch
  */
 internal class CoreSwitch(
     id: NodeId,

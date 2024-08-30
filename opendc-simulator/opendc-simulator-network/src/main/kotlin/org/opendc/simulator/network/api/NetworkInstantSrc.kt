@@ -36,9 +36,9 @@ internal class NetworkInstantSrc private constructor(
     private val external: InstantSource? = null,
     internal: Time = Time.ZERO,
 ) : InstantSource {
-    constructor(external: InstantSource? = null): this(external = external, internal = Time.ZERO)
+    constructor(external: InstantSource? = null) : this(external = external, internal = Time.ZERO)
 
-    constructor(internal: Time = Time.ZERO): this(external = null, internal = internal)
+    constructor(internal: Time = Time.ZERO) : this(external = null, internal = internal)
 
     var internal = internal
         private set

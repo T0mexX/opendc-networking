@@ -38,6 +38,7 @@ import io.kotest.property.checkAll
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.components.CustomNetwork
 import org.opendc.simulator.network.components.CustomNetwork.CustomNetworkSpecs
@@ -45,7 +46,6 @@ import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Node
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch
-import org.opendc.simulator.network.units.DataRate
 import java.io.File
 
 @OptIn(ExperimentalSerializationApi::class, ExperimentalKotest::class)

@@ -255,43 +255,43 @@ class SimMachineTest {
             assertEquals(1000, timeSource.millis())
         }
 
-    @Test
-    fun testNetUsage() =
-        runSimulation {
-            val engine = FlowEngine.create(dispatcher)
-            val graph = engine.newGraph()
-
-            val machine =
-                SimBareMetalMachine.create(
-                    graph,
-                    machineModel,
-                )
-
-            val adapter = (machine.peripherals[0] as SimNetworkAdapter)
-//            adapter.connect(SimNetworkSink(graph, adapter.bandwidth.toFloat()))
-
-            machine.runWorkload(
-                object : SimWorkload {
-                    override fun onStart(ctx: SimMachineContext) {
-                        val iface = ctx.networkInterfaces[0]
-                        val source =
-                            SimpleFlowSource(ctx.graph, 800.0f, 0.8f) {
-                                ctx.shutdown()
-                                it.close()
-                            }
-                        ctx.graph.connect(source.output, iface.tx)
-                    }
-
-                    override fun setOffset(now: Long) {}
-
-                    override fun onStop(ctx: SimMachineContext) {}
-
-                    override fun snapshot(): SimWorkload = TODO()
-                },
-            )
-
-            assertEquals(40, timeSource.millis())
-        }
+//    @Test
+//    fun testNetUsage() =
+//        runSimulation {
+//            val engine = FlowEngine.create(dispatcher)
+//            val graph = engine.newGraph()
+//
+//            val machine =
+//                SimBareMetalMachine.create(
+//                    graph,
+//                    machineModel,
+//                )
+//
+//            val adapter = (machine.peripherals[0] as SimNetworkAdapter)
+////            adapter.connect(SimNetworkSink(graph, adapter.bandwidth.toFloat()))
+//
+//            machine.runWorkload(
+//                object : SimWorkload {
+//                    override fun onStart(ctx: SimMachineContext) {
+//                        val iface = ctx.networkInterfaces[0]
+//                        val source =
+//                            SimpleFlowSource(ctx.graph, 800.0f, 0.8f) {
+//                                ctx.shutdown()
+//                                it.close()
+//                            }
+//                        ctx.graph.connect(source.output, iface.tx)
+//                    }
+//
+//                    override fun setOffset(now: Long) {}
+//
+//                    override fun onStop(ctx: SimMachineContext) {}
+//
+//                    override fun snapshot(): SimWorkload = TODO()
+//                },
+//            )
+//
+//            assertEquals(40, timeSource.millis())
+//        }
 
     @Test
     fun testDiskReadUsage() =

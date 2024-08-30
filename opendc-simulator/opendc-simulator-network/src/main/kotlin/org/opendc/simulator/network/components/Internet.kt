@@ -36,9 +36,16 @@ import org.opendc.simulator.network.policies.fairness.FirstComeFirstServed
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.policies.forwarding.StaticECMP
 
+/**
+ * This 'abstract' node represents the internet.
+ * It has infinite number of ports and port speed.
+ */
 internal class Internet(
     override val portSelectionPolicy: PortSelectionPolicy = StaticECMP,
 ) : EndPointNode {
+    /**
+     * Has no effect since the node has infinite port speed.
+     */
     override val fairnessPolicy: FairnessPolicy = FirstComeFirstServed
     override val updtChl = UpdateChl()
 

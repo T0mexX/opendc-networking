@@ -28,15 +28,16 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.ints.shouldBeExactly
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.components.FatTreeNetwork
 import org.opendc.simulator.network.components.FatTreeNetwork.FatTreeTopologySpecs
 import org.opendc.simulator.network.components.HostNode
 import org.opendc.simulator.network.components.Network
 import org.opendc.simulator.network.components.Specs
 import org.opendc.simulator.network.components.Switch.SwitchSpecs
-import org.opendc.simulator.network.units.DataRate
 import java.io.File
 import kotlin.math.pow
 

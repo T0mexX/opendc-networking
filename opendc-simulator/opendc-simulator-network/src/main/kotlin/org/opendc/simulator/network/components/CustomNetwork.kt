@@ -41,6 +41,7 @@ import kotlinx.serialization.json.JsonUnquotedLiteral
 import kotlinx.serialization.serializer
 import org.opendc.simulator.network.api.NodeId
 import org.opendc.simulator.network.flow.NetFlow
+import org.opendc.simulator.network.utils.NonSerializable
 import org.opendc.simulator.network.utils.errAndNull
 import org.opendc.simulator.network.utils.logger
 
@@ -48,6 +49,8 @@ import org.opendc.simulator.network.utils.logger
  * Network that is not built following a specific algorithm.
  * It can be built from json with specific format.
  */
+@Suppress("SERIALIZER_TYPE_INCOMPATIBLE")
+@Serializable(NonSerializable::class)
 internal class CustomNetwork(
     nodes: List<Node> = mutableListOf(),
 ) : Network() {

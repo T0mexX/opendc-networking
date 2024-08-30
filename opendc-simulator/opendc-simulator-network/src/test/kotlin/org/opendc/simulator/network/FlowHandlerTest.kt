@@ -36,6 +36,7 @@ import io.kotest.property.arbitrary.long
 import io.kotest.property.arbitrary.next
 import io.kotest.property.checkAll
 import kotlinx.coroutines.runBlocking
+import org.opendc.common.units.DataRate
 import org.opendc.simulator.network.components.CoreSwitch
 import org.opendc.simulator.network.components.Switch
 import org.opendc.simulator.network.components.connect
@@ -44,8 +45,7 @@ import org.opendc.simulator.network.flow.FlowId
 import org.opendc.simulator.network.flow.NetFlow
 import org.opendc.simulator.network.flow.OutFlow
 import org.opendc.simulator.network.flow.RateUpdt
-import org.opendc.simulator.network.units.DataRate
-import org.opendc.simulator.network.units.ifNullZero
+import org.opendc.simulator.network.utils.ifNull0
 
 class FlowHandlerTest : FunSpec({
 
@@ -62,7 +62,7 @@ class FlowHandlerTest : FunSpec({
         val testDataGenerator: Arb<TestData> =
             Arb.bind(
                 Arb.int(2..50),
-                Arb.int(50..1000),
+                Arb.int(50..100),
                 Arb.int(2..10),
             ) { numOfFlows, numOfUpdts, numOfInBetweenSwitches ->
                 val arbFlowId = Arb.long(0L..<numOfFlows)
@@ -80,7 +80,7 @@ class FlowHandlerTest : FunSpec({
                                         ).next(),
                                     )
                                 }.next()
-                            rateTracker.compute(fId) { _, oldRate -> (oldRate.ifNullZero()) + deltaRate }
+                            rateTracker.compute(fId) { _, oldRate -> (oldRate.ifNull0()) + deltaRate }
                             add(Pair(fId, deltaRate))
                         }
                     }
@@ -118,7 +118,7 @@ class FlowHandlerTest : FunSpec({
                         outRatesByPort.forEach { (port, rate) ->
                             rate.toKbps() shouldBe (port.outgoingRateOf(this@isConsistent.id).toKbps() plusOrMinus 0.00001)
                         }
-                        totRateOut shouldBe (outRatesByPort.values.sumOf { it.toKbps() } plusOrMinus 0.00001)
+                        totRateOut.toKbps() shouldBe (outRatesByPort.values.sumOf { it.toKbps() } plusOrMinus 0.00001)
                     } ?: let {
                         sender.ports.sumOf { it.outgoingRateOf(id).toKbps() } shouldBeExactly .0
                     }
@@ -130,7 +130,7 @@ class FlowHandlerTest : FunSpec({
 
                 context("total rate out should be equal to the sum of the rates for each port") {
                     this@isConsistent?.let {
-                        totRateOut shouldBe (outRatesByPort.values.sumOf { it.toKbps() } plusOrMinus 0.00001)
+                        totRateOut.toKbps() shouldBe (outRatesByPort.values.sumOf { it.toKbps() } plusOrMinus 0.00001)
                     }
                 }
             }

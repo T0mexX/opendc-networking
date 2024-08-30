@@ -35,7 +35,6 @@ import org.opendc.simulator.network.flow.RateUpdt
 import org.opendc.simulator.network.policies.fairness.FairnessPolicy
 import org.opendc.simulator.network.policies.forwarding.PortSelectionPolicy
 import org.opendc.simulator.network.utils.ifNull0
-import org.opendc.simulator.network.utils.logger
 
 /**
  * Interface representing a node in a [Network].
@@ -67,12 +66,18 @@ internal interface Node : FlowView, WithSpecs<Node> {
     }
 
     /**
-     * Policy that determines how [Flow]s are forwarded.
+     * Policy that determines to which [Port]s the flows are forwarded to.
      */
     val portSelectionPolicy: PortSelectionPolicy
 
+    /**
+     * Policy that determines how the flows data are handled in case of maximum bw reached.
+     */
     val fairnessPolicy: FairnessPolicy
 
+    /**
+     * Handles incoming and outgoing flows.
+     */
     val flowHandler: FlowHandler
 
     /**
@@ -94,10 +99,16 @@ internal interface Node : FlowView, WithSpecs<Node> {
             return ports.count { it.isConnected }
         }
 
+    /**
+     * Aggregates the flow updates from all adjacent nodes.
+     */
     val updtChl: UpdateChl
 
-//    val flowRates: MutableMap<FlowId, Kbps>
-
+    /**
+     * **Does not return**. Should be launched as an independent coroutine.
+     * Processes incoming updates.
+     * @param[invalidator] used to invalidate the network stability while updates are pending or being processed.
+     */
     suspend fun run(invalidator: NetworkStabilityValidator.Invalidator? = null) {
         invalidator?.let { updtChl.withInvalidator(invalidator) }
         updtChl.clear()
@@ -108,6 +119,9 @@ internal interface Node : FlowView, WithSpecs<Node> {
         }
     }
 
+    /**
+     * Consumes a round of updates.
+     */
     suspend fun consumeUpdt() {
         var updt: RateUpdt = updtChl.receive()
 
@@ -121,6 +135,9 @@ internal interface Node : FlowView, WithSpecs<Node> {
         notifyAdjNodes()
     }
 
+    /**
+     * Sends the buffered updates to adjacent nodes.
+     */
     private suspend fun notifyAdjNodes() {
         portToNode.values.forEach { it.notifyReceiver() }
     }
@@ -141,6 +158,9 @@ internal interface Node : FlowView, WithSpecs<Node> {
             outgoingFlows.keys + consumingFlows.keys
         }
 
+    /**
+     * @return formatted string representing node information. Preferably to be logged in a new line.
+     */
     fun fmt(): String =
         """
         | Type = ${this::class.simpleName}
@@ -148,8 +168,4 @@ internal interface Node : FlowView, WithSpecs<Node> {
         | portSpeed = $portSpeed
         | numConnectedNodes = $numOfConnectedNodes
         """.trimIndent()
-
-    companion object {
-        private val log by logger()
-    }
 }
